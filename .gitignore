@@ -3,3 +3,18 @@
 .env.*
 !.env.example
 
+# Dependencies and build output
+node_modules/
+.next/
+out/
+coverage/
+
+# Local durable data
+data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Logs and editor files
+*.log
+.DS_Store
