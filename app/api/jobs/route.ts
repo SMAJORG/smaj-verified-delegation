@@ -11,6 +11,6 @@ export async function GET() {
     const jobs = await adapter.listJobs();
     return NextResponse.json({ jobs, source: adapter.sourceUrl, mode: "read_only" });
   } catch (error) {
-    return apiError(error, 502);
+    return apiError(error);
   }
 }

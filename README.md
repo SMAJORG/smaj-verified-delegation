@@ -1,28 +1,30 @@
 # SMAJ Verified Delegation
 
-An independent Meta-powered AI agent that turns authorized goals into bounded actions, verifies the actual outcome, and produces evidence-backed proof receipts.
+An independent Meta-powered AI agent that turns authorized goals into bounded actions, verifies actual outcomes, and issues evidence-backed proof receipts. It complements SMAJ PI HUB without modifying or shipping inside the existing application.
 
-This hackathon repository complements SMAJ PI HUB but does not modify or ship as part of the existing SMAJ PI HUB application.
+## Milestone Two
 
-## Milestone One
+- Live read-only SMAJ Jobs discovery and Meta `muse-spark-1.3` planning
+- Signed HttpOnly sessions, actor-isolated tasks, and mandatory idempotency keys
+- Explicit human approval before every mock execution
+- Real-time server events, persistent task history, and restart-safe run leases
+- Stable `better-sqlite3` persistence with WAL and transactional state changes
+- Controlled failure recovery, duplicate prevention, independent verification, and SHA-256 proof receipts
 
-- Read-only discovery from the deployed SMAJ Jobs API
-- Planning with Meta `muse-spark-1.3`
-- Explicit approval before action
-- Mock-only job applications with idempotent retries
-- Independent verification from the local action store
-- Tamper-evident proof receipts and event timeline
+Production Jobs submissions and real Pi payments remain disabled by design.
 
-No real Pi payments or production job submissions are performed.
+## Configure
 
-## Run locally
+Copy `.env.example` to `.env.local` and provide `META_API_KEY` plus a random `SMAJ_DEMO_ACCESS_TOKEN` of at least 16 characters. Secret files are excluded from Git.
+
+## Run
 
 ```powershell
 npm.cmd install
 npm.cmd run dev
 ```
 
-Open `http://localhost:3000`.
+Open `http://localhost:3000` and sign in with the configured demo access token. See `DEMO.md` for the scripted judging flow.
 
 ## Validate
 

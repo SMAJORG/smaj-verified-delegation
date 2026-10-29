@@ -24,7 +24,8 @@ const parseJson = (value: string) => {
 
 const normalizeRecommendation = (value: any, allowedIds: Set<string>): JobRecommendation | null => {
   if (!value || typeof value.jobId !== "string" || !allowedIds.has(value.jobId)) return null;
-  const score = Math.max(0, Math.min(100, Number(value.score) || 0));
+  const rawScore = Number(value.score) || 0;
+  const score = Math.round(Math.max(0, Math.min(100, rawScore > 0 && rawScore <= 1 ? rawScore * 100 : rawScore)));
   const rationale = String(value.rationale || "Strong alignment with the candidate profile.").slice(0, 600);
   const coverNote = String(value.coverNote || "I am interested in this opportunity and would welcome a conversation.").slice(0, 1800);
   return { jobId: value.jobId, score, rationale, coverNote };

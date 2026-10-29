@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DelegationView, JobsApiJob } from "@/src/domain/types";
 
-type ApiResponse = { delegation?: DelegationView; message?: string };
+type ApiResponse = { delegation?: DelegationView; delegations?: DelegationView[]; message?: string };
 
 const statusLabels: Record<string, string> = {
   awaiting_approval: "Awaiting approval",
@@ -31,6 +31,9 @@ const Icon = ({ name }: { name: "shield" | "spark" | "check" | "database" | "arr
 
 export default function Dashboard() {
   const [delegation, setDelegation] = useState<DelegationView | null>(null);
+  const [history, setHistory] = useState<DelegationView[]>([]);
+  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const [accessToken, setAccessToken] = useState("");
   const [candidateName, setCandidateName] = useState("Amina Okafor");
   const [skills, setSkills] = useState("TypeScript, React, Node.js, REST APIs");
   const [goal, setGoal] = useState("Find three matching SMAJ Jobs opportunities and prepare tailored applications for my approval.");
@@ -38,17 +41,78 @@ export default function Dashboard() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [injectFailure, setInjectFailure] = useState(true);
+  const streamRef = useRef<EventSource | null>(null);
 
   const jobsById = useMemo(() => new Map((delegation?.jobs || []).map(job => [job.id, job])), [delegation]);
+
+  const updateDelegation = (next: DelegationView) => {
+    setDelegation(next);
+    setHistory(current => [next, ...current.filter(item => item.id !== next.id)]);
+  };
+
+  const loadHistory = async () => {
+    const response = await fetch("/api/delegations", { cache: "no-store" });
+    if (response.status === 401 || response.status === 503) {
+      setAuthenticated(false);
+      return;
+    }
+    if (!response.ok) throw new Error("Task history could not be loaded");
+    const payload = await response.json() as ApiResponse;
+    setAuthenticated(true);
+    setHistory(payload.delegations || []);
+  };
+
+  useEffect(() => {
+    loadHistory().catch(error => {
+      setAuthenticated(false);
+      setError(error instanceof Error ? error.message : "Authentication check failed");
+    });
+    return () => streamRef.current?.close();
+  }, []);
+
+  const login = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy("login");
+    setError("");
+    try {
+      const response = await fetch("/api/auth/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessToken }) });
+      const payload = await response.json() as ApiResponse;
+      if (!response.ok) throw new Error(payload.message || "Authentication failed");
+      setAccessToken("");
+      await loadHistory();
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : "Authentication failed");
+    } finally { setBusy(null); }
+  };
+
+  const logout = async () => {
+    await fetch("/api/auth/session", { method: "DELETE" });
+    streamRef.current?.close();
+    setAuthenticated(false);
+    setDelegation(null);
+    setHistory([]);
+  };
+
+  const watch = (id: string) => {
+    streamRef.current?.close();
+    const source = new EventSource(`/api/delegations/${id}/events`);
+    source.addEventListener("delegation", event => {
+      const next = JSON.parse((event as MessageEvent).data) as DelegationView;
+      updateDelegation(next);
+      if (["verified", "failed"].includes(next.status)) source.close();
+    });
+    source.onerror = () => source.close();
+    streamRef.current = source;
+  };
 
   const request = async (url: string, body: Record<string, unknown>, action: string) => {
     setBusy(action);
     setError("");
     try {
-      const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": `ui_${crypto.randomUUID()}` }, body: JSON.stringify(body) });
       const payload = (await response.json()) as ApiResponse;
       if (!response.ok || !payload.delegation) throw new Error(payload.message || `Request failed with HTTP ${response.status}`);
-      setDelegation(payload.delegation);
+      updateDelegation(payload.delegation);
       return payload.delegation;
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "The workflow request failed.");
@@ -65,7 +129,17 @@ export default function Dashboard() {
   };
 
   const approve = () => delegation && request(`/api/delegations/${delegation.id}/approve`, { selectedJobIds: selectedJobs }, "approving");
-  const execute = () => delegation && request(`/api/delegations/${delegation.id}/execute`, { injectTransientFailure: injectFailure }, "executing");
+  const execute = () => {
+    if (!delegation) return;
+    watch(delegation.id);
+    return request(`/api/delegations/${delegation.id}/execute`, { injectTransientFailure: injectFailure }, "executing");
+  };
+
+  const openHistory = (item: DelegationView) => {
+    setDelegation(item);
+    setSelectedJobs(item.selectedJobIds);
+    if (["executing", "retrying", "verifying"].includes(item.status)) watch(item.id);
+  };
 
   const toggleJob = (jobId: string) => setSelectedJobs(current => current.includes(jobId) ? current.filter(id => id !== jobId) : [...current, jobId]);
 
@@ -90,6 +164,7 @@ export default function Dashboard() {
         <div className="topbarMeta">
           <span className="liveDot" /> Meta Model API
           <span className="modelPill">muse-spark-1.3</span>
+          {authenticated && <button className="logoutButton" onClick={logout}>Sign out</button>}
         </div>
       </header>
 
@@ -119,7 +194,14 @@ export default function Dashboard() {
           <p>Define a bounded Jobs goal. Meta reads current opportunities and prepares a plan—not an action.</p>
         </div>
 
-        <form className="contractForm" onSubmit={createDelegation}>
+        {authenticated === null && <div className="authPanel"><span className="spinner darkSpinner" /> Checking secure session...</div>}
+        {authenticated === false && <form className="authPanel" onSubmit={login}>
+          <div><Icon name="shield" /><span><strong>Protected hackathon workspace</strong><small>Enter the configured demo access token. It is exchanged for an HttpOnly signed session.</small></span></div>
+          <label className="field"><span>Demo access token</span><input type="password" value={accessToken} onChange={event => setAccessToken(event.target.value)} autoComplete="current-password" /></label>
+          <button className="primaryButton" disabled={busy === "login" || accessToken.length < 1}>{busy === "login" ? "Authenticating..." : "Unlock dashboard"}</button>
+        </form>}
+
+        {authenticated && <form className="contractForm" onSubmit={createDelegation}>
           <label className="field fieldWide"><span>Authorized goal</span><textarea value={goal} onChange={event => setGoal(event.target.value)} rows={3} /></label>
           <label className="field"><span>Candidate</span><input value={candidateName} onChange={event => setCandidateName(event.target.value)} /></label>
           <label className="field"><span>Skills, comma separated</span><input value={skills} onChange={event => setSkills(event.target.value)} /></label>
@@ -131,9 +213,14 @@ export default function Dashboard() {
           <button className="primaryButton" disabled={Boolean(busy)} type="submit">
             {busy === "planning" ? <><span className="spinner" /> Meta is planning</> : <>Generate verified plan <Icon name="arrow" /></>}
           </button>
-        </form>
+        </form>}
 
         {error && <div className="errorBanner" role="alert"><strong>Workflow stopped safely.</strong> {error}</div>}
+
+        {authenticated && history.length > 0 && <section className="historyPanel">
+          <div className="historyHeading"><div><Icon name="database" /><span><strong>Persistent task history</strong><small>Recovered from stable local storage after restarts.</small></span></div><b>{history.length} tasks</b></div>
+          <div className="historyList">{history.map(item => <button className={item.id === delegation?.id ? "active" : ""} key={item.id} onClick={() => openHistory(item)}><span className={`status status-${item.status}`}>{statusLabels[item.status]}</span><strong>{item.goal}</strong><small>{item.plan.recommendations.length} planned · {time(item.updatedAt)}</small></button>)}</div>
+        </section>}
 
         {delegation && (
           <div className="workspace">
@@ -142,6 +229,14 @@ export default function Dashboard() {
               <div><span>Status</span><b className={`status status-${delegation.status}`}>{statusLabels[delegation.status]}</b></div>
               <div><span>Planner</span><b>{delegation.plan.model}</b></div>
               <div><span>Source</span><b>Production read-only</b></div>
+            </div>
+
+            <div className="progressRail" aria-label="Delegation progress">
+              {["Plan", "Approve", "Execute", "Recover", "Verify"].map((label, index) => {
+                const rank: Record<string, number> = { awaiting_approval: 1, approved: 2, executing: 3, retrying: 3, verifying: 4, verified: 5, failed: 3 };
+                const active = index < (rank[delegation.status] || 0);
+                return <div className={active ? "complete" : ""} key={label}><span>{active ? "✓" : index + 1}</span><b>{label}</b></div>;
+              })}
             </div>
 
             <div className="sectionHeading compact">
@@ -185,6 +280,8 @@ export default function Dashboard() {
                 <button className="primaryButton" onClick={execute} disabled={Boolean(busy)}>{busy === "executing" ? <><span className="spinner" /> Executing and verifying</> : <>Execute approved plan <Icon name="arrow" /></>}</button>
               </div>
             )}
+
+            {["executing", "retrying", "verifying"].includes(delegation.status) && <div className="liveProgress"><span className="spinner" /><div><strong>{statusLabels[delegation.status]} in real time</strong><small>Signed server events update this evidence timeline as each stage persists.</small></div></div>}
 
             <div className="evidenceGrid">
               <section className="timelinePanel">

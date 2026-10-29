@@ -29,6 +29,7 @@ svg { width: 1.2em; height: 1.2em; }
 .topbarMeta { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 650; }
 .liveDot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 5px var(--green-soft); margin-right: 4px; }
 .modelPill { padding: 7px 11px; background: var(--purple-soft); color: var(--purple-dark); border-radius: 999px; }
+.logoutButton { border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; color: var(--muted); background: white; font-size: 11px; font-weight: 750; }
 
 .hero { padding: clamp(56px, 8vw, 100px) clamp(20px, 7vw, 110px); display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, .6fr); gap: clamp(40px, 8vw, 100px); align-items: center; background: radial-gradient(circle at 8% 5%, rgba(139,92,246,.18), transparent 26%), linear-gradient(135deg, #111827 0%, #17152b 55%, #26184a 100%); color: white; min-height: 570px; }
 .eyebrow { display: inline-flex; align-items: center; gap: 9px; color: #c9b8ff; font-size: 13px; text-transform: uppercase; letter-spacing: .13em; font-weight: 750; }
@@ -69,6 +70,24 @@ svg { width: 1.2em; height: 1.2em; }
 .spinner { width: 15px; height: 15px; border: 2px solid rgba(255,255,255,.4); border-top-color: white; border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .errorBanner { margin-top: 18px; padding: 14px 16px; border: 1px solid #f2caca; border-radius: 12px; background: #fff1f1; color: var(--danger); }
+.authPanel { display: grid; grid-template-columns: 1.2fr 1fr auto; align-items: end; gap: 18px; padding: 24px; border: 1px solid var(--line); border-radius: 20px; background: white; box-shadow: 0 18px 55px rgba(31,21,57,.07); }
+.authPanel > div { display: flex; align-items: center; gap: 12px; align-self: center; }
+.authPanel > div > svg { width: 30px; height: 30px; color: var(--purple); }
+.authPanel strong, .authPanel small { display: block; }
+.authPanel small { margin-top: 4px; color: var(--muted); line-height: 1.45; }
+.darkSpinner { border-color: #d5ccec; border-top-color: var(--purple); }
+.historyPanel { margin-top: 20px; padding: 20px; border: 1px solid var(--line); border-radius: 20px; background: white; }
+.historyHeading, .historyHeading > div { display: flex; align-items: center; justify-content: space-between; gap: 11px; }
+.historyHeading > div { justify-content: flex-start; }
+.historyHeading svg { color: var(--purple); }
+.historyHeading strong, .historyHeading small { display: block; }
+.historyHeading small { margin-top: 3px; color: var(--muted); font-size: 11px; }
+.historyHeading > b { color: var(--muted); font-size: 12px; }
+.historyList { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(260px, 1fr); gap: 10px; margin-top: 16px; padding-bottom: 4px; overflow-x: auto; }
+.historyList button { display: grid; justify-items: start; gap: 7px; min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 13px; text-align: left; color: var(--ink); background: #fcfbfe; }
+.historyList button.active { border-color: #8f70e5; background: var(--purple-soft); }
+.historyList button > strong { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.historyList button > small { color: var(--muted); font-size: 10px; }
 
 .workspace { margin-top: 24px; }
 .statusStrip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--line); }
@@ -78,6 +97,11 @@ svg { width: 1.2em; height: 1.2em; }
 .statusStrip b, .statusStrip code { font-size: 13px; }
 .status { width: fit-content; padding: 5px 8px; border-radius: 999px; color: var(--purple-dark); background: var(--purple-soft); }
 .status-verified { color: #08704c; background: var(--green-soft); }
+.progressRail { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 20px 0; }
+.progressRail > div { display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 12px; color: #958ba8; background: #ece8f2; font-size: 11px; }
+.progressRail span { width: 24px; height: 24px; display: grid; place-items: center; flex: none; border-radius: 50%; background: white; }
+.progressRail .complete { color: #08704c; background: var(--green-soft); }
+.progressRail .complete span { color: white; background: var(--green); }
 
 .jobGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .jobCard { position: relative; padding: 22px; border: 1px solid var(--line); border-radius: 20px; background: white; transition: .2s; box-shadow: 0 12px 35px rgba(24,21,40,.04); }
@@ -117,6 +141,9 @@ svg { width: 1.2em; height: 1.2em; }
 .faultToggle input:checked + span::after { transform: translateX(19px); }
 .faultToggle strong, .faultToggle small { display: block; }
 .faultToggle small { margin-top: 3px; color: #aeb8c8; font-size: 11px; }
+.liveProgress { margin-top: 20px; padding: 18px; display: flex; align-items: center; gap: 13px; border-radius: 16px; color: white; background: linear-gradient(135deg, #5730bd, #26184a); }
+.liveProgress strong, .liveProgress small { display: block; }
+.liveProgress small { margin-top: 4px; color: #d2c8ed; }
 
 .evidenceGrid { display: grid; grid-template-columns: 1.12fr .88fr; gap: 20px; margin-top: 42px; }
 .timelinePanel, .receiptPanel { min-height: 360px; padding: 24px; border: 1px solid var(--line); border-radius: 21px; background: white; }
@@ -166,6 +193,7 @@ footer p { color: #8e9aad; font-size: 11px; text-align: right; }
 @media (max-width: 650px) {
   .topbar { height: 64px; }
   .topbarMeta { font-size: 0; }
+  .logoutButton { font-size: 10px; }
   .modelPill { font-size: 10px; }
   .hero { padding-top: 55px; }
   .hero h1 { font-size: 46px; }
@@ -175,6 +203,9 @@ footer p { color: #8e9aad; font-size: 11px; text-align: right; }
   .contractForm .primaryButton { width: 100%; }
   .statusStrip { grid-template-columns: 1fr; }
   .statusStrip > div { padding: 14px; }
+  .authPanel { grid-template-columns: 1fr; align-items: stretch; }
+  .authPanel .primaryButton { width: 100%; }
+  .progressRail { grid-template-columns: 1fr; }
   footer { align-items: flex-start; flex-direction: column; }
   footer p { text-align: left; }
 }

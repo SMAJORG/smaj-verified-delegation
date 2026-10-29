@@ -30,7 +30,7 @@ test("Meta planner uses muse-spark-1.3 and rejects unknown job IDs", async () =>
       output: [{ content: [{ type: "output_text", text: JSON.stringify({
         summary: "Best matches",
         recommendations: [
-          { jobId: jobs[0].id, score: 96, rationale: "Strong match", coverNote: "Hello" },
+          { jobId: jobs[0].id, score: 0.96, rationale: "Strong match", coverNote: "Hello" },
           { jobId: "invented-job", score: 100, rationale: "Invalid", coverNote: "No" },
         ],
       }) }] }],
@@ -47,6 +47,7 @@ test("Meta planner uses muse-spark-1.3 and rejects unknown job IDs", async () =>
     assert.equal(requestBody.model, META_MODEL);
     assert.equal(requestBody.store, false);
     assert.deepEqual(result.recommendations.map(item => item.jobId), [jobs[0].id]);
+    assert.equal(result.recommendations[0].score, 96);
   } finally {
     if (previousKey === undefined) delete process.env.META_API_KEY;
     else process.env.META_API_KEY = previousKey;
