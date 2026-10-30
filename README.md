@@ -13,6 +13,14 @@ An independent Meta-powered AI agent that turns authorized goals into bounded ac
 
 Production Jobs submissions and real Pi payments remain disabled by design.
 
+## SMAJ PI HUB integration
+
+SMAJ AI runs independently at `https://ai.smajpihub.com` and signs users in with SMAJ PI HUB single sign-on: PiHub issues a one-time code, SMAJ AI exchanges it server-to-server for a short-lived signed token, and then creates its own HttpOnly session. Pi access tokens, wallet credentials, and Meta API keys are never sent to SMAJ AI or shared between the two applications.
+
+- Connected read-only services: SMAJ Jobs and SMAJ Store, each behind a user-controlled connection. SSO users start with nothing connected.
+- Task history, approvals, and proof receipts stay isolated per authenticated PiHub user.
+- Real Pi payments and production write operations remain disabled (`SMAJ_REAL_PI_PAYMENTS_ENABLED=false`, `SMAJ_PRODUCTION_WRITES_ENABLED=false`) until separately approved.
+
 ## Configure
 
 Copy `.env.example` to `.env.local` and provide `META_API_KEY` plus a random `SMAJ_DEMO_ACCESS_TOKEN` of at least 16 characters. Secret files are excluded from Git.

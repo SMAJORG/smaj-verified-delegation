@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSession, SESSION_COOKIE } from "@/src/server/auth";
-import { apiError } from "@/src/server/http";
+import { createSession, demoAuthEnabled, requireActorSession, SESSION_COOKIE, ssoConfigured } from "@/src/server/auth";
+import { apiError, AppError } from "@/src/server/http";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET(request: NextRequest) {
+  let authenticated = false;
+  let authType: string | null = null;
+  try {
+    const session = requireActorSession(request);
+    authenticated = true;
+    authType = session.authType;
+  } catch { /* unauthenticated */ }
+  return NextResponse.json({ authenticated, authType, ssoEnabled: ssoConfigured(), demoEnabled: demoAuthEnabled() });
+}
 
 export async function POST(request: NextRequest) {
   try {
+    if (!demoAuthEnabled()) throw new AppError("demo_auth_disabled", "Demo access is disabled; continue with SMAJ PI HUB", 403);
     const body = await request.json() as { accessToken?: string };
     const session = createSession(String(body.accessToken || ""));
     const response = NextResponse.json({ authenticated: true });

@@ -7,7 +7,7 @@ import { MetaServiceRouter } from "@/src/server/service-router";
 test("service catalog contains the official 15 unique SMAJ services", () => {
   assert.equal(SMAJ_SERVICES.length, 15);
   assert.equal(SERVICE_IDS.size, 15);
-  assert.deepEqual(SMAJ_SERVICES.filter(service => service.adapterMode === "connected").map(service => service.id), ["jobs"]);
+  assert.deepEqual(SMAJ_SERVICES.filter(service => service.adapterMode === "connected").map(service => service.id), ["store", "jobs"]);
 });
 
 test("Meta router validates service IDs and blocks unavailable adapters", async () => {

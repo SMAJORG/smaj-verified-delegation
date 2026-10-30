@@ -16,7 +16,7 @@ export type SmajService = {
 };
 
 export const SMAJ_SERVICES: readonly SmajService[] = [
-  { id: "store", name: "SMAJ Store", shortName: "Store", description: "Products and verified stores", platformStatus: "live", adapterMode: "planning_only", capabilities: ["product discovery", "purchase planning"], example: "Compare products that fit my budget", icon: "bag", accent: "#7c3aed" },
+  { id: "store", name: "SMAJ Store", shortName: "Store", description: "Products and verified stores", platformStatus: "live", adapterMode: "connected", capabilities: ["product discovery", "price comparison"], example: "Compare products that fit my budget", icon: "bag", accent: "#7c3aed" },
   { id: "stream", name: "SMAJ Stream", shortName: "Stream", description: "Movies, series, and entertainment", platformStatus: "live", adapterMode: "planning_only", capabilities: ["content discovery", "watch planning"], example: "Build a weekend watchlist", icon: "play", accent: "#db2777" },
   { id: "jobs", name: "SMAJ Jobs", shortName: "Jobs", description: "Jobs and freelance opportunities", platformStatus: "live", adapterMode: "connected", capabilities: ["read opportunities", "match roles", "mock applications"], example: "Find matching jobs and prepare applications", icon: "briefcase", accent: "#6d28d9" },
   { id: "education", name: "SMAJ Education", shortName: "Education", description: "Courses and practical skills", platformStatus: "coming_soon", adapterMode: "planning_only", capabilities: ["learning plans", "course discovery"], example: "Create a learning path for product design", icon: "book", accent: "#2563eb" },

@@ -101,3 +101,13 @@ export type CreateDelegationInput = {
   skills: string[];
   maxApplications?: number;
 };
+
+export type StoreApiProduct = {
+  id: string;
+  title: string;
+  category: string;
+  price: string;
+  sellerName: string;
+  location: string;
+  summary: string;
+};

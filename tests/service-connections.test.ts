@@ -30,3 +30,14 @@ test("rejects unavailable integrations instead of simulating a connection", () =
     assert.throws(() => store.set("actor-one", "health", true), (error: unknown) => error instanceof AppError && error.code === "integration_unavailable");
   } finally { database.close(); }
 });
+
+test("SSO actors start with no services connected until they opt in", () => {
+  const database = createDatabase(":memory:");
+  try {
+    const store = new ServiceConnectionStore(database);
+    const connections = store.list("sso-user-1", "sso");
+    assert.deepEqual(connections.filter(item => item.connected).map(item => item.serviceId), []);
+    store.set("sso-user-1", "jobs", true);
+    assert.equal(store.list("sso-user-1", "sso").find(item => item.serviceId === "jobs")?.connected, true);
+  } finally { database.close(); }
+});

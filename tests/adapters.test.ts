@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { SmajJobsReadAdapter } from "@/src/server/jobs-adapter";
+import { SmajStoreReadAdapter } from "@/src/server/store-adapter";
 import { META_MODEL, MetaJobsPlanner } from "@/src/server/meta-planner";
 import { jobs } from "./fixtures";
 
@@ -52,4 +53,19 @@ test("Meta planner uses muse-spark-1.3 and rejects unknown job IDs", async () =>
     if (previousKey === undefined) delete process.env.META_API_KEY;
     else process.env.META_API_KEY = previousKey;
   }
+});
+
+test("Store adapter performs a GET and normalizes read-only products", async () => {
+  let method = "";
+  const fetcher = async (_input: string | URL | Request, init?: RequestInit) => {
+    method = init?.method || "";
+    return new Response(JSON.stringify({ products: [{ _id: "p1", title: "Solar Lamp", category: "Energy", pricePi: 12, priceUsdt: 30, sellerName: "Ada Stores", location: "Lagos", country: "Nigeria", description: "Bright solar lamp" }] }), { status: 200 });
+  };
+  const adapter = new SmajStoreReadAdapter("https://smaj.example/products", fetcher as typeof fetch);
+  const result = await adapter.listProducts();
+  assert.equal(method, "GET");
+  assert.equal(result[0].id, "p1");
+  assert.equal(result[0].title, "Solar Lamp");
+  assert.equal(result[0].price, "12 Pi");
+  assert.equal(result[0].sellerName, "Ada Stores");
 });

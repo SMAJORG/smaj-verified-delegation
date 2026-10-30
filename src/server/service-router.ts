@@ -69,7 +69,7 @@ export class MetaServiceRouter {
         status: connected ? "approval_required" : "unavailable",
         approvalRequired: true,
         reason: connected
-          ? "SMAJ Jobs supports read-only discovery and mock execution after approval."
+          ? `${service.name} supports read-only discovery and mock execution after approval.`
           : service.adapterMode === "connected"
             ? `${service.name} must be connected before this step can run.`
             : `${service.name} is planning-only until an authorized adapter is available.`,
