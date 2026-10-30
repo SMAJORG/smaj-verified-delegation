@@ -21,14 +21,15 @@ const clean = (value: unknown, fallback: string, limit = 500) => String(value ||
 export class MetaServiceRouter {
   constructor(private readonly fetcher: typeof fetch = fetch) {}
 
-  async plan(task: string): Promise<ServiceRoutePlan> {
+  async plan(task: string, connectedServiceIds: ServiceId[] = ["jobs"]): Promise<ServiceRoutePlan> {
     const request = task.trim();
     if (request.length < 12) throw new AppError("invalid_task", "Describe a specific task using at least 12 characters", 400);
     if (request.length > 2000) throw new AppError("invalid_task", "Task description must be 2,000 characters or fewer", 400);
     const apiKey = process.env.META_API_KEY?.trim();
     if (!apiKey) throw new AppError("meta_not_configured", "Meta Model API is not configured", 503);
 
-    const catalog = SMAJ_SERVICES.map(service => ({ id: service.id, name: service.name, adapterMode: service.adapterMode, capabilities: service.capabilities }));
+    const connectedIds = new Set(connectedServiceIds.filter(serviceId => SERVICE_IDS.has(serviceId)));
+    const catalog = SMAJ_SERVICES.map(service => ({ id: service.id, name: service.name, connected: connectedIds.has(service.id), adapterMode: service.adapterMode, capabilities: service.capabilities }));
     const prompt = [
       "You route user tasks across SMAJ PI HUB services. Return strict JSON only.",
       "Never claim an action completed. Never plan a payment, token swap, donation, purchase, booking, production submission, or medical decision as executable.",
@@ -58,7 +59,7 @@ export class MetaServiceRouter {
       const service = SMAJ_SERVICES.find(item => item.id === serviceId)!;
       const requestedCapability = clean(value?.capability, service.capabilities[0], 100);
       const capability = service.capabilities.includes(requestedCapability) ? requestedCapability : service.capabilities[0];
-      const connected = service.adapterMode === "connected";
+      const connected = service.adapterMode === "connected" && connectedIds.has(service.id);
       return {
         id: clean(value?.id, `step-${index + 1}`, 60),
         serviceId,
@@ -69,7 +70,9 @@ export class MetaServiceRouter {
         approvalRequired: true,
         reason: connected
           ? "SMAJ Jobs supports read-only discovery and mock execution after approval."
-          : `${service.name} is planning-only until an authorized adapter is available.`,
+          : service.adapterMode === "connected"
+            ? `${service.name} must be connected before this step can run.`
+            : `${service.name} is planning-only until an authorized adapter is available.`,
       };
     }).filter((step: ServicePlanStep | null): step is ServicePlanStep => Boolean(step)).slice(0, 10);
     if (steps.length === 0) throw new AppError("invalid_meta_plan", "Meta did not identify a supported SMAJ service", 502);

@@ -44,6 +44,10 @@ const initialize = (database: AppDatabase) => {
       PRIMARY KEY (owner_id, operation, request_key),
       FOREIGN KEY (delegation_id) REFERENCES delegations(id) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS service_connections (
+      owner_id TEXT NOT NULL, service_id TEXT NOT NULL, connected INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL, PRIMARY KEY (owner_id, service_id)
+    );
   `);
 
   if (!hasColumn(database, "delegations", "owner_id")) database.exec("ALTER TABLE delegations ADD COLUMN owner_id TEXT NOT NULL DEFAULT 'legacy-demo'");
@@ -54,6 +58,7 @@ const initialize = (database: AppDatabase) => {
     CREATE INDEX IF NOT EXISTS delegations_owner_updated ON delegations(owner_id, updated_at DESC);
     CREATE UNIQUE INDEX IF NOT EXISTS delegations_owner_create_key ON delegations(owner_id, create_key) WHERE create_key IS NOT NULL;
     CREATE INDEX IF NOT EXISTS delegation_events_delegation_id ON delegation_events(delegation_id, id);
+    CREATE INDEX IF NOT EXISTS service_connections_owner ON service_connections(owner_id, connected);
   `);
 };
 
