@@ -1,318 +1,100 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SMAJ_SERVICES, type ServiceId, type ServiceRoutePlan } from "@/src/domain/services";
 import type { DelegationView, JobsApiJob } from "@/src/domain/types";
 
-type ApiResponse = { delegation?: DelegationView; delegations?: DelegationView[]; message?: string };
+type ApiResponse = { delegation?: DelegationView; delegations?: DelegationView[]; plan?: ServiceRoutePlan; message?: string };
+type View = "home" | "services" | "tasks" | "proofs";
+const statusLabels: Record<string, string> = { awaiting_approval: "Awaiting approval", approved: "Approved", executing: "Executing", retrying: "Recovering", verifying: "Verifying", verified: "Verified", failed: "Needs attention" };
+const platformLabels = { live: "Live", coming_soon: "Coming soon", in_progress: "In progress" };
+const time = (value: string) => new Intl.DateTimeFormat("en", { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 
-const statusLabels: Record<string, string> = {
-  awaiting_approval: "Awaiting approval",
-  approved: "Approved",
-  executing: "Executing",
-  retrying: "Recovering",
-  verifying: "Verifying",
-  verified: "Verified",
-  failed: "Needs attention",
-};
-
-const time = (value: string) => new Intl.DateTimeFormat("en", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date(value));
-
-const Icon = ({ name }: { name: "shield" | "spark" | "check" | "database" | "arrow" | "receipt" }) => {
-  const paths = {
-    shield: <path d="M12 3 5 6v5c0 4.7 2.8 8.3 7 10 4.2-1.7 7-5.3 7-10V6l-7-3Zm-3 9 2 2 4-4" />,
-    spark: <path d="m12 2 1.4 5.1L18 9l-4.6 1.9L12 16l-1.4-5.1L6 9l4.6-1.9L12 2Zm6 12 .8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14Z" />,
-    check: <path d="m5 12 4 4L19 6" />,
-    database: <path d="M4 6c0-2 3.6-3 8-3s8 1 8 3-3.6 3-8 3-8-1-8-3Zm0 0v6c0 2 3.6 3 8 3s8-1 8-3V6M4 12v6c0 2 3.6 3 8 3s8-1 8-3v-6" />,
-    arrow: <path d="M5 12h14m-5-5 5 5-5 5" />,
-    receipt: <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Zm3 5h6M9 12h6" />,
+const Icon = ({ name }: { name: string }) => {
+  const paths: Record<string, React.ReactNode> = {
+    home: <><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></>, spark: <path d="m12 2 1.5 5L18 9l-4.5 2L12 16l-1.5-5L6 9l4.5-2L12 2Zm6 13 .7 2.3L21 18l-2.3.7L18 21l-.7-2.3L15 18l2.3-.7L18 15Z"/>,
+    grid: <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/>, clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>, receipt: <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Zm3 5h6m-6 4h6"/>, bell: <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-8 12h4"/>, shield: <path d="M12 3 5 6v5c0 4.7 2.8 8.3 7 10 4.2-1.7 7-5.3 7-10V6l-7-3Zm-3 9 2 2 4-4"/>, arrow: <path d="M5 12h14m-5-5 5 5-5 5"/>, check: <path d="m5 12 4 4L19 6"/>, lock: <><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></>,
+    bag: <><path d="M5 8h14l-1 13H6L5 8Z"/><path d="M9 8a3 3 0 0 1 6 0"/></>, play: <><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3V9Z"/></>, briefcase: <><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V4h6v3M3 12h18"/></>, book: <path d="M4 5a3 3 0 0 1 3-2h5v17H7a3 3 0 0 0-3 2V5Zm16 0a3 3 0 0 0-3-2h-5v17h5a3 3 0 0 1 3 2V5Z"/>, trophy: <path d="M8 4h8v5a4 4 0 0 1-8 0V4Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 1v4m-4 3h8"/>,
+    food: <path d="M7 3v8m-3-8v5a3 3 0 0 0 6 0V3m-3 8v10m10-18v18m0-18c-4 2-4 8 0 9"/>, health: <path d="M12 21S4 16 4 9a4 4 0 0 1 7-2.5A4 4 0 0 1 20 9c0 7-8 12-8 12Zm-4-9h3l1-3 2 6 1-3h2"/>, car: <path d="m5 16-1-3 2-6h12l2 6-1 3M4 13h16v6H4v-6Zm3 6v2m10-2v2M7 16h.01M17 16h.01"/>, leaf: <path d="M20 4C10 4 5 9 5 15c0 3 2 5 5 5 6 0 10-7 10-16ZM4 21c3-6 7-9 12-12"/>, bolt: <path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/>, heart: <path d="M12 21S4 16 4 9a4 4 0 0 1 7-2.5A4 4 0 0 1 20 9c0 7-8 12-8 12Z"/>,
+    homeService: <><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></>, calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4m8-4v4M3 10h18"/></>, swap: <path d="m7 7 3-3m-3 3 3 3M7 7h10a3 3 0 0 1 3 3m-3 7-3 3m3-3-3-3m3 3H7a3 3 0 0 1-3-3"/>, token: <><circle cx="12" cy="12" r="9"/><path d="M9 8h5a2 2 0 1 1 0 4H9m0 0h6a2 2 0 1 1 0 4H9m3-10v12"/></>,
   };
-  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name] || paths.spark}</svg>;
 };
 
 export default function Dashboard() {
-  const [delegation, setDelegation] = useState<DelegationView | null>(null);
-  const [history, setHistory] = useState<DelegationView[]>([]);
+  const [view, setView] = useState<View>("home");
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [accessToken, setAccessToken] = useState("");
+  const [task, setTask] = useState("Find suitable jobs, create a learning plan for missing skills, and plan transport for interviews.");
+  const [routePlan, setRoutePlan] = useState<ServiceRoutePlan | null>(null);
+  const [selectedService, setSelectedService] = useState<ServiceId | null>(null);
+  const [delegation, setDelegation] = useState<DelegationView | null>(null);
+  const [history, setHistory] = useState<DelegationView[]>([]);
   const [candidateName, setCandidateName] = useState("Amina Okafor");
   const [skills, setSkills] = useState("TypeScript, React, Node.js, REST APIs");
-  const [goal, setGoal] = useState("Find three matching SMAJ Jobs opportunities and prepare tailored applications for my approval.");
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [injectFailure, setInjectFailure] = useState(true);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const streamRef = useRef<EventSource | null>(null);
-
   const jobsById = useMemo(() => new Map((delegation?.jobs || []).map(job => [job.id, job])), [delegation]);
-
-  const updateDelegation = (next: DelegationView) => {
-    setDelegation(next);
-    setHistory(current => [next, ...current.filter(item => item.id !== next.id)]);
-  };
-
-  const loadHistory = async () => {
-    const response = await fetch("/api/delegations", { cache: "no-store" });
-    if (response.status === 401 || response.status === 503) {
-      setAuthenticated(false);
-      return;
-    }
-    if (!response.ok) throw new Error("Task history could not be loaded");
-    const payload = await response.json() as ApiResponse;
-    setAuthenticated(true);
-    setHistory(payload.delegations || []);
-  };
-
-  useEffect(() => {
-    loadHistory().catch(error => {
-      setAuthenticated(false);
-      setError(error instanceof Error ? error.message : "Authentication check failed");
-    });
-    return () => streamRef.current?.close();
-  }, []);
-
-  const login = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setBusy("login");
-    setError("");
-    try {
-      const response = await fetch("/api/auth/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessToken }) });
-      const payload = await response.json() as ApiResponse;
-      if (!response.ok) throw new Error(payload.message || "Authentication failed");
-      setAccessToken("");
-      await loadHistory();
-    } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : "Authentication failed");
-    } finally { setBusy(null); }
-  };
-
-  const logout = async () => {
-    await fetch("/api/auth/session", { method: "DELETE" });
-    streamRef.current?.close();
-    setAuthenticated(false);
-    setDelegation(null);
-    setHistory([]);
-  };
-
-  const watch = (id: string) => {
-    streamRef.current?.close();
-    const source = new EventSource(`/api/delegations/${id}/events`);
-    source.addEventListener("delegation", event => {
-      const next = JSON.parse((event as MessageEvent).data) as DelegationView;
-      updateDelegation(next);
-      if (["verified", "failed"].includes(next.status)) source.close();
-    });
-    source.onerror = () => source.close();
-    streamRef.current = source;
-  };
-
-  const request = async (url: string, body: Record<string, unknown>, action: string) => {
-    setBusy(action);
-    setError("");
-    try {
-      const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": `ui_${crypto.randomUUID()}` }, body: JSON.stringify(body) });
-      const payload = (await response.json()) as ApiResponse;
-      if (!response.ok || !payload.delegation) throw new Error(payload.message || `Request failed with HTTP ${response.status}`);
-      updateDelegation(payload.delegation);
-      return payload.delegation;
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "The workflow request failed.");
-      return null;
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const createDelegation = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const created = await request("/api/delegations", { goal, candidateName, skills: skills.split(",").map(value => value.trim()).filter(Boolean), maxApplications: 3 }, "planning");
-    if (created) setSelectedJobs(created.selectedJobIds);
-  };
-
+  const updateDelegation = (next: DelegationView) => { setDelegation(next); setHistory(current => [next, ...current.filter(item => item.id !== next.id)]); };
+  const loadHistory = async () => { const response = await fetch("/api/delegations", { cache: "no-store" }); if (response.status === 401 || response.status === 503) { setAuthenticated(false); return; } if (!response.ok) throw new Error("Task history could not be loaded"); const payload = await response.json() as ApiResponse; setAuthenticated(true); setHistory(payload.delegations || []); };
+  useEffect(() => { loadHistory().catch(loadError => { setAuthenticated(false); setError(loadError instanceof Error ? loadError.message : "Authentication failed"); }); return () => streamRef.current?.close(); }, []);
+  const login = async (event: React.FormEvent) => { event.preventDefault(); setBusy("login"); setError(""); try { const response = await fetch("/api/auth/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessToken }) }); const payload = await response.json() as ApiResponse; if (!response.ok) throw new Error(payload.message || "Authentication failed"); setAccessToken(""); await loadHistory(); } catch (loginError) { setError(loginError instanceof Error ? loginError.message : "Authentication failed"); } finally { setBusy(null); } };
+  const logout = async () => { await fetch("/api/auth/session", { method: "DELETE" }); streamRef.current?.close(); setAuthenticated(false); setHistory([]); setDelegation(null); };
+  const routeTask = async (event: React.FormEvent) => { event.preventDefault(); setBusy("routing"); setError(""); setRoutePlan(null); try { const response = await fetch("/api/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ task }) }); const payload = await response.json() as ApiResponse; if (!response.ok || !payload.plan) throw new Error(payload.message || "Meta could not route this task"); setRoutePlan(payload.plan); } catch (routeError) { setError(routeError instanceof Error ? routeError.message : "Routing failed safely"); } finally { setBusy(null); } };
+  const watch = (id: string) => { streamRef.current?.close(); const source = new EventSource(`/api/delegations/${id}/events`); source.addEventListener("delegation", event => { const next = JSON.parse((event as MessageEvent).data) as DelegationView; updateDelegation(next); if (["verified", "failed"].includes(next.status)) source.close(); }); source.onerror = () => source.close(); streamRef.current = source; };
+  const request = async (url: string, body: Record<string, unknown>, action: string) => { setBusy(action); setError(""); try { const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": `ui_${crypto.randomUUID()}` }, body: JSON.stringify(body) }); const payload = await response.json() as ApiResponse; if (!response.ok || !payload.delegation) throw new Error(payload.message || `Request failed with HTTP ${response.status}`); updateDelegation(payload.delegation); return payload.delegation; } catch (requestError) { setError(requestError instanceof Error ? requestError.message : "The workflow stopped safely"); return null; } finally { setBusy(null); } };
+  const createJobsPlan = async () => { const created = await request("/api/delegations", { goal: task, candidateName, skills: skills.split(",").map(value => value.trim()).filter(Boolean), maxApplications: 3 }, "planning"); if (created) { setSelectedJobs(created.selectedJobIds); setView("tasks"); } };
   const approve = () => delegation && request(`/api/delegations/${delegation.id}/approve`, { selectedJobIds: selectedJobs }, "approving");
-  const execute = () => {
-    if (!delegation) return;
-    watch(delegation.id);
-    return request(`/api/delegations/${delegation.id}/execute`, { injectTransientFailure: injectFailure }, "executing");
-  };
+  const execute = () => { if (!delegation) return; watch(delegation.id); return request(`/api/delegations/${delegation.id}/execute`, { injectTransientFailure: injectFailure }, "executing"); };
+  const openHistory = (item: DelegationView) => { setDelegation(item); setSelectedJobs(item.selectedJobIds); setView("tasks"); if (["executing", "retrying", "verifying"].includes(item.status)) watch(item.id); };
+  const downloadReceipt = () => { if (!delegation?.receipt) return; const url = URL.createObjectURL(new Blob([JSON.stringify(delegation.receipt, null, 2)], { type: "application/json" })); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `smaj-proof-${delegation.id}.json`; anchor.click(); URL.revokeObjectURL(url); };
+  const chooseService = (id: ServiceId) => { const service = SMAJ_SERVICES.find(item => item.id === id)!; setSelectedService(id); setTask(service.example); setView("home"); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
-  const openHistory = (item: DelegationView) => {
-    setDelegation(item);
-    setSelectedJobs(item.selectedJobIds);
-    if (["executing", "retrying", "verifying"].includes(item.status)) watch(item.id);
-  };
+  if (authenticated !== true) return <Login authenticated={authenticated} accessToken={accessToken} setAccessToken={setAccessToken} busy={busy} error={error} login={login} />;
 
-  const toggleJob = (jobId: string) => setSelectedJobs(current => current.includes(jobId) ? current.filter(id => id !== jobId) : [...current, jobId]);
+  return <main className="appShell">
+    <aside className="sidebar"><button className="brand" onClick={() => setView("home")}><span className="brandMark"><Icon name="spark" /></span><span><strong>SMAJ AI</strong><small>Task Platform</small></span></button><nav><NavButton icon="home" label="Home" active={view === "home"} onClick={() => setView("home")} /><NavButton icon="grid" label="Services" badge="15" active={view === "services"} onClick={() => setView("services")} /><NavButton icon="clock" label="Tasks" badge={history.length || undefined} active={view === "tasks"} onClick={() => setView("tasks")} /><NavButton icon="receipt" label="Proofs" active={view === "proofs"} onClick={() => setView("proofs")} /></nav><div className="sidebarTrust"><Icon name="shield" /><div><strong>Safe execution</strong><small>Payments and production submissions are disabled.</small></div></div><button className="profileButton" onClick={logout}><span>AO</span><div><strong>Demo workspace</strong><small>Sign out</small></div></button></aside>
+    <section className="mainArea"><header className="topbar"><div><p>{view === "home" ? "AI Task Dashboard" : view === "services" ? "Service Network" : view === "tasks" ? "Task History" : "Verified Proofs"}</p><span><i /> Meta muse-spark-1.3 connected</span></div><button className="notificationButton" onClick={() => setNotificationsOpen(value => !value)} aria-label="Notifications"><Icon name="bell" /><i /></button>{notificationsOpen && <div className="notificationPanel"><strong>Notifications</strong><div><Icon name="shield" /><span><b>Safety controls active</b><small>No real payments or production writes.</small></span></div>{history[0] && <div><Icon name="clock" /><span><b>{statusLabels[history[0].status]}</b><small>{history[0].goal.slice(0, 62)}</small></span></div>}</div>}</header>
+      <div className="content">{error && <div className="errorBanner globalError"><strong>Task stopped safely.</strong> {error}<button onClick={() => setError("")}>×</button></div>}
+        {view === "home" && <HomeView task={task} setTask={setTask} routeTask={routeTask} busy={busy} routePlan={routePlan} candidateName={candidateName} setCandidateName={setCandidateName} skills={skills} setSkills={setSkills} createJobsPlan={createJobsPlan} selectedService={selectedService} chooseService={chooseService} history={history} setView={setView} />}
+        {view === "services" && <ServicesView selectedService={selectedService} chooseService={chooseService} />}
+        {view === "tasks" && <TasksView history={history} delegation={delegation} openHistory={openHistory} setView={setView} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} busy={busy} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} />}
+        {view === "proofs" && <ProofsView history={history} openHistory={openHistory} />}
+      </div>
+    </section>
+    <nav className="mobileNav"><NavButton icon="home" label="Home" active={view === "home"} onClick={() => setView("home")} /><NavButton icon="grid" label="Services" active={view === "services"} onClick={() => setView("services")} /><NavButton icon="clock" label="Tasks" active={view === "tasks"} onClick={() => setView("tasks")} /><NavButton icon="receipt" label="Proofs" active={view === "proofs"} onClick={() => setView("proofs")} /></nav>
+  </main>;
+}
 
-  const downloadReceipt = () => {
-    if (!delegation?.receipt) return;
-    const blob = new Blob([JSON.stringify(delegation.receipt, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `smaj-proof-${delegation.id}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
+function Login({ authenticated, accessToken, setAccessToken, busy, error, login }: { authenticated: boolean | null; accessToken: string; setAccessToken: (value: string) => void; busy: string | null; error: string; login: (event: React.FormEvent) => void }) {
+  return <main className="loginScreen"><section className="loginBrand"><div className="brandMark"><Icon name="spark" /></div><strong>SMAJ AI</strong><span>One intelligent workspace for the SMAJ PI HUB ecosystem.</span></section><form className="loginCard" onSubmit={login}><div className="secureIcon"><Icon name="shield" /></div><p className="eyebrow">Verified delegation</p><h1>Welcome to your AI task hub</h1><p>Access the protected hackathon workspace with your configured demo token.</p>{authenticated === null ? <div className="checking"><span className="spinner dark" /> Checking secure session…</div> : <><label><span>Demo access token</span><input type="password" value={accessToken} onChange={event => setAccessToken(event.target.value)} autoComplete="current-password" placeholder="Enter access token" /></label><button className="primaryButton" disabled={busy === "login" || !accessToken}>{busy === "login" ? "Authenticating…" : "Unlock workspace"}<Icon name="arrow" /></button></>}{error && <div className="errorBanner">{error}</div>}<small><Icon name="lock" /> Credentials are exchanged for an HttpOnly signed session.</small></form></main>;
+}
 
-  return (
-    <main>
-      <header className="topbar">
-        <a className="brand" href="#top" aria-label="SMAJ Verified Delegation home">
-          <span className="brandMark">S</span>
-          <span><strong>SMAJ AI</strong><small>Verified Delegation</small></span>
-        </a>
-        <div className="topbarMeta">
-          <span className="liveDot" /> Meta Model API
-          <span className="modelPill">muse-spark-1.3</span>
-          {authenticated && <button className="logoutButton" onClick={logout}>Sign out</button>}
-        </div>
-      </header>
+function NavButton({ icon, label, badge, active, onClick }: { icon: string; label: string; badge?: string | number; active: boolean; onClick: () => void }) { return <button className={active ? "active" : ""} onClick={onClick}><Icon name={icon} /><span>{label}</span>{badge !== undefined && <b>{badge}</b>}</button>; }
 
-      <section className="hero" id="top">
-        <div className="heroCopy">
-          <div className="eyebrow"><Icon name="shield" /> Authorized actions. Verified outcomes.</div>
-          <h1>Turn AI intentions into <span>trusted proof.</span></h1>
-          <p>SMAJ Verified Delegation plans bounded tasks, pauses for human approval, recovers safely, and verifies the real outcome before it ever claims success.</p>
-          <div className="heroBadges">
-            <span><Icon name="database" /> SMAJ Jobs read-only</span>
-            <span><Icon name="check" /> Mock submissions only</span>
-            <span><Icon name="shield" /> No Pi payments</span>
-          </div>
-        </div>
-        <div className="trustCard">
-          <div className="trustOrb"><Icon name="spark" /></div>
-          <strong>Proof-carrying AI</strong>
-          <p>Every completed action carries approval evidence, deterministic checks, and a SHA-256 receipt digest.</p>
-          <div className="trustMetric"><span>Production side effects</span><b>Disabled</b></div>
-          <div className="trustMetric"><span>Verification mode</span><b>Independent</b></div>
-        </div>
-      </section>
+function HomeView({ task, setTask, routeTask, busy, routePlan, candidateName, setCandidateName, skills, setSkills, createJobsPlan, selectedService, chooseService, history, setView }: any) {
+  return <><section className="welcome"><div><p className="eyebrow">One identity · One workspace · 15 services</p><h1>What can SMAJ AI<br/><span>help you accomplish?</span></h1><p>Describe an outcome. Meta plans the right services, pauses for your approval, and verifies supported actions before reporting success.</p></div><div className="trustOrb"><Icon name="shield" /><span><b>Human-controlled</b><small>Every action stays bounded</small></span></div></section><form className="taskComposer" onSubmit={routeTask}><textarea value={task} onChange={event => setTask(event.target.value)} rows={3} placeholder="Ask SMAJ AI to plan a task across jobs, education, transport, housing, and more…" /><div><span><Icon name="spark" /> Auto-route across services</span><button className="composerSubmit" disabled={busy === "routing" || task.trim().length < 12}>{busy === "routing" ? <><span className="spinner" /> Planning</> : <>Plan task <Icon name="arrow" /></>}</button></div></form><div className="quickPrompts"><span>Try:</span>{["Find jobs and plan interview travel", "Build a skills learning plan", "Plan housing near a new job"].map(prompt => <button key={prompt} onClick={() => setTask(prompt)}>{prompt}</button>)}</div>
+    {routePlan && <section className="routePlan"><SectionTitle icon="spark" eyebrow="Meta service plan" title="Ready for your review" action={<span className="modelBadge">{routePlan.model}</span>} /><p className="planSummary">{routePlan.summary}</p><div className="routeSteps">{routePlan.steps.map((step: any, index: number) => { const service = SMAJ_SERVICES.find(item => item.id === step.serviceId)!; return <article key={`${step.id}-${index}`}><div className="stepNumber">{index + 1}</div><span className="serviceIcon small" style={{ color: service.accent, background: `${service.accent}12` }}><Icon name={service.icon} /></span><div><p>{service.name}</p><h3>{step.title}</h3><span>{step.description}</span><small className={step.status === "unavailable" ? "unavailable" : "approval"}>{step.status === "unavailable" ? "Planning only · execution unavailable" : "Approval required · connected adapter"}</small></div></article>; })}</div><div className="planWarnings"><Icon name="shield" /><div>{routePlan.warnings.map((warning: string) => <span key={warning}>{warning}</span>)}</div></div>{routePlan.services.includes("jobs") && <div className="jobsLaunch"><div><strong>Continue with connected SMAJ Jobs</strong><span>Current opportunities are read-only. Any application remains a local mock.</span></div><div className="candidateFields"><input value={candidateName} onChange={event => setCandidateName(event.target.value)} aria-label="Candidate name" /><input value={skills} onChange={event => setSkills(event.target.value)} aria-label="Candidate skills" /></div><button className="primaryButton" disabled={Boolean(busy)} onClick={createJobsPlan}>{busy === "planning" ? "Reading Jobs…" : "Generate Jobs plan"}<Icon name="arrow" /></button></div>}</section>}
+    <section className="servicesSection"><SectionTitle icon="grid" eyebrow="SMAJ ecosystem" title="Explore all services" action={<button onClick={() => setView("services")}>View all <Icon name="arrow" /></button>} /><div className="serviceGrid compactGrid">{SMAJ_SERVICES.slice(0, 6).map(service => <ServiceCard service={service} key={service.id} selected={selectedService === service.id} onSelect={chooseService} />)}</div></section><section className="overviewGrid"><Metric icon="clock" value={history.length} label="Persistent tasks"/><Metric icon="shield" value={history.filter((item: DelegationView) => item.status === "awaiting_approval").length} label="Awaiting approval"/><Metric icon="receipt" value={history.filter((item: DelegationView) => item.receipt).length} label="Verified receipts"/><Metric icon="grid" value="1 / 15" label="Connected adapters"/></section></>;
+}
 
-      <section className="workflowShell">
-        <div className="sectionHeading">
-          <div><span className="sectionIndex">01</span><h2>Create a delegation</h2></div>
-          <p>Define a bounded Jobs goal. Meta reads current opportunities and prepares a plan—not an action.</p>
-        </div>
+function ServicesView({ selectedService, chooseService }: { selectedService: ServiceId | null; chooseService: (id: ServiceId) => void }) { return <section className="pageSection"><div className="pageHeading"><p className="eyebrow">SMAJ PI HUB ecosystem</p><h1>15 connected directions.<br/><span>One AI workspace.</span></h1><p>Platform status comes from SMAJ PI HUB. Adapter status shows what this independent AI project can safely perform today.</p></div><div className="serviceLegend"><span><i className="live" /> Platform live</span><span><i className="connected" /> AI adapter connected</span><span><i /> Planning only</span></div><div className="serviceGrid">{SMAJ_SERVICES.map(service => <ServiceCard service={service} key={service.id} selected={selectedService === service.id} onSelect={chooseService} />)}</div></section>; }
 
-        {authenticated === null && <div className="authPanel"><span className="spinner darkSpinner" /> Checking secure session...</div>}
-        {authenticated === false && <form className="authPanel" onSubmit={login}>
-          <div><Icon name="shield" /><span><strong>Protected hackathon workspace</strong><small>Enter the configured demo access token. It is exchanged for an HttpOnly signed session.</small></span></div>
-          <label className="field"><span>Demo access token</span><input type="password" value={accessToken} onChange={event => setAccessToken(event.target.value)} autoComplete="current-password" /></label>
-          <button className="primaryButton" disabled={busy === "login" || accessToken.length < 1}>{busy === "login" ? "Authenticating..." : "Unlock dashboard"}</button>
-        </form>}
+function TasksView(props: any) { const { history, delegation, openHistory, setView, jobsById, selectedJobs, setSelectedJobs, busy, approve, execute, injectFailure, setInjectFailure, downloadReceipt } = props; return <section className="pageSection"><div className="pageHeading rowHeading"><div><p className="eyebrow">Persistent workspace</p><h1>Tasks and approvals</h1><p>Jobs delegations survive restarts and resume with idempotent execution.</p></div><button className="primaryButton" onClick={() => setView("home")}>New task <Icon name="spark" /></button></div><div className="taskLayout"><aside className="historyList"><h2>Recent tasks</h2>{history.length === 0 ? <p>No Jobs tasks yet.</p> : history.map((item: DelegationView) => <button className={item.id === delegation?.id ? "active" : ""} key={item.id} onClick={() => openHistory(item)}><span className={`status status-${item.status}`}>{statusLabels[item.status]}</span><strong>{item.goal}</strong><small>{item.plan.recommendations.length} actions · {time(item.updatedAt)}</small></button>)}</aside><div className="taskDetail">{delegation ? <DelegationWorkspace delegation={delegation} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} busy={busy} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} /> : <EmptyState icon="clock" title="Select a task" text="Open a persistent task to review its plan, approvals, evidence, and proof." />}</div></div></section>; }
 
-        {authenticated && <form className="contractForm" onSubmit={createDelegation}>
-          <label className="field fieldWide"><span>Authorized goal</span><textarea value={goal} onChange={event => setGoal(event.target.value)} rows={3} /></label>
-          <label className="field"><span>Candidate</span><input value={candidateName} onChange={event => setCandidateName(event.target.value)} /></label>
-          <label className="field"><span>Skills, comma separated</span><input value={skills} onChange={event => setSkills(event.target.value)} /></label>
-          <div className="contractGuardrails">
-            <span><b>Scope</b> 3 mock applications</span>
-            <span><b>Expiry</b> 24 hours</span>
-            <span><b>Approval</b> Required</span>
-          </div>
-          <button className="primaryButton" disabled={Boolean(busy)} type="submit">
-            {busy === "planning" ? <><span className="spinner" /> Meta is planning</> : <>Generate verified plan <Icon name="arrow" /></>}
-          </button>
-        </form>}
+function ProofsView({ history, openHistory }: { history: DelegationView[]; openHistory: (item: DelegationView) => void }) { const proofs = history.filter(item => item.receipt); return <section className="pageSection"><div className="pageHeading"><p className="eyebrow">Independent verification</p><h1>Proof receipts</h1><p>Receipts are issued only after approved mock actions pass deterministic checks.</p></div><div className="proofGrid">{proofs.length ? proofs.map(item => <button key={item.id} onClick={() => openHistory(item)}><span className="proofSeal"><Icon name="check" /></span><div><small>Verified outcome</small><strong>{item.goal}</strong><code>{item.receipt?.proofHash.slice(0, 28)}…</code></div><Icon name="arrow" /></button>) : <EmptyState icon="receipt" title="No receipts yet" text="Complete an approved Jobs demonstration to issue the first proof." />}</div></section>; }
 
-        {error && <div className="errorBanner" role="alert"><strong>Workflow stopped safely.</strong> {error}</div>}
+function ServiceCard({ service, selected, onSelect }: { service: typeof SMAJ_SERVICES[number]; selected: boolean; onSelect: (id: ServiceId) => void }) { return <button className={`serviceCard ${selected ? "selected" : ""}`} onClick={() => onSelect(service.id)}><div className="serviceCardTop"><span className="serviceIcon" style={{ color: service.accent, background: `${service.accent}12` }}><Icon name={service.id === "housing" ? "homeService" : service.icon} /></span><span className={`platformStatus ${service.platformStatus}`}>{platformLabels[service.platformStatus]}</span></div><h3>{service.name}</h3><p>{service.description}</p><div className="capabilityTags">{service.capabilities.slice(0, 2).map(capability => <span key={capability}>{capability}</span>)}</div><div className={`adapterStatus ${service.adapterMode}`}><i />{service.adapterMode === "connected" ? "AI adapter connected" : "Planning only"}<Icon name="arrow" /></div></button>; }
+function SectionTitle({ icon, eyebrow, title, action }: { icon: string; eyebrow: string; title: string; action?: React.ReactNode }) { return <div className="sectionTitle"><div><span className="titleIcon"><Icon name={icon} /></span><div><p>{eyebrow}</p><h2>{title}</h2></div></div>{action}</div>; }
+function Metric({ icon, value, label }: { icon: string; value: React.ReactNode; label: string }) { return <div><span><Icon name={icon} /></span><strong>{value}</strong><small>{label}</small></div>; }
+function EmptyState({ icon, title, text }: { icon: string; title: string; text: string }) { return <div className="emptyState"><span><Icon name={icon} /></span><h2>{title}</h2><p>{text}</p></div>; }
 
-        {authenticated && history.length > 0 && <section className="historyPanel">
-          <div className="historyHeading"><div><Icon name="database" /><span><strong>Persistent task history</strong><small>Recovered from stable local storage after restarts.</small></span></div><b>{history.length} tasks</b></div>
-          <div className="historyList">{history.map(item => <button className={item.id === delegation?.id ? "active" : ""} key={item.id} onClick={() => openHistory(item)}><span className={`status status-${item.status}`}>{statusLabels[item.status]}</span><strong>{item.goal}</strong><small>{item.plan.recommendations.length} planned · {time(item.updatedAt)}</small></button>)}</div>
-        </section>}
-
-        {delegation && (
-          <div className="workspace">
-            <div className="statusStrip">
-              <div><span>Delegation</span><code>{delegation.id.slice(0, 8)}</code></div>
-              <div><span>Status</span><b className={`status status-${delegation.status}`}>{statusLabels[delegation.status]}</b></div>
-              <div><span>Planner</span><b>{delegation.plan.model}</b></div>
-              <div><span>Source</span><b>Production read-only</b></div>
-            </div>
-
-            <div className="progressRail" aria-label="Delegation progress">
-              {["Plan", "Approve", "Execute", "Recover", "Verify"].map((label, index) => {
-                const rank: Record<string, number> = { awaiting_approval: 1, approved: 2, executing: 3, retrying: 3, verifying: 4, verified: 5, failed: 3 };
-                const active = index < (rank[delegation.status] || 0);
-                return <div className={active ? "complete" : ""} key={label}><span>{active ? "✓" : index + 1}</span><b>{label}</b></div>;
-              })}
-            </div>
-
-            <div className="sectionHeading compact">
-              <div><span className="sectionIndex">02</span><h2>Review Meta&apos;s plan</h2></div>
-              <p>{delegation.plan.summary}</p>
-            </div>
-
-            <div className="jobGrid">
-              {delegation.plan.recommendations.map(recommendation => {
-                const job = jobsById.get(recommendation.jobId) as JobsApiJob | undefined;
-                if (!job) return null;
-                const selected = selectedJobs.includes(job.id);
-                return (
-                  <article className={`jobCard ${selected ? "selected" : ""}`} key={job.id}>
-                    <div className="jobCardTop">
-                      <label className="selectControl"><input type="checkbox" checked={selected} disabled={delegation.status !== "awaiting_approval"} onChange={() => toggleJob(job.id)} /><span /></label>
-                      <div className="scoreRing"><b>{recommendation.score}</b><small>match</small></div>
-                    </div>
-                    <span className="jobMode">{job.mode} · {job.type}</span>
-                    <h3>{job.title}</h3>
-                    <p className="company">{job.company} · {job.location}</p>
-                    <p className="rationale">{recommendation.rationale}</p>
-                    <div className="skillRow">{job.skills.slice(0, 4).map(skill => <span key={skill}>{skill}</span>)}</div>
-                    <details><summary>Application draft</summary><p>{recommendation.coverNote}</p></details>
-                  </article>
-                );
-              })}
-            </div>
-
-            {delegation.status === "awaiting_approval" && (
-              <div className="approvalBar">
-                <div><Icon name="shield" /><span><strong>Human approval gate</strong><small>No action can run until you approve the selected mock applications.</small></span></div>
-                <button className="primaryButton" onClick={approve} disabled={Boolean(busy) || selectedJobs.length === 0}>{busy === "approving" ? "Recording approval…" : `Approve ${selectedJobs.length} mock applications`}</button>
-              </div>
-            )}
-
-            {delegation.status === "approved" && (
-              <div className="executionPanel">
-                <div><span className="sectionIndex">03</span><h2>Execute safely</h2><p>Writes go only to this hackathon&apos;s local mock store.</p></div>
-                <label className="faultToggle"><input type="checkbox" checked={injectFailure} onChange={event => setInjectFailure(event.target.checked)} /><span /><div><strong>Demonstrate recovery</strong><small>Inject one transient failure, then retry with the same idempotency key.</small></div></label>
-                <button className="primaryButton" onClick={execute} disabled={Boolean(busy)}>{busy === "executing" ? <><span className="spinner" /> Executing and verifying</> : <>Execute approved plan <Icon name="arrow" /></>}</button>
-              </div>
-            )}
-
-            {["executing", "retrying", "verifying"].includes(delegation.status) && <div className="liveProgress"><span className="spinner" /><div><strong>{statusLabels[delegation.status]} in real time</strong><small>Signed server events update this evidence timeline as each stage persists.</small></div></div>}
-
-            <div className="evidenceGrid">
-              <section className="timelinePanel">
-                <div className="panelTitle"><span><Icon name="database" /></span><div><h2>Evidence timeline</h2><p>Append-only events from planning through verification.</p></div></div>
-                <div className="timeline">
-                  {delegation.events.map(event => <div className="timelineEvent" key={event.id}><span className="timelineDot" /><div><b>{event.message}</b><small>{event.type} · {time(event.createdAt)}</small></div></div>)}
-                </div>
-              </section>
-
-              <section className={`receiptPanel ${delegation.receipt ? "receiptReady" : ""}`}>
-                <div className="panelTitle"><span><Icon name="receipt" /></span><div><h2>Proof receipt</h2><p>Issued only after deterministic verification.</p></div></div>
-                {delegation.receipt ? (
-                  <>
-                    <div className="verifiedSeal"><Icon name="check" /><span><b>Outcome verified</b><small>{delegation.receipt.proof.actions.length} mock actions confirmed</small></span></div>
-                    <dl>
-                      <div><dt>Receipt</dt><dd>{delegation.receipt.proof.receiptId.slice(0, 13)}…</dd></div>
-                      <div><dt>Approval</dt><dd>{time(delegation.receipt.proof.approval.approvedAt)}</dd></div>
-                      <div><dt>Recovery</dt><dd>{delegation.receipt.proof.recovery.retries} safe retry</dd></div>
-                      <div><dt>Production writes</dt><dd>None</dd></div>
-                    </dl>
-                    <div className="hashBox"><span>SHA-256 proof digest</span><code>{delegation.receipt.proofHash}</code></div>
-                    <button className="secondaryButton" onClick={downloadReceipt}>Download JSON receipt</button>
-                  </>
-                ) : <div className="receiptEmpty"><Icon name="shield" /><p>Receipt locked until the approved workflow executes and every outcome passes verification.</p></div>}
-              </section>
-            </div>
-          </div>
-        )}
-      </section>
-
-      <footer><div className="brand footerBrand"><span className="brandMark">S</span><span><strong>SMAJ AI</strong><small>Verified Delegation</small></span></div><p>Independent Meta Hackathon project · No real Pi payments · No production job submissions</p></footer>
-    </main>
-  );
+function DelegationWorkspace({ delegation, jobsById, selectedJobs, setSelectedJobs, busy, approve, execute, injectFailure, setInjectFailure, downloadReceipt }: { delegation: DelegationView; jobsById: Map<string, JobsApiJob>; selectedJobs: string[]; setSelectedJobs: React.Dispatch<React.SetStateAction<string[]>>; busy: string | null; approve: () => unknown; execute: () => unknown; injectFailure: boolean; setInjectFailure: (value: boolean) => void; downloadReceipt: () => void }) {
+  const toggle = (id: string) => setSelectedJobs(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
+  const rank: Record<string, number> = { awaiting_approval: 1, approved: 2, executing: 3, retrying: 3, verifying: 4, verified: 5, failed: 3 };
+  return <div className="delegationWorkspace"><div className="taskHeader"><div><span className={`status status-${delegation.status}`}>{statusLabels[delegation.status]}</span><h2>{delegation.goal}</h2><p>{delegation.plan.summary}</p></div><span className="modelBadge">{delegation.plan.model}</span></div><div className="progressRail">{["Plan", "Approve", "Execute", "Recover", "Verify"].map((label, index) => <div className={index < rank[delegation.status] ? "complete" : ""} key={label}><span>{index < rank[delegation.status] ? "✓" : index + 1}</span><b>{label}</b></div>)}</div><div className="jobGrid">{delegation.plan.recommendations.map(recommendation => { const job = jobsById.get(recommendation.jobId); if (!job) return null; const selected = selectedJobs.includes(job.id); return <article className={`jobCard ${selected ? "selected" : ""}`} key={job.id}><div><label><input type="checkbox" checked={selected} disabled={delegation.status !== "awaiting_approval"} onChange={() => toggle(job.id)} /><span /></label><b>{recommendation.score}% match</b></div><small>{job.mode} · {job.type}</small><h3>{job.title}</h3><p>{job.company} · {job.location}</p><span>{recommendation.rationale}</span><details><summary>Application draft</summary><p>{recommendation.coverNote}</p></details></article>; })}</div>{delegation.status === "awaiting_approval" && <div className="actionBar"><div><Icon name="shield" /><span><strong>Human approval required</strong><small>No action runs before your explicit approval.</small></span></div><button className="primaryButton" onClick={approve} disabled={Boolean(busy) || !selectedJobs.length}>Approve {selectedJobs.length} mock actions</button></div>}{delegation.status === "approved" && <div className="actionBar execution"><label><input type="checkbox" checked={injectFailure} onChange={event => setInjectFailure(event.target.checked)} /><span><strong>Demonstrate recovery</strong><small>Inject one retryable adapter failure.</small></span></label><button className="primaryButton" onClick={execute} disabled={Boolean(busy)}>Execute approved plan <Icon name="arrow" /></button></div>}{["executing", "retrying", "verifying"].includes(delegation.status) && <div className="liveProgress"><span className="spinner dark"/><div><strong>{statusLabels[delegation.status]}</strong><small>Live evidence is being persisted.</small></div></div>}<div className="evidenceGrid"><section><div className="panelHeading"><span><Icon name="clock" /></span><div><h3>Evidence timeline</h3><p>Append-only workflow events</p></div></div><div className="timeline">{delegation.events.map(event => <div key={event.id}><i /><span><b>{event.message}</b><small>{event.type} · {time(event.createdAt)}</small></span></div>)}</div></section><section className={delegation.receipt ? "receiptReady" : ""}><div className="panelHeading"><span><Icon name="receipt" /></span><div><h3>Proof receipt</h3><p>Deterministic verification</p></div></div>{delegation.receipt ? <><div className="verifiedBox"><Icon name="check"/><span><b>Outcome verified</b><small>{delegation.receipt.proof.actions.length} mock actions confirmed</small></span></div><dl><div><dt>Production writes</dt><dd>None</dd></div><div><dt>Safe retries</dt><dd>{delegation.receipt.proof.recovery.retries}</dd></div></dl><code className="hash">{delegation.receipt.proofHash}</code><button className="secondaryButton" onClick={downloadReceipt}>Download JSON receipt</button></> : <div className="receiptLocked"><Icon name="lock"/><p>Locked until every approved action passes verification.</p></div>}</section></div></div>;
 }
