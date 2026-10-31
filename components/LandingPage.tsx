@@ -5,6 +5,7 @@ import "./reference-landing.css";
 import ServiceIcon from "./ServiceIcon";
 import ConversationShowcase from "./ConversationShowcase";
 import HubServicesSection from "./HubServicesSection";
+import WhyItMatters from "./WhyItMatters";
 
 type LandingPageProps = {
   authenticated: boolean | null;
@@ -17,14 +18,6 @@ type LandingPageProps = {
   error: string;
   login: (event: React.FormEvent) => void;
 };
-
-const comparison = [
-  ["What matters", "Basic chatbot", "SMAJ AI"],
-  ["Action plan", "Text suggestions", "Structured AI plan"],
-  ["Control", "You interpret replies", "Explicit approval"],
-  ["Failures", "Try again yourself", "Recovery tracking"],
-  ["Evidence", "Conversation history", "PDF + JSON proof"],
-];
 
 export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, startDemo, accessToken, setAccessToken, busy, error, login }: LandingPageProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -88,13 +81,7 @@ export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, st
           <ConversationShowcase />
         </section>
         <HubServicesSection />
-        <section className="wrap" id="compare">
-          <span className="sectionlabel">Why it matters</span>
-          <h2 className="sectiontitle">A chatbot replies.<br />SMAJ AI tracks the work.</h2>
-          <div className="comparison" role="table" aria-label="Basic chatbot and SMAJ AI comparison">
-            {comparison.map((row, index) => <div className="row" role="row" key={row[0]}>{row.map((cell, column) => <div role={index === 0 ? "columnheader" : column === 0 ? "rowheader" : "cell"} key={cell}>{cell}</div>)}</div>)}
-          </div>
-        </section>
+        <WhyItMatters />
         <section className="wrap" id="demo">
           <div className="cta" aria-busy={busy === "demo"}>
             <span className="eyebrow">META AI HACKATHON DEMO</span>
