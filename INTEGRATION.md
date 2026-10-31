@@ -80,3 +80,34 @@ Never commit populated secrets. The existing demo access variable must not silen
 4. Implement per-user consent and Jobs/Store read adapters; test redirects, oversized/malformed responses, timeouts, pagination, unavailable services, disconnection during execution and model attempts to select an unsupported action.
 5. Test two distinct Hub users for task/approval/receipt/event isolation, including guessed IDs. Run mobile Pi Browser, native bridge, desktop browser and cross-origin session tests. Inspect browser storage, URLs, logs and built assets for secret leakage.
 6. Deploy AI independently with a read-only allowlist. Verify health, DNS/TLS, SSO, opt-in permissions, Meta routing and revocation. Roll back either application independently. Review writes/payments only in a separate approved change.
+
+### Render browser origin validation
+
+Keep `SMAJ_AI_PUBLIC_URL` set to the canonical HTTPS website URL used for SSO.
+Render automatically provides `RENDER_EXTERNAL_URL` for this service. Browser
+mutation endpoints accept these two exact origins, including when Next.js sees
+an internal HTTP request URL behind Render's TLS proxy. No wildcard or
+`X-Forwarded-Host` allowlist is used. Invalid configured URLs fail closed.
+Outside configured deployments, the fallback compares the browser Origin with
+Host and the first forwarded protocol (also used for the demo's Secure cookie).
+The proxy must preserve Host and overwrite forwarded protocol headers.
+
+The app connection controls send same-origin relative `POST /api/connections`
+with JSON `{ "serviceId": "store" | "stream" | "jobs", "connected": true | false }`.
+They update the authenticated user's catalog permissions; they do not authorize
+purchases, payments, playback, or job applications. The browser does not call
+Hub catalog APIs directly, so adding cross-origin CORS permissions is unnecessary.
+Authentication, HttpOnly/SameSite cookies, origin checks, approval requirements,
+and catalog URL restrictions remain in place. Explicit `Sec-Fetch-Site:
+cross-site` mutations are rejected; browsers without that header still require
+an exact Origin match.
+
+Regression coverage: `tests/connection-origins.test.ts` exercises production
+settings with internal HTTP URLs, Render HTTPS origins, forwarded protocol
+chains, canonical-domain requests, all three connect/disconnect operations,
+unauthenticated requests, missing/foreign/null/lookalike origins, spoofed Host
+and forwarded Host, cross-site fetch metadata, and invalid configuration.
+Run `npm test`, `npm run typecheck`, and `npm run build` before deployment.
+After deployment, verify both the canonical and Render URLs in desktop Chrome,
+Android Chrome, and iOS Safari: sign in, connect/disconnect Store, Stream, Jobs,
+and reload to confirm persistence. Confirm `POST /api/connections` returns 200.
