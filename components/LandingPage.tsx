@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import "./reference-landing.css";
-import ServiceIcon from "./ServiceIcon";
+import BrandLogo from "./BrandLogo";
 import ConversationShowcase from "./ConversationShowcase";
 import HubServicesSection from "./HubServicesSection";
 import WhyItMatters from "./WhyItMatters";
@@ -47,7 +47,7 @@ export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, st
   return (
     <div className="referenceLanding">
       <header className="nav" ref={navRef}>
-        <a className="brand" href="#top" aria-label="SMAJ AI home">SMAJ<span> AI</span></a>
+        <a className="brand" href="#top" aria-label="SMAJ AI home"><BrandLogo className="navLogo" /></a>
         <div className="navright">
           <button className="pill" type="button" disabled={demoDisabled} onClick={startDemo}>{busy === "demo" ? "Preparing demo…" : "Try Live Demo"}</button>
           <button className="menu" type="button" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} aria-controls="landing-menu" onClick={() => setMenuOpen(!menuOpen)}>☰</button>
@@ -63,9 +63,9 @@ export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, st
       <main id="top">
         <section className="hero">
           <div className="heroServices" aria-label="Store, Jobs, Stream, 13+">
-            <ServiceIcon serviceId="store" />
-            <ServiceIcon serviceId="jobs" />
-            <ServiceIcon serviceId="stream" />
+            <img src="/assets/services/store.png" alt="SMAJ Store" width={28} height={28} />
+            <img src="/assets/services/jobs.png" alt="SMAJ Jobs" width={28} height={28} />
+            <img src="/assets/smaj-stream-logo.png" alt="SMAJ Stream" width={28} height={28} />
             <span aria-hidden="true">13+</span>
           </div>
           <div className="eyebrow">SMAJ PI HUB · PI NETWORK ECOSYSTEM</div>

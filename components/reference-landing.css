@@ -36,12 +36,14 @@
   box-shadow: 0 12px 32px #21144112
 }
 .referenceLanding .brand {
-  font-weight: 800;
-  font-size: 25px;
-  letter-spacing: -1.4px
+  display: inline-flex;
+  align-items: center;
+  flex: none
 }
-.referenceLanding .brand span {
-  color: #6734eb
+.referenceLanding .brand .navLogo {
+  width: 52px;
+  height: 52px;
+  object-fit: contain
 }
 .referenceLanding .navright {
   display: flex;
@@ -91,13 +93,18 @@
   font-weight: 700;
   line-height: 1
 }
-.referenceLanding .heroServices .hubServiceIcon {
+.referenceLanding .heroServices img {
   display: block;
   flex: none;
   width: 28px;
   height: 28px;
   margin: 0;
-  border-radius: 0
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  object-fit: contain
 }
 .referenceLanding .eyebrow {
   font-size: 14px;
@@ -297,8 +304,9 @@
   .referenceLanding .nav {
     padding: 12px 17px
   }
-  .referenceLanding .brand {
-    font-size: 21px
+  .referenceLanding .brand .navLogo {
+    width: 44px;
+    height: 44px
   }
   .referenceLanding .navright .pill {
     padding: 12px 17px;
