@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./reference-landing.css";
 import ServiceIcon from "./ServiceIcon";
+import ConversationShowcase from "./ConversationShowcase";
 
 type LandingPageProps = {
   authenticated: boolean | null;
@@ -83,51 +84,7 @@ export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, st
         <section className="wrap" id="how">
           <span className="sectionlabel">Built for trusted delegation</span>
           <h2 className="sectiontitle">From your goal to proof. Every step visible.</h2>
-          <div className="cards">
-            <article className="card">
-              <div className="visual" aria-label="Illustrative AI planning preview"><div className="mini">
-                <span className="chip">01 · PLAN</span>
-                <p>“Find matching opportunities on SMAJ PI HUB Jobs.”</p>
-                <strong>AI-generated action plan ✓</strong>
-                <p>Review jobs → select match → request approval</p>
-              </div></div>
-              <h3>You set the goal. Meta AI maps the steps.</h3>
-              <p>Turn a request into a clear, structured plan using live Meta model reasoning.</p>
-            </article>
-            <article className="card">
-              <div className="visual" aria-label="Illustrative human approval preview"><div className="mini">
-                <span className="chip">02 · APPROVE</span>
-                <p>Proposed action</p>
-                <strong>Prepare a mock job application</strong>
-                <p>Nothing proceeds without your approval.</p>
-                <div className="approvalPreview"><span className="chip">Approve ✓</span><span className="chip rejectChip">Reject</span></div>
-              </div></div>
-              <h3>Your approval is the control point.</h3>
-              <p>See the proposed action and authorize it before simulated execution.</p>
-            </article>
-            <article className="card" id="features">
-              <div className="visual" aria-label="Illustrative execution and recovery preview"><div className="mini">
-                <span className="chip">03 · EXECUTE &amp; RECOVER</span>
-                <p>Execution status</p>
-                <strong>Simulated task completed</strong>
-                <p>Retry and recovery events are tracked.</p>
-                <div className="steps"><span className="chip">✓ Checked</span><span className="chip">✓ Recovered</span></div>
-              </div></div>
-              <h3>Delegation with a recovery path.</h3>
-              <p>Follow execution status and see how the system responds when a step fails.</p>
-            </article>
-            <article className="card">
-              <div className="visual" aria-label="Illustrative proof receipt preview"><div className="mini">
-                <span className="chip">04 · VERIFY</span>
-                <div className="check">✓</div>
-                <strong>Proof receipt ready</strong>
-                <p>Action history · Approval · Checks · Outcome</p>
-                <div className="steps"><span className="chip">PDF receipt</span><span className="chip">JSON proof</span></div>
-              </div></div>
-              <h3>Don&apos;t just trust the result. Inspect it.</h3>
-              <p>Export a readable PDF or structured JSON receipt for the simulated workflow.</p>
-            </article>
-          </div>
+          <ConversationShowcase />
         </section>
         <section className="wrap" id="compare">
           <span className="sectionlabel">Why it matters</span>

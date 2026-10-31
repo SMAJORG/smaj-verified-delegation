@@ -1,0 +1,49 @@
+.referenceLanding .conversationShowcase {
+  padding: 40px 15px 80px;
+  border-radius: 36px;
+  background: radial-gradient(ellipse at 50% 4%,#ffceb5 0,transparent 43%),linear-gradient(180deg,#fbf7f4 0%,#ede0ff 24%,#9b75ff 65%,#5020ed 100%);
+  font-family: Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  color: #181526
+}
+.referenceLanding .conversationFrame {max-width:690px;margin:auto;padding:13px;border-radius:62px;background:rgba(255,255,255,.53);box-shadow:0 25px 75px #4212bd36,0 0 0 2px #ffffff6e}
+.referenceLanding .conversationWindow {background:white;border-radius:49px;overflow:hidden;height:600px;min-height:0;display:flex;flex-direction:column;box-shadow:inset 0 0 0 1px #efebf4}
+.referenceLanding .conversationViewport {flex:1;min-height:0;overflow-y:auto;padding:25px 25px 12px;position:relative}
+.referenceLanding .conversationInner {animation:conversationRise .5s ease both}
+.referenceLanding .conversationMessage {display:grid;grid-template-columns:65px minmax(0,1fr);gap:13px;margin:0 0 26px;align-items:start}
+.referenceLanding .conversationAvatar {display:block;width:60px;height:60px;border-radius:16px;object-fit:cover;background:#e9ddff}
+.referenceLanding .conversationAiAvatar {object-fit:contain;flex:none}
+.referenceLanding .conversationPerson {display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.referenceLanding .conversationName {font-size:21px;font-weight:750}
+.referenceLanding .conversationTime {color:#a3a0a9;font-size:16px}
+.referenceLanding .conversationText {font-size:20px;line-height:1.5;margin-top:5px;overflow-wrap:anywhere}
+.referenceLanding .conversationMention {background:#e7f5ff;color:#0879b4;padding:0 3px;border-radius:4px}
+.referenceLanding .conversationReceipt {margin-top:16px;background:#f3efff;border:1px solid #e1d6ff;border-radius:18px;padding:18px;font-size:16px}
+.referenceLanding .conversationReceiptTitle {font-weight:800;font-size:18px;margin-bottom:10px}
+.referenceLanding .conversationStep {display:flex;gap:9px;margin:9px 0;align-items:center}
+.referenceLanding .conversationCheck {color:#1c9365;font-weight:800}
+.referenceLanding .conversationProof {display:flex;align-items:center;justify-content:space-between;margin-top:14px;border:1px solid #ddd7e9;border-radius:14px;padding:13px;background:white;gap:10px}
+.referenceLanding .conversationProof small {color:#88818e}
+.referenceLanding .conversationBadge {background:#e8e0ff;color:#5b2fbc;border-radius:30px;padding:8px 11px;font-size:12px;font-weight:800}
+.referenceLanding .conversationFooter {flex-shrink:0;height:48px;border-top:1px solid #eeeaf2;display:flex;align-items:center;justify-content:flex-end;padding:0 26px}
+.referenceLanding .conversationDots {display:flex;gap:6px}
+.referenceLanding .conversationDot {width:7px;height:7px;background:#d6c8ef;border-radius:50%}
+.referenceLanding .conversationDot.active {background:#7c4ce3}
+@keyframes conversationRise {from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:520px) {
+  .referenceLanding .conversationShowcase {padding:25px 10px 55px}
+  .referenceLanding .conversationFrame {padding:8px;border-radius:44px}
+  .referenceLanding .conversationWindow {border-radius:37px}
+  .referenceLanding .conversationViewport {padding:20px 15px}
+  .referenceLanding .conversationMessage {grid-template-columns:45px minmax(0,1fr);gap:11px;margin-bottom:23px}
+  .referenceLanding .conversationAvatar {width:44px;height:44px;border-radius:12px}
+  .referenceLanding .conversationName {font-size:17px}
+  .referenceLanding .conversationTime {font-size:12px}
+  .referenceLanding .conversationText {font-size:16px;line-height:1.48}
+  .referenceLanding .conversationReceipt {padding:13px;font-size:13px}
+  .referenceLanding .conversationReceiptTitle {font-size:15px}
+  .referenceLanding .conversationProof {padding:10px}
+  .referenceLanding .conversationFooter {padding:0 17px}
+}
+@media(prefers-reduced-motion:reduce) {
+  .referenceLanding .conversationInner {animation:none}
+}
