@@ -104,7 +104,6 @@ export async function metaResponse(input: string, maxTokens: number, fetcher: ty
   const safeMaxTokens = Number(maxTokens) > 0 ? Math.max(MIN_OUTPUT_TOKENS, Number(maxTokens)) : MIN_OUTPUT_TOKENS;
   const payload = await request("responses", apiKey, fetcher, {
     model,
-    model_id: model,
     input,
     max_output_tokens: safeMaxTokens,
     store: false,

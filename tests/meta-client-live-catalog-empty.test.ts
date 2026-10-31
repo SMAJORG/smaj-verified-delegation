@@ -14,14 +14,15 @@ test("AI attempts a live response even when the catalog is empty", async () => {
       if (target.endsWith("/models")) {
         return Response.json({ data: [] });
       }
-      assert.equal(JSON.parse(String(init?.body)).model, "muse-wonder-1.0");
-      assert.equal(JSON.parse(String(init?.body)).model_id, "muse-wonder-1.0");
+      const body = JSON.parse(String(init?.body));
+      assert.equal(body.model, "muse-wonder-1.0");
+      assert.equal("model_id" in body, false);
       return Response.json({
         status: "completed",
         output: [{ content: [{ type: "output_text", text: "real answer" }] }],
       });
     };
-    const result = await metaResponse("Say hello.", 100, fetcher as typeof fetch);
+    const result = await metaResponse("Say hello.", 1500, fetcher as typeof fetch);
     assert.equal(result.model, "muse-wonder-1.0");
     assert.equal(calls.length, 2);
     assert.equal(result.payload.output[0].content[0].text, "real answer");
