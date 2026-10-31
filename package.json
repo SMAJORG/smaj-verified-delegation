@@ -9,7 +9,7 @@
     "demo": "tsx scripts/demo.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
-    "verify:live": "tsx scripts/verify-live.ts"
+    "verify:live": "tsx --tsconfig tsconfig.json scripts/verify-live.ts"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
