@@ -1,8 +1,10 @@
 import { AppError } from "@/src/server/http";
 
 const BASE = "https://api.meta.ai/v1";
-const DEFAULT_META_MODEL = "meta/muse-spark-1.3";
+const DEFAULT_META_MODEL = "muse-spark-1.3";
 const MIN_OUTPUT_TOKENS = 64;
+
+const normalizeModelId = (value: string) => value.trim().replace(/^meta\//i, "");
 
 export function extractMetaOutputText(payload: any): string {
   const chunks: string[] = [];
@@ -36,7 +38,7 @@ function catalogContainsModel(catalog: unknown, model: string): boolean {
         : typeof item?.model_id === "string"
           ? item.model_id
           : "";
-    return candidate === model;
+    return candidate === model || candidate === `meta/${model}`;
   });
 }
 
@@ -59,6 +61,7 @@ async function request(path: string, apiKey: string, fetcher: typeof fetch, body
     const payload = await response.json().catch(() => ({}));
     const rawCode = payload?.error?.code;
     const code = typeof rawCode === "string" && /^[a-z_]{1,64}$/.test(rawCode) ? rawCode : "request_failed";
+    const providerMessage = typeof payload?.error?.message === "string" ? payload.error.message : undefined;
 
     console.error(JSON.stringify({
       provider: "meta",
@@ -66,6 +69,7 @@ async function request(path: string, apiKey: string, fetcher: typeof fetch, body
       status: response.status,
       code,
       requestId: response.headers.get("x-request-id"),
+      message: providerMessage ? providerMessage.replace(/(?<=Bearer\s)[A-Za-z0-9._-]+/gi, "[REDACTED]") : undefined,
     }));
 
     const message = code === "model_not_found"
@@ -84,7 +88,7 @@ async function request(path: string, apiKey: string, fetcher: typeof fetch, body
 
 export async function metaResponse(input: string, maxTokens: number, fetcher: typeof fetch = fetch) {
   const apiKey = (process.env.META_API_KEY || process.env.MODEL_API_KEY)?.trim();
-  const model = (process.env.META_MODEL || DEFAULT_META_MODEL).trim();
+  const model = normalizeModelId((process.env.META_MODEL || DEFAULT_META_MODEL).trim());
 
   if (!apiKey) {
     throw new AppError("meta_not_configured", "AI is unavailable: the server Meta API key is not configured.", 503);
@@ -111,7 +115,6 @@ export async function metaResponse(input: string, maxTokens: number, fetcher: ty
   const safeMaxTokens = Number(maxTokens) > 0 ? Math.max(MIN_OUTPUT_TOKENS, Number(maxTokens)) : MIN_OUTPUT_TOKENS;
   const payload = await request("responses", apiKey, fetcher, {
     model,
-    model_id: model,
     input,
     max_output_tokens: safeMaxTokens,
     store: false,
