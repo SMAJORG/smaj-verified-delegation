@@ -12,7 +12,7 @@ async function main() {
     console.log(JSON.stringify({ check: "live_jobs_read", status: "passed", count: jobs.length }));
   } catch (error) { failed = true; console.error("Live Jobs check failed:", error instanceof Error ? error.message : "Unknown error"); }
   try {
-    const { payload, model } = await metaResponse("Say hello in one short sentence.", 500);
+    const { payload, model } = await metaResponse("Say hello in one short sentence.", 1500);
     const hasText = payload.output?.some((item: any) => item.content?.some((content: any) => content.type === "output_text" && content.text?.trim()));
     if (!hasText) throw new Error("Meta returned no answer");
     console.log(JSON.stringify({ check: "live_meta_response", status: "passed", model }));

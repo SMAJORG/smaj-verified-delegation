@@ -2,6 +2,16 @@
 
 An independent Meta-powered AI agent that turns authorized goals into bounded actions, verifies actual outcomes, and issues evidence-backed proof receipts. It complements SMAJ PI HUB without modifying or shipping inside the existing application.
 
+## Live Meta configuration
+
+Use the exact model ID returned by your Meta account catalog. The verified live model for this deployment is `muse-spark-1.3`.
+
+- `META_API_KEY`: server-side Meta API key
+- `META_MODEL=muse-spark-1.3`
+- `max_output_tokens`: at least `1500` for live AI responses and task planning
+
+The backend validates the model against `GET https://api.meta.ai/v1/models` and then sends `POST https://api.meta.ai/v1/responses` with the configured model and `max_output_tokens`.
+
 ## Milestone Two
 
 - Live read-only SMAJ Jobs discovery and Meta account-confirmed models planning

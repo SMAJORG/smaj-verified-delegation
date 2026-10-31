@@ -1,6 +1,50 @@
 import { AppError } from "@/src/server/http";
 
 const BASE = "https://api.meta.ai/v1";
+const DEFAULT_META_MODEL = "muse-spark-1.3";
+const MIN_OUTPUT_TOKENS = 1500;
+
+export function extractMetaOutputText(payload: any): string {
+  const chunks: string[] = [];
+  const stack: unknown[] = [payload];
+
+  while (stack.length) {
+    const current = stack.pop();
+    if (typeof current === "string") {
+      const trimmed = current.trim();
+      if (trimmed) chunks.push(trimmed);
+      continue;
+    }
+    if (!current || typeof current !== "object") continue;
+
+    const record = current as Record<string, unknown>;
+
+    if (record.type === "output_text" && typeof record.text === "string") {
+      const trimmed = record.text.trim();
+      if (trimmed) chunks.push(trimmed);
+    }
+
+    if (Array.isArray(record.content)) {
+      for (const entry of record.content) stack.push(entry);
+    }
+    if (Array.isArray(record.output)) {
+      for (const entry of record.output) stack.push(entry);
+    }
+    if (Array.isArray(record.output_text)) {
+      for (const entry of record.output_text) stack.push(entry);
+    }
+    if (typeof record.output_text === "string") {
+      const trimmed = record.output_text.trim();
+      if (trimmed) chunks.push(trimmed);
+    }
+    if (typeof record.text === "string") {
+      const trimmed = record.text.trim();
+      if (trimmed) chunks.push(trimmed);
+    }
+  }
+
+  return chunks.join("").trim();
+}
 
 function catalogContainsModel(catalog: unknown, model: string): boolean {
   const items = Array.isArray((catalog as any)?.data)
@@ -48,21 +92,21 @@ async function request(path: string, apiKey: string, fetcher: typeof fetch, body
 
 export async function metaResponse(input: string, maxTokens: number, fetcher: typeof fetch = fetch) {
   const apiKey = (process.env.META_API_KEY || process.env.MODEL_API_KEY)?.trim();
-  const model = process.env.META_MODEL?.trim();
+  const model = (process.env.META_MODEL || DEFAULT_META_MODEL).trim();
   if (!apiKey) throw new AppError("meta_not_configured", "AI is unavailable: the server Meta API key is not configured.", 503);
   if (!model) throw new AppError("meta_model_not_configured", "AI is unavailable: configure META_MODEL using a model available to your Meta account.", 503);
 
   const catalog = await request("models", apiKey, fetcher);
-  const catalogHasModel = catalog && catalogContainsModel(catalog, model);
-  if (catalog && !catalogHasModel) {
+  if (catalog && !catalogContainsModel(catalog, model)) {
     console.warn(JSON.stringify({ provider: "meta", event: "model_catalog_mismatch", requestedModel: model, modelCatalogAvailable: false, catalogLength: Array.isArray((catalog as any)?.data) ? (catalog as any).data.length : Array.isArray((catalog as any)?.models) ? (catalog as any).models.length : 0 }));
   }
 
+  const safeMaxTokens = Number(maxTokens) > 0 ? Math.max(MIN_OUTPUT_TOKENS, Number(maxTokens)) : MIN_OUTPUT_TOKENS;
   const payload = await request("responses", apiKey, fetcher, {
     model,
     model_id: model,
     input,
-    max_output_tokens: maxTokens,
+    max_output_tokens: safeMaxTokens,
     store: false,
   });
   if (payload?.status !== "completed") throw new AppError("meta_incomplete", "The AI response did not complete. Please retry.", 502);

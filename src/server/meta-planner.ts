@@ -1,20 +1,10 @@
 import type { CreateDelegationInput, JobRecommendation, JobsApiJob, JobsPlan } from "@/src/domain/types";
 
-import { metaResponse } from "@/src/server/meta-client";
+import { extractMetaOutputText, metaResponse } from "@/src/server/meta-client";
 
 export interface JobsPlanner {
   plan(input: CreateDelegationInput, jobs: JobsApiJob[]): Promise<JobsPlan>;
 }
-
-const extractOutputText = (payload: any) => {
-  const chunks: string[] = [];
-  for (const item of Array.isArray(payload?.output) ? payload.output : []) {
-    for (const content of Array.isArray(item?.content) ? item.content : []) {
-      if (content?.type === "output_text" && typeof content.text === "string") chunks.push(content.text);
-    }
-  }
-  return chunks.join("").trim();
-};
 
 const parseJson = (value: string) => {
   const cleaned = value.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
@@ -47,7 +37,7 @@ export class MetaJobsPlanner implements JobsPlanner {
     ].join("\n");
 
     const { payload, model } = await metaResponse(prompt, 2200, this.fetcher);
-    const parsed = parseJson(extractOutputText(payload));
+    const parsed = parseJson(extractMetaOutputText(payload));
     const allowedIds = new Set(jobs.map(job => job.id));
     const recommendations = (Array.isArray(parsed.recommendations) ? parsed.recommendations : [])
       .map(value => normalizeRecommendation(value, allowedIds))

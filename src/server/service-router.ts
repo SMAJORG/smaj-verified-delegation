@@ -1,19 +1,7 @@
 import type { ServiceId, ServicePlanStep, ServiceRoutePlan } from "@/src/domain/services";
 import { SERVICE_IDS, SMAJ_SERVICES } from "@/src/domain/services";
 import { AppError } from "@/src/server/http";
-import { metaResponse } from "@/src/server/meta-client";
-
-
-
-const extractOutputText = (payload: any) => {
-  const chunks: string[] = [];
-  for (const item of Array.isArray(payload?.output) ? payload.output : []) {
-    for (const content of Array.isArray(item?.content) ? item.content : []) {
-      if (content?.type === "output_text" && typeof content.text === "string") chunks.push(content.text);
-    }
-  }
-  return chunks.join("").trim();
-};
+import { extractMetaOutputText, metaResponse } from "@/src/server/meta-client";
 
 const parseJson = (value: string) => JSON.parse(value.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim()) as any;
 const clean = (value: unknown, fallback: string, limit = 500) => String(value || fallback).trim().slice(0, limit);
@@ -40,7 +28,7 @@ export class MetaServiceRouter {
     const { payload, model } = await metaResponse(prompt, 1800, this.fetcher);
 
     let parsed: any;
-    try { parsed = parseJson(extractOutputText(payload)); }
+    try { parsed = parseJson(extractMetaOutputText(payload)); }
     catch { throw new AppError("invalid_meta_plan", "Meta returned an invalid routing plan", 502); }
     const rawSteps = Array.isArray(parsed.steps) ? parsed.steps : [];
     const steps: ServicePlanStep[] = rawSteps.map((value: any, index: number): ServicePlanStep | null => {
