@@ -1,0 +1,123 @@
+.network {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 480px;
+  overflow: hidden;
+  border-radius: 44px;
+  background: radial-gradient(
+    ellipse at 52% 110%,
+    #b88bee,
+    #6c42d6 58%,
+    #22027f 100%
+  );
+}
+.connections {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.connections line {
+  stroke: #ffffff45;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 118px;
+  height: 118px;
+  border: 1px solid #ffffff85;
+  border-radius: 30px;
+  background: linear-gradient(145deg, #9b79e4, #3911aa);
+  box-shadow:
+    0 0 0 12px #ffffff08,
+    0 20px 35px #16006255;
+}
+.center .logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
+}
+.node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 88px;
+  text-align: center;
+}
+.floating {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  animation: float var(--float-duration) ease-in-out var(--float-delay) infinite;
+}
+.art {
+  width: 58px;
+  height: 58px;
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: 0 7px 18px #22006740;
+}
+.art > span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: inherit;
+}
+.name {
+  color: #fff;
+  font-size: 10px;
+  line-height: 1.3;
+  font-weight: 500;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px #230080;
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+@media (max-width: 520px) {
+  .network {
+    height: 440px;
+  }
+  .center {
+    width: 86px;
+    height: 86px;
+    border-radius: 23px;
+  }
+  .node {
+    width: 64px;
+  }
+  .art {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+  .name {
+    font-size: 8px;
+  }
+}
+@media (max-width: 360px) {
+  .network { height: 480px; }
+  .art { width: 34px; height: 34px; }
+  .name { font-size: 7px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .floating {
+    animation: none;
+  }
+}

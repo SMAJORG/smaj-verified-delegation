@@ -1,3 +1,4 @@
+import ServiceNetworkIllustration from "./ServiceNetworkIllustration";
 import BrandLogo from "./BrandLogo";
 import styles from "./HomepageWorkflow.module.css";
 
@@ -125,57 +126,7 @@ export default function HomepageWorkflow() {
             </div>
           </article>
           <article className={styles["step"]}>
-            <div
-              className={styles["visual"] + " " + styles["network"]}
-              role="img"
-              aria-label="Illustrative SMAJ service network: Store, Jobs, Stream, Education, Health and Transport"
-            >
-              <div className={styles["wire"]}></div>
-              <div className={styles["wire"]}></div>
-              <div className={styles["wire"]}></div>
-              <div className={styles["wire"]}></div>
-              <div className={styles["wire"]}></div>
-              <div className={styles["wire"]}></div>
-              <div
-                className={styles["service"] + " " + styles["one"]}
-                title="Store"
-              >
-                🛍️
-              </div>
-              <div
-                className={styles["service"] + " " + styles["two"]}
-                title="Jobs"
-              >
-                💼
-              </div>
-              <div
-                className={styles["service"] + " " + styles["three"]}
-                title="Stream"
-              >
-                🎬
-              </div>
-              <div
-                className={styles["service"] + " " + styles["four"]}
-                title="Education"
-              >
-                📚
-              </div>
-              <div
-                className={styles["service"] + " " + styles["five"]}
-                title="Health"
-              >
-                🩺
-              </div>
-              <div
-                className={styles["service"] + " " + styles["six"]}
-                title="Transport"
-              >
-                🚕
-              </div>
-              <div className={styles["network-center"]}>
-                <BrandLogo className={styles.networkLogo} />
-              </div>
-            </div>
+            <ServiceNetworkIllustration />
             <div className={styles["step-copy"]}>
               <div className={styles["step-title"]}>
                 <span className={styles["number"]}>2</span>
