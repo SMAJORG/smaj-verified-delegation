@@ -43,18 +43,25 @@ test("short messages produce a provider answer and tasks remain owner-scoped thr
   }
 });
 
-test("AI fails explicitly for missing credentials, unavailable models, and upstream model_not_found", async () => {
+test("AI rejects missing credentials and blank models, uses the default model, and reports upstream failures", async () => {
   const previous = { ...process.env };
   try {
     delete process.env.META_API_KEY; delete process.env.MODEL_API_KEY;
     await assert.rejects(() => metaResponse("Hi", 100), /not configured/);
     process.env.META_API_KEY = "test-only-secret";
-    delete process.env.META_MODEL;
+    process.env.META_MODEL = " ";
     await assert.rejects(() => metaResponse("Hi", 100), /META_MODEL/);
+    delete process.env.META_MODEL;
+    const calls: string[] = [];
+    const result = await metaResponse("Hi", 100, (async (url, init) => {
+      calls.push(String(url));
+      if (String(url).endsWith("/models")) return Response.json({ data: [] });
+      assert.equal(JSON.parse(String(init?.body)).model, "muse-spark-1.3");
+      return Response.json({ status: "completed", output: [] });
+    }) as typeof fetch);
+    assert.equal(result.model, "muse-spark-1.3");
+    assert.equal(calls.length, 2);
     process.env.META_MODEL = "test-account-model";
-    let calls = 0;
-    await assert.rejects(() => metaResponse("Hi", 100, (async () => { calls++; return Response.json({ data: [] }); }) as typeof fetch), /available model catalog/);
-    assert.equal(calls, 1);
     await assert.rejects(() => metaResponse("Hi", 100, (async url => String(url).endsWith("/models") ? Response.json({ data: [{ id: "test-account-model" }] }) : Response.json({ error: { code: "model_not_found", message: "private upstream details" } }, { status: 404 })) as typeof fetch), (error: any) => error.code === "meta_model_not_found" && !error.message.includes("private upstream details"));
     await assert.rejects(() => metaResponse("Hi", 100, (async () => { throw new Error("private network error"); }) as typeof fetch), /could not be reached/);
   } finally {
