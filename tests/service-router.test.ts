@@ -1,43 +1,294 @@
-import assert from "node:assert/strict";
-import test from "node:test";
-import { SERVICE_IDS, SMAJ_SERVICES } from "@/src/domain/services";
+import { AppError } from "@/src/server/http";
 
-import { MetaServiceRouter } from "@/src/server/service-router";
+const BASE = "https://api.meta.ai/v1";
 
-test("service catalog contains the official 15 unique SMAJ services", () => {
-  assert.equal(SMAJ_SERVICES.length, 15);
-  assert.equal(SERVICE_IDS.size, 15);
-  assert.deepEqual(SMAJ_SERVICES.filter(service => service.adapterMode === "connected").map(service => service.id), ["store", "jobs"]);
-});
-
-test("Meta router tolerates wrapped reasoning and fenced JSON, then validates service IDs", async () => {
-  const previousKey = process.env.META_API_KEY;
-  process.env.META_API_KEY = "test-only-key";
-  const previousModel = process.env.META_MODEL; process.env.META_MODEL = "test-account-model";
-  let requestBody: Record<string, any> = {};
-  const fetcher = async (_input: string | URL | Request, init?: RequestInit) => {
-    if (String(_input).endsWith("/models")) return new Response(JSON.stringify({ data: [{ id: "test-account-model" }] }));
-    requestBody = JSON.parse(String(init?.body));
-    return new Response(JSON.stringify({ status: "completed", output: [{ content: [{ type: "output_text", text: `Let me reason first.\n\n```json\n{\"summary\":\"Use Jobs and Education.\",\"services\":[\"jobs\",\"education\"],\"steps\":[{\"id\":\"one\",\"serviceId\":\"jobs\",\"title\":\"Find jobs\",\"description\":\"Read matching roles\",\"capability\":\"read opportunities\",\"approvalRequired\":true},{\"id\":\"two\",\"serviceId\":\"education\",\"title\":\"Plan learning\",\"description\":\"Prepare a learning path\",\"capability\":\"learning plans\",\"approvalRequired\":true}],\"warnings\":[\"No Pi payment will be executed.\"]}\n```\nI have enough context.` }] }] }), { status: 200 });
-  };
-  try {
-    const result = await new MetaServiceRouter(fetcher as typeof fetch).plan("Find a job and create a learning plan for missing skills.");
-    assert.equal(requestBody.model, "test-account-model");
-    assert.equal(requestBody.store, false);
-    assert.deepEqual(result.services, ["jobs", "education"]);
-    assert.equal(result.steps[0].status, "approval_required");
-    assert.equal(result.steps[0].approvalRequired, true);
-    assert.equal(result.steps[1].status, "unavailable");
-    assert.match(result.warnings.join(" "), /No Pi payment/);
-  } finally {
-    if (previousModel === undefined) delete process.env.META_MODEL; else process.env.META_MODEL = previousModel;
-    if (previousKey === undefined) delete process.env.META_API_KEY; else process.env.META_API_KEY = previousKey;
+export const extractMetaOutputText = (payload: any) => {
+  const chunks: string[] = [];
+  for (const item of Array.isArray(payload?.output) ? payload.output : []) {
+    for (const content of Array.isArray(item?.content) ? item.content : []) {
+      if (content?.type === "output_text" && typeof content.text === "string") chunks.push(content.text);
+    }
   }
-});
+  return chunks.join("").trim();
+};
 
-test("Meta router rejects empty tasks before calling the API", async () => {
-  let called = false;
-  const fetcher = async () => { called = true; return new Response(); };
-  await assert.rejects(() => new MetaServiceRouter(fetcher as typeof fetch).plan(" "), /Enter a message/);
-  assert.equal(called, false);
-});
+async function request(path: string, apiKey: string, fetcher: typeof fetch, body?: unknown) {
+  let response: Response;
+  try {
+    response = await fetcher(`${BASE}/${path}`, {
+      method: body ? "POST" : "GET",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+      signal: AbortSignal.timeout(60_000),
+      cache: "no-store",
+    });
+  } catch {
+    throw new AppError("meta_unreachable", "The AI provider could not be reached. Please retry.", 502);
+  }
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const rawCode = payload?.error?.code;
+    const code = typeof rawCode === "string" && /^[a-z_]{1,64}$/.test(rawCode) ? rawCode : "request_failed";
+    console.error(JSON.stringify({ provider: "meta", operation: path, status: response.status, code, requestId: response.headers.get("x-request-id") }));
+    const message = code === "model_not_found"
+      ? "The configured AI model is unavailable to this Meta account. Check META_MODEL against the account model catalog."
+      : response.status === 401 || response.status === 403
+        ? "Meta rejected the server credentials or account permissions."
+        : response.status === 429
+          ? "The AI provider quota or rate limit was reached. Please retry later."
+          : `The AI provider request failed (HTTP ${response.status}, ${code}). Please retry or contact support.`;
+    throw new AppError(`meta_${code}`, message, response.status === 429 ? 429 : 502);
+  }
+
+  return response.json();
+}
+
+export async function metaResponse(input: string, maxTokens: number, fetcher: typeof fetch = fetch) {
+  const apiKey = (process.env.META_API_KEY || process.env.MODEL_API_KEY)?.trim();
+  const model = process.env.META_MODEL?.trim();
+
+  if (!apiKey) throw new AppError("meta_not_configured", "AI is unavailable: the server Meta API key is not configured.", 503);
+  if (!model) throw new AppError("meta_model_not_configured", "AI is unavailable: configure META_MODEL using a model available to your Meta account.", 503);
+
+  const catalog = await request("models", apiKey, fetcher);
+  if (!Array.isArray(catalog?.data) || !catalog.data.some((item: { id?: string }) => item.id === model)) {
+    throw new AppError("meta_model_not_available", "The configured AI model is not in this account's available model catalog. No AI request was sent.", 503);
+  }
+
+  const payload = await request("responses", apiKey, fetcher, {
+    model,
+    input,
+    max_output_tokens: maxTokens,
+    store: false,
+  });
+
+  if (payload?.status !== "completed") {
+    throw new AppError("meta_incomplete", "The AI response did not complete. Please retry.", 502);
+  }
+
+  return { payload, model };
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

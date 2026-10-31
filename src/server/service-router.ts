@@ -1,155 +1,100 @@
-import type { ServiceId, ServicePlanStep, ServiceRoutePlan } from "@/src/domain/services";
+import assert from "node:assert/strict";
+import test from "node:test";
 import { SERVICE_IDS, SMAJ_SERVICES } from "@/src/domain/services";
-import { AppError } from "@/src/server/http";
-import { extractMetaOutputText, metaResponse } from "@/src/server/meta-client";
 
-const clean = (value: unknown, fallback: string, limit = 500) => String(value ?? fallback).trim().slice(0, limit);
+import { MetaServiceRouter } from "@/src/server/service-router";
 
-const parseJsonCandidate = (value: string): any => {
-  const trimmed = value.trim();
-  if (!trimmed) throw new Error("empty response");
+test("service catalog contains the official 15 unique SMAJ services", () => {
+  assert.equal(SMAJ_SERVICES.length, 15);
+  assert.equal(SERVICE_IDS.size, 15);
+  assert.deepEqual(
+    SMAJ_SERVICES.filter(service => service.adapterMode === "connected").map(service => service.id),
+    ["store", "jobs"],
+  );
+});
 
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  const candidate = fenced ? fenced[1] : trimmed;
+test("Meta router tolerates wrapped reasoning and fenced JSON, then validates service IDs", async () => {
+  const previousKey = process.env.META_API_KEY;
+  process.env.META_API_KEY = "test-only-key";
+  const previousModel = process.env.META_MODEL;
+  process.env.META_MODEL = "test-account-model";
 
-  const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-  const narrowed = start >= 0 && end > start ? candidate.slice(start, end + 1) : candidate;
-
-  const parsed = JSON.parse(narrowed);
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("response is not an object");
-  }
-  return parsed;
-};
-
-const buildRoutingPrompt = (catalog: unknown[], request: string) => [
-  "You are SMAJ AI. Answer the user helpfully and route tasks across SMAJ PI HUB services.",
-  "Return only one valid JSON object with no markdown, no reasoning, and no extra text.",
-  "Schema: {\"summary\": string, \"services\": string[], \"steps\": [{\"id\": string, \"serviceId\": string, \"title\": string, \"description\": string, \"capability\": string, \"approvalRequired\": boolean}], \"warnings\": string[] }",
-  "For greetings or tasks that need no service, return summary as the direct answer and services: [], steps: [], warnings: [].",
-  "For all other tasks, use only service IDs from the catalog and only valid capabilities from those services.",
-  "Never claim an action completed. Never plan a payment, token swap, donation, purchase, booking, production submission, or medical decision as executable.",
-  "Allowed service IDs are the exact strings in the catalog: use only those IDs.",
-  "If a step cannot be executed because a service is unavailable or not connected, still include it as a planning step only when it is relevant, and set approvalRequired to true.",
-  `Catalog: ${JSON.stringify(catalog)}`,
-  `User task: ${request}`,
-].join("\n");
-
-const buildRetryPrompt = (catalog: unknown[], request: string) => [
-  "Return only strict JSON.",
-  "No prose, no code fences, no analysis text, no markdown, no trailing commas.",
-  "Object keys must be exactly: summary, services, steps, warnings.",
-  "summary must be a short plain-language summary.",
-  "services must be an array of valid SMAJ service IDs only.",
-  "steps must be an array of objects with exact keys: id, serviceId, title, description, capability, approvalRequired.",
-  "serviceId must be one of the exact valid IDs from the catalog; do not invent IDs.",
-  "approvalRequired must be boolean.",
-  "warnings must be an array of strings.",
-  `Catalog: ${JSON.stringify(catalog)}`,
-  `User task: ${request}`,
-].join("\n");
-
-const isValidPlan = (parsed: any) => {
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
-  if (typeof parsed.summary !== "string" || !parsed.summary.trim()) return false;
-  if (!Array.isArray(parsed.steps)) return false;
-  if (!Array.isArray(parsed.services)) return false;
-  if (!Array.isArray(parsed.warnings)) return false;
-  return true;
-};
-
-export class MetaServiceRouter {
-  constructor(private readonly fetcher: typeof fetch = fetch) {}
-
-  async plan(task: string, connectedServiceIds: ServiceId[] = ["jobs"]): Promise<ServiceRoutePlan> {
-    const request = task.trim();
-    if (!request) throw new AppError("invalid_task", "Enter a message or task", 400);
-    if (request.length > 2000) throw new AppError("invalid_task", "Task description must be 2,000 characters or fewer", 400);
-
-    const connectedIds = new Set(connectedServiceIds.filter(serviceId => SERVICE_IDS.has(serviceId)));
-    const catalog = SMAJ_SERVICES.map(service => ({ id: service.id, name: service.name, connected: connectedIds.has(service.id), adapterMode: service.adapterMode, capabilities: service.capabilities }));
-
-    const parsePlanFromPayload = async (promptText: string): Promise<{ parsed: any; model: string }> => {
-      const { payload, model } = await metaResponse(promptText, 1800, this.fetcher);
-      const rawText = extractMetaOutputText(payload);
-      try {
-        const parsed = parseJsonCandidate(rawText);
-        if (!isValidPlan(parsed)) {
-          throw new Error("missing required plan fields");
-        }
-        return { parsed, model };
-      } catch (error) {
-        console.warn(JSON.stringify({ provider: "meta", event: "invalid_plan_response", model, sample: rawText.slice(0, 1200), error: error instanceof Error ? error.message : String(error) }));
-        throw error;
-      }
-    };
-
-    try {
-      const { parsed, model } = await parsePlanFromPayload(buildRoutingPrompt(catalog, request));
-      const result = this.normalizePlan(parsed, model, connectedIds);
-      return result;
-    } catch (firstError) {
-      try {
-        const { parsed, model } = await parsePlanFromPayload(buildRetryPrompt(catalog, request));
-        const result = this.normalizePlan(parsed, model, connectedIds);
-        return result;
-      } catch (retryError) {
-        console.error(JSON.stringify({ provider: "meta", event: "routing_plan_retry_failed", task: request.slice(0, 200), error: retryError instanceof Error ? retryError.message : String(retryError) }));
-        throw new AppError("invalid_meta_plan", "Meta returned an invalid routing plan. Please retry with a simpler task or check the connected services.", 502);
-      }
+  let requestBody: Record<string, any> = {};
+  const fetcher = async (_input: string | URL | Request, init?: RequestInit) => {
+    if (String(_input).endsWith("/models")) {
+      return new Response(JSON.stringify({ data: [{ id: "test-account-model" }] }));
     }
+
+    requestBody = JSON.parse(String(init?.body));
+    return new Response(JSON.stringify({
+      status: "completed",
+      output: [{
+        content: [{
+          type: "output_text",
+          text: [
+            "Let me reason first.",
+            "",
+            "```json",
+            JSON.stringify({
+              summary: "Use Jobs and Education.",
+              services: ["jobs", "education"],
+              steps: [
+                {
+                  id: "one",
+                  serviceId: "jobs",
+                  title: "Find jobs",
+                  description: "Read matching roles",
+                  capability: "read opportunities",
+                  approvalRequired: true,
+                },
+                {
+                  id: "two",
+                  serviceId: "education",
+                  title: "Plan learning",
+                  description: "Prepare a learning path",
+                  capability: "learning plans",
+                  approvalRequired: true,
+                },
+              ],
+              warnings: ["No Pi payment will be executed."],
+            }),
+            "```",
+            "I have enough context.",
+          ].join("\n"),
+        }],
+      }],
+    }), { status: 200 });
+  };
+
+  try {
+    const result = await new MetaServiceRouter(fetcher as typeof fetch).plan("Find a job and create a learning plan for missing skills.");
+    assert.equal(requestBody.model, "test-account-model");
+    assert.equal(requestBody.store, false);
+    assert.deepEqual(result.services, ["jobs", "education"]);
+    assert.equal(result.steps[0].status, "approval_required");
+    assert.equal(result.steps[0].approvalRequired, true);
+    assert.equal(result.steps[1].status, "unavailable");
+    assert.match(result.warnings.join(" "), /No Pi payment/);
+  } finally {
+    if (previousModel === undefined) delete process.env.META_MODEL;
+    else process.env.META_MODEL = previousModel;
+
+    if (previousKey === undefined) delete process.env.META_API_KEY;
+    else process.env.META_API_KEY = previousKey;
   }
+});
 
-  private normalizePlan(parsed: any, model: string, connectedIds: Set<ServiceId>): ServiceRoutePlan {
-    const rawSteps = Array.isArray(parsed.steps) ? parsed.steps : [];
-    const steps: ServicePlanStep[] = rawSteps.map((value: any, index: number): ServicePlanStep | null => {
-      const serviceId = String(value?.serviceId ?? value?.service_id ?? "") as ServiceId;
-      if (!SERVICE_IDS.has(serviceId)) return null;
-      const service = SMAJ_SERVICES.find(item => item.id === serviceId)!;
-      const requestedCapability = clean(value?.capability ?? service.capabilities[0], service.capabilities[0], 120);
-      const capability = service.capabilities.includes(requestedCapability) ? requestedCapability : service.capabilities[0];
-      const connected = service.adapterMode === "connected" && connectedIds.has(service.id);
-      return {
-        id: clean(value?.id ?? `step-${index + 1}`, `step-${index + 1}`, 60),
-        serviceId,
-        title: clean(value?.title ?? `${service.shortName} task`, `${service.shortName} task`, 120),
-        description: clean(value?.description ?? `Prepare this step with ${service.name}.`, `Prepare this step with ${service.name}.`, 300),
-        capability,
-        status: connected ? "approval_required" : "unavailable",
-        approvalRequired: Boolean(value?.approvalRequired ?? true),
-        reason: connected
-          ? `${service.name} supports read-only discovery and mock execution after approval.`
-          : service.adapterMode === "connected"
-            ? `${service.name} must be connected before this step can run.`
-            : `${service.name} is planning-only until an authorized adapter is available.`,
-      };
-    }).filter((step: ServicePlanStep | null): step is ServicePlanStep => Boolean(step)).slice(0, 10);
+test("Meta router rejects empty tasks before calling the API", async () => {
+  let called = false;
+  const fetcher = async () => {
+    called = true;
+    return new Response();
+  };
 
-    const summaryText = typeof parsed.summary === "string" && parsed.summary.trim() ? parsed.summary.trim() : "SMAJ AI prepared a bounded, reviewable service plan.";
-    const services: ServiceId[] = Array.from(new Set<ServiceId>(
-      Array.isArray(parsed.services)
-        ? parsed.services
-            .map((value: unknown) => String(value || "").trim())
-            .filter((value): value is ServiceId => SERVICE_IDS.has(value as ServiceId))
-        : []
-    ));
-    const warnings = Array.from(new Set([
-      ...(Array.isArray(parsed.warnings) ? parsed.warnings.map((value: unknown) => clean(value, "", 240)).filter(Boolean) : []),
-      "No Pi payment, purchase, booking, donation, swap, or production submission will be executed.",
-      ...(steps.some((step: ServicePlanStep) => step.status === "unavailable") ? ["Planning-only steps are clearly blocked from execution."] : []),
-    ])).slice(0, 6);
+  await assert.rejects(() => new MetaServiceRouter(fetcher as typeof fetch).plan(" "), /Enter a message/);
+  assert.equal(called, false);
+});
 
-    const validServices = services.length ? services : steps.map(step => step.serviceId);
-    return {
-      summary: clean(summaryText, "SMAJ AI prepared a bounded, reviewable service plan.", 800),
-      model,
-      services: Array.from(new Set(validServices)).slice(0, 10),
-      steps,
-      warnings,
-    };
-  }
-}
 
 
 
@@ -267,3 +212,143 @@ export class MetaServiceRouter {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+a
