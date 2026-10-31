@@ -2,6 +2,24 @@ import { AppError } from "@/src/server/http";
 
 const BASE = "https://api.meta.ai/v1";
 
+function catalogContainsModel(catalog: unknown, model: string): boolean {
+  const items = Array.isArray((catalog as any)?.data)
+    ? (catalog as any).data
+    : Array.isArray((catalog as any)?.models)
+      ? (catalog as any).models
+      : [];
+  return Array.isArray(items) && items.some((item: any) => {
+    const candidate = typeof item?.id === "string"
+      ? item.id
+      : typeof item?.model === "string"
+        ? item.model
+        : typeof item?.model_id === "string"
+          ? item.model_id
+          : "";
+    return candidate === model;
+  });
+}
+
 async function request(path: string, apiKey: string, fetcher: typeof fetch, body?: unknown) {
   let response: Response;
   try {
@@ -33,11 +51,20 @@ export async function metaResponse(input: string, maxTokens: number, fetcher: ty
   const model = process.env.META_MODEL?.trim();
   if (!apiKey) throw new AppError("meta_not_configured", "AI is unavailable: the server Meta API key is not configured.", 503);
   if (!model) throw new AppError("meta_model_not_configured", "AI is unavailable: configure META_MODEL using a model available to your Meta account.", 503);
+
   const catalog = await request("models", apiKey, fetcher);
-  if (!Array.isArray(catalog?.data) || !catalog.data.some((item: { id?: string }) => item.id === model)) {
-    throw new AppError("meta_model_not_available", "The configured AI model is not in this account's available model catalog. No AI request was sent.", 503);
+  const catalogHasModel = catalog && catalogContainsModel(catalog, model);
+  if (catalog && !catalogHasModel) {
+    console.warn(JSON.stringify({ provider: "meta", event: "model_catalog_mismatch", requestedModel: model, modelCatalogAvailable: false, catalogLength: Array.isArray((catalog as any)?.data) ? (catalog as any).data.length : Array.isArray((catalog as any)?.models) ? (catalog as any).models.length : 0 }));
   }
-  const payload = await request("responses", apiKey, fetcher, { model, input, max_output_tokens: maxTokens, store: false });
+
+  const payload = await request("responses", apiKey, fetcher, {
+    model,
+    model_id: model,
+    input,
+    max_output_tokens: maxTokens,
+    store: false,
+  });
   if (payload?.status !== "completed") throw new AppError("meta_incomplete", "The AI response did not complete. Please retry.", 502);
   return { payload, model };
 }
