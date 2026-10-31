@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import "./reference-landing.css";
 import ServiceIcon from "./ServiceIcon";
 import ConversationShowcase from "./ConversationShowcase";
+import HubServicesSection from "./HubServicesSection";
 
 type LandingPageProps = {
   authenticated: boolean | null;
@@ -86,6 +87,7 @@ export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, st
           <h2 className="sectiontitle">From your goal to proof. Every step visible.</h2>
           <ConversationShowcase />
         </section>
+        <HubServicesSection />
         <section className="wrap" id="compare">
           <span className="sectionlabel">Why it matters</span>
           <h2 className="sectiontitle">A chatbot replies.<br />SMAJ AI tracks the work.</h2>

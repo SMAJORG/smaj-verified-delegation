@@ -1,0 +1,109 @@
+.referenceLanding .hubServicesSection {
+  padding-top: 0;
+  padding-bottom: 0
+}
+.referenceLanding .hubServicesCard {
+  max-width: 690px;
+  margin: auto;
+  overflow: hidden;
+  border-radius: 32px;
+  background: #fff;
+  color: #1a1829
+}
+.referenceLanding .hubServicesCopy {
+  padding: 32px 24px 0;
+  text-align: center
+}
+.referenceLanding .hubServicesCopy h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -.06em
+}
+.referenceLanding .hubServicesCopy h2 span {
+  display: inline-block;
+  color: #6748fd;
+  background: radial-gradient(283.63% 201.39% at 31.42% -99.18%,#ffbd9e 0%,#fdbca0 6.43%,#947fff 50.71%,#6748fd 80.36%,#150079 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent
+}
+.referenceLanding .hubServicesSubtitle {
+  margin: 16px 0 0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5
+}
+.referenceLanding .hubServicesAvailability {
+  max-width: 490px;
+  margin: 8px auto 0;
+  color: #797380;
+  font-size: 14px;
+  line-height: 1.5
+}
+.referenceLanding .hubServicesIllustration {
+  position: relative;
+  height: 288px;
+  margin-top: 24px;
+  overflow: hidden;
+  border-radius: 32px;
+  background: radial-gradient(225.22% 262.62% at 18.42% -99.13%,#fff 0%,#fff4a2 34.1%,#f9a77d 72.39%,#fff4a200 86.82%)
+}
+.referenceLanding .hubServicesDiagram {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 270px;
+  height: 180px;
+  transform: translate(-50%,-50%)
+}
+.referenceLanding .hubServicesConnections {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none
+}
+.referenceLanding .hubServicesNode {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #fffefc;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 5px 10px rgba(26,24,41,.06)
+}
+.referenceLanding .hubServicesNode .hubServiceIcon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  border-radius: 0;
+  flex: none
+}
+.referenceLanding .hubServicesNode-store {left:0;top:0}
+.referenceLanding .hubServicesNode-jobs {left:0;top:68px}
+.referenceLanding .hubServicesNode-stream {left:0;top:136px}
+.referenceLanding .hubServicesNode-education {right:0;top:0}
+.referenceLanding .hubServicesNode-health {right:0;top:68px}
+.referenceLanding .hubServicesNode-transport {right:0;top:136px}
+.referenceLanding .hubServicesCenter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 76px;
+  height: 76px;
+  max-width: none;
+  transform: translate(-50%,-50%);
+  border-radius: 21px;
+  background: #fff;
+  object-fit: contain;
+  box-shadow: 0 4px 9px rgba(26,24,41,.12)
+}
+@media(max-width:359px) {
+  .referenceLanding .hubServicesCopy {padding-right:20px;padding-left:20px}
+}
