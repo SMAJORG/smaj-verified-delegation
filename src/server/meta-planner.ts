@@ -1,7 +1,6 @@
 import type { CreateDelegationInput, JobRecommendation, JobsApiJob, JobsPlan } from "@/src/domain/types";
 
-export const META_MODEL = "muse-spark-1.3" as const;
-const META_RESPONSES_URL = "https://api.meta.ai/v1/responses";
+import { metaResponse } from "@/src/server/meta-client";
 
 export interface JobsPlanner {
   plan(input: CreateDelegationInput, jobs: JobsApiJob[]): Promise<JobsPlan>;
@@ -35,8 +34,6 @@ export class MetaJobsPlanner implements JobsPlanner {
   constructor(private readonly fetcher: typeof fetch = fetch) {}
 
   async plan(input: CreateDelegationInput, jobs: JobsApiJob[]): Promise<JobsPlan> {
-    const apiKey = process.env.META_API_KEY;
-    if (!apiKey) throw new Error("META_API_KEY is required for Meta planning");
     const maxApplications = Math.max(1, Math.min(3, input.maxApplications || 3));
     const prompt = [
       "You are the planning engine for SMAJ Verified Delegation.",
@@ -49,24 +46,7 @@ export class MetaJobsPlanner implements JobsPlanner {
       `Jobs: ${JSON.stringify(jobs)}`,
     ].join("\n");
 
-    const response = await this.fetcher(META_RESPONSES_URL, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: META_MODEL,
-        input: prompt,
-        max_output_tokens: 2200,
-        store: false,
-        reasoning: { effort: "medium" },
-      }),
-      signal: AbortSignal.timeout(60_000),
-    });
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Meta planning failed with HTTP ${response.status}: ${errorBody.slice(0, 300)}`);
-    }
-    const payload = await response.json();
-    if (payload?.status !== "completed") throw new Error(`Meta planning ended with status ${payload?.status || "unknown"}`);
+    const { payload, model } = await metaResponse(prompt, 2200, this.fetcher);
     const parsed = parseJson(extractOutputText(payload));
     const allowedIds = new Set(jobs.map(job => job.id));
     const recommendations = (Array.isArray(parsed.recommendations) ? parsed.recommendations : [])
@@ -74,6 +54,6 @@ export class MetaJobsPlanner implements JobsPlanner {
       .filter((value): value is JobRecommendation => Boolean(value))
       .slice(0, maxApplications);
     if (recommendations.length === 0) throw new Error("Meta did not return any valid job recommendations");
-    return { summary: String(parsed.summary || "Meta selected the strongest available matches.").slice(0, 800), recommendations, model: META_MODEL };
+    return { summary: String(parsed.summary || "Meta selected the strongest available matches.").slice(0, 800), recommendations, model };
   }
 }

@@ -1,9 +1,9 @@
 import type { ServiceId, ServicePlanStep, ServiceRoutePlan } from "@/src/domain/services";
 import { SERVICE_IDS, SMAJ_SERVICES } from "@/src/domain/services";
 import { AppError } from "@/src/server/http";
-import { META_MODEL } from "@/src/server/meta-planner";
+import { metaResponse } from "@/src/server/meta-client";
 
-const META_RESPONSES_URL = "https://api.meta.ai/v1/responses";
+
 
 const extractOutputText = (payload: any) => {
   const chunks: string[] = [];
@@ -23,15 +23,13 @@ export class MetaServiceRouter {
 
   async plan(task: string, connectedServiceIds: ServiceId[] = ["jobs"]): Promise<ServiceRoutePlan> {
     const request = task.trim();
-    if (request.length < 12) throw new AppError("invalid_task", "Describe a specific task using at least 12 characters", 400);
+    if (!request) throw new AppError("invalid_task", "Enter a message or task", 400);
     if (request.length > 2000) throw new AppError("invalid_task", "Task description must be 2,000 characters or fewer", 400);
-    const apiKey = process.env.META_API_KEY?.trim();
-    if (!apiKey) throw new AppError("meta_not_configured", "Meta Model API is not configured", 503);
 
     const connectedIds = new Set(connectedServiceIds.filter(serviceId => SERVICE_IDS.has(serviceId)));
     const catalog = SMAJ_SERVICES.map(service => ({ id: service.id, name: service.name, connected: connectedIds.has(service.id), adapterMode: service.adapterMode, capabilities: service.capabilities }));
     const prompt = [
-      "You route user tasks across SMAJ PI HUB services. Return strict JSON only.",
+      "You are SMAJ AI. Answer the user helpfully in summary and route actionable tasks across SMAJ PI HUB services. Return strict JSON only. For greetings, questions, or tasks needing no service, return the actual answer in summary with empty services and steps. Never invent service results.",
       "Never claim an action completed. Never plan a payment, token swap, donation, purchase, booking, production submission, or medical decision as executable.",
       "Use only service IDs and capabilities from the catalog. Multi-service plans are allowed.",
       "Schema: {summary:string, services:string[], steps:[{id:string,serviceId:string,title:string,description:string,capability:string,approvalRequired:boolean}], warnings:string[]}",
@@ -39,15 +37,7 @@ export class MetaServiceRouter {
       `User task: ${request}`,
     ].join("\n");
 
-    const response = await this.fetcher(META_RESPONSES_URL, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: META_MODEL, input: prompt, max_output_tokens: 1800, store: false, reasoning: { effort: "medium" } }),
-      signal: AbortSignal.timeout(60_000),
-    });
-    if (!response.ok) throw new AppError("meta_planning_failed", `Meta routing failed with HTTP ${response.status}`, 502);
-    const payload = await response.json();
-    if (payload?.status !== "completed") throw new AppError("meta_planning_failed", `Meta routing ended with status ${payload?.status || "unknown"}`, 502);
+    const { payload, model } = await metaResponse(prompt, 1800, this.fetcher);
 
     let parsed: any;
     try { parsed = parseJson(extractOutputText(payload)); }
@@ -75,13 +65,13 @@ export class MetaServiceRouter {
             : `${service.name} is planning-only until an authorized adapter is available.`,
       };
     }).filter((step: ServicePlanStep | null): step is ServicePlanStep => Boolean(step)).slice(0, 10);
-    if (steps.length === 0) throw new AppError("invalid_meta_plan", "Meta did not identify a supported SMAJ service", 502);
+    if (typeof parsed.summary !== "string" || !parsed.summary.trim()) throw new AppError("invalid_meta_plan", "The AI returned an empty answer. Please retry.", 502);
     const services: ServiceId[] = Array.from(new Set<ServiceId>(steps.map((step: ServicePlanStep) => step.serviceId)));
     const warnings = Array.from(new Set([
       ...(Array.isArray(parsed.warnings) ? parsed.warnings.map((value: unknown) => clean(value, "", 240)).filter(Boolean) : []),
       "No Pi payment, purchase, booking, donation, swap, or production submission will be executed.",
       ...(steps.some((step: ServicePlanStep) => step.status === "unavailable") ? ["Planning-only steps are clearly blocked from execution."] : []),
     ])).slice(0, 6);
-    return { summary: clean(parsed.summary, "SMAJ AI prepared a bounded, reviewable service plan.", 800), model: META_MODEL, services, steps, warnings };
+    return { summary: clean(parsed.summary, "SMAJ AI prepared a bounded, reviewable service plan.", 800), model, services, steps, warnings };
   }
 }

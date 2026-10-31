@@ -24,6 +24,7 @@ export const cleanupDemoSessions = (db = getDemoDatabase(), now = Date.now()) =>
   db.transaction(() => {
     const expired = db.prepare("SELECT actor_id FROM demo_sessions WHERE expires_at <= ?").all(now) as { actor_id: string }[];
     for (const row of expired) {
+      db.prepare("DELETE FROM ai_tasks WHERE owner_id = ?").run(row.actor_id);
       db.prepare("DELETE FROM delegations WHERE owner_id = ?").run(row.actor_id);
       db.prepare("DELETE FROM service_connections WHERE owner_id = ?").run(row.actor_id);
     }

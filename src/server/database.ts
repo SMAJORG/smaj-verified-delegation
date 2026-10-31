@@ -13,6 +13,11 @@ const initialize = (database: AppDatabase) => {
   database.pragma("foreign_keys = ON");
   database.pragma("busy_timeout = 5000");
   database.exec(`
+    CREATE TABLE IF NOT EXISTS ai_tasks (
+      id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, task TEXT NOT NULL,
+      plan_json TEXT NOT NULL, created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS ai_tasks_owner ON ai_tasks(owner_id, created_at DESC);
     CREATE TABLE IF NOT EXISTS delegations (
       id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, goal TEXT NOT NULL,
       candidate_name TEXT NOT NULL, skills_json TEXT NOT NULL, status TEXT NOT NULL,

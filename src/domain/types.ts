@@ -58,7 +58,7 @@ export type ProofReceipt = {
   delegationId: string;
   outcome: "verified";
   verifiedAt: string;
-  planner: { provider: "Meta Model API" | "Hackathon simulation"; model: "muse-spark-1.3" };
+  planner: { provider: "Meta Model API" | "Hackathon simulation"; model: string };
   scope: {
     action: "mock_job_application";
     productionSideEffects: false;

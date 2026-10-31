@@ -28,11 +28,11 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
     <h1>What will we create today?</h1>
     <form className="centralComposer compactComposer" onSubmit={routeTask} aria-label="Create an AI task" aria-busy={busy === "routing"}>
       <label className="visuallyHidden" htmlFor="ai-task">Your AI task</label>
-      <textarea ref={input} id="ai-task" value={task} onChange={event => setTask(event.target.value)} placeholder="Ask anything, create something." maxLength={4000} />
+      <textarea ref={input} id="ai-task" value={task} onChange={event => setTask(event.target.value)} placeholder="Ask anything, create something." maxLength={1900} />
       <div className="composerToolbar">
         <button type="button" className="roundButton" onClick={manageApps} aria-label="Manage connected apps">+</button>
         {selected ? <button type="button" className="contextChip" onClick={() => selectService(null)} aria-label={`Clear ${selected.shortName} context`}><ServiceIcon serviceId={selected.id}/><span>{selected.shortName}</span><span aria-hidden="true">×</span></button> : <button type="button" className="contextChip" onClick={manageApps}><span aria-hidden="true">▦</span> Apps</button>}
-        <button className="createButton" disabled={!ready || task.trim().length < 12 || busy === "routing"}>{busy === "routing" ? <><span className="spinner"/>Planning</> : <>Create <span aria-hidden="true">↗</span></>}</button>
+        <button className="createButton" disabled={!task.trim() || busy === "routing"}>{busy === "routing" ? <><span className="spinner"/>Asking AI…</> : <>Create Task <span aria-hidden="true">↗</span></>}</button>
       </div>
     </form>
     {selected && <div className="serviceContext" role="status"><span><strong>{selected.name}</strong> · {status(selected.id)}{status(selected.id) === "Unavailable" ? " — integration not available yet." : !ready ? " — connect this app to continue." : " — task context selected."}</span>{!ready && selected.adapterMode === "connected" && <button onClick={manageApps}>Connect app</button>}</div>}

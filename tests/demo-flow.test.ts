@@ -79,7 +79,9 @@ test("complete restricted demo login, approval, execution, isolation, expiry and
     const reader = stream.body!.getReader();
     assert.match(new TextDecoder().decode((await reader.read()).value), /event: delegation/);
     await reader.cancel();
-    assert.equal((await routeTask(request("/api/tasks", cookie, "POST", { task: "Find remote developer opportunities" }))).status, 200);
+    assert.equal((await routeTask(request("/api/tasks", cookie, "POST", { task: "Hi" }))).status, 503);
+    process.env.META_API_KEY="test-only-key";process.env.META_MODEL="test-account-model";
+    globalThis.fetch=async(url)=>{assert.match(String(url),/^https:\/\/api\.meta\.ai\/v1\/(models|responses)$/);return new Response(JSON.stringify(String(url).endsWith("/models")?{data:[{id:"test-account-model"}]}:{status:"completed",output:[{content:[{type:"output_text",text:JSON.stringify({summary:"Test fixture plan",recommendations:[{jobId:"sample-frontend",score:90,rationale:"Test match",coverNote:"Test draft"}]})}]}]}));};
     const newResponse = await create(request("/api/delegations", cookie, "POST", { goal: "Find suitable frontend engineering opportunities", candidateName: "Sample Judge", skills: ["React"], maxApplications: 2 }));
     assert.equal(newResponse.status, 201);
     const created = (await newResponse.json()).delegation;

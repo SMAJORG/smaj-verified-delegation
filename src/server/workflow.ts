@@ -91,7 +91,7 @@ export class DelegationWorkflow {
       this.event(id, "contract.created", "A bounded Jobs delegation contract was created.", { expiresAt, maxApplications: selectedJobIds.length });
       const simulated = this.jobsAdapter.sourceUrl.startsWith("demo://");
       this.event(id, "jobs.read", simulated ? "Loaded fictional sample opportunities from the isolated demo workspace." : "Read current Jobs data through the production read-only adapter.", { sourceUrl: this.jobsAdapter.sourceUrl, jobsRead: jobs.length });
-      this.event(id, "plan.generated", simulated ? "A simulated, reviewable application plan was prepared. No live AI request was made." : "Meta generated a reviewable job application plan.", { model: plan.model, recommendations: selectedJobIds.length, simulated });
+      this.event(id, "plan.generated", plan.model === "sample-data" ? "Preloaded fictional sample plan. No live AI request was made." : "Meta generated a reviewable job application plan.", { model: plan.model, recommendations: selectedJobIds.length, simulated });
     });
     insert();
     return this.get(id, ownerId);
@@ -101,6 +101,14 @@ export class DelegationWorkflow {
     this.recoverExpired(ownerId);
     const rows = this.database.prepare("SELECT id FROM delegations WHERE owner_id = ? ORDER BY updated_at DESC LIMIT 50").all(ownerId) as Array<{ id: string }>;
     return rows.map(row => this.get(row.id, ownerId));
+  }
+
+  delete(ownerId: string, id: string) {
+    this.database.transaction(() => {
+      const current = this.get(id, ownerId);
+      if (activeStatuses.includes(current.status)) throw new AppError("task_running", "Wait for this task to finish before deleting it", 409);
+      this.database.prepare("DELETE FROM delegations WHERE id = ? AND owner_id = ?").run(id, ownerId);
+    })();
   }
 
   recoverExpired(ownerId: string) {
@@ -201,7 +209,7 @@ export class DelegationWorkflow {
     const verifiedSubmissions = this.listSubmissions(id);
     const receipt: ProofReceipt = {
       schemaVersion: "1.0", receiptId: randomUUID(), delegationId: id, outcome: "verified", verifiedAt,
-      planner: { provider: current.sourceUrl.startsWith("demo://") ? "Hackathon simulation" : "Meta Model API", model: "muse-spark-1.3" },
+      planner: { provider: current.plan.model === "sample-data" ? "Hackathon simulation" : "Meta Model API", model: current.plan.model },
       scope: { action: "mock_job_application", productionSideEffects: false, realPiPayment: false },
       source: { system: "SMAJ PI HUB", mode: current.sourceUrl.startsWith("demo://") ? "simulated" : "read_only", endpoint: current.sourceUrl },
       approval: { required: true, approvedAt: current.approvedAt || "" },
@@ -238,7 +246,7 @@ export class DelegationWorkflow {
     return {
       id: row.id, goal: row.goal, candidateName: row.candidate_name, skills: parse<string[]>(row.skills_json, []),
       status: row.status, expiresAt: row.expires_at, approvedAt: row.approved_at, createdAt: row.created_at, updatedAt: row.updated_at,
-      plan: parse<JobsPlan>(row.plan_json, { summary: "", recommendations: [], model: "muse-spark-1.3" }),
+      plan: parse<JobsPlan>(row.plan_json, { summary: "", recommendations: [], model: "unknown" }),
       jobs: parse<JobsApiJob[]>(row.jobs_json, []), selectedJobIds: parse<string[]>(row.selected_job_ids_json, []), sourceUrl: row.source_url,
       events: eventRows.map((event): DelegationEvent => ({ id: event.id, type: event.type, message: event.message, payload: parse(event.payload_json, {}), createdAt: event.created_at })),
       submissions: this.listSubmissions(id),

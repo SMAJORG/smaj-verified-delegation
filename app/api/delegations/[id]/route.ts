@@ -13,3 +13,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     return NextResponse.json({ delegation: workspaceWorkflow(request).get(id, actorId) });
   } catch (error) { return apiError(error); }
 }
+
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  try {
+    const actorId = requireActor(request);
+    workspaceWorkflow(request).delete(actorId, (await context.params).id);
+    return new NextResponse(null, { status: 204 });
+  } catch (error) { return apiError(error); }
+}

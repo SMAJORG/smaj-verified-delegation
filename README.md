@@ -4,7 +4,7 @@ An independent Meta-powered AI agent that turns authorized goals into bounded ac
 
 ## Milestone Two
 
-- Live read-only SMAJ Jobs discovery and Meta `muse-spark-1.3` planning
+- Live read-only SMAJ Jobs discovery and Meta account-confirmed models planning
 - Signed HttpOnly sessions, actor-isolated tasks, and mandatory idempotency keys
 - Explicit human approval before every mock execution
 - Real-time server events, persistent task history, and restart-safe run leases
@@ -23,9 +23,9 @@ SMAJ AI runs independently at `https://ai.smajpihub.com` and signs users in with
 
 ## Configure
 
-Copy `.env.example` to `.env.local`. Hackathon Demo Mode needs no API key or access token. Keep `SMAJ_DEMO_AUTH_ENABLED=true` and use a writable `SMAJ_HACKATHON_DB_PATH` separate from `SMAJ_DELEGATION_DB_PATH`.
+Copy `.env.example` to `.env.local`. Hackathon sign-in and preloaded sample history need no API key or access token. New AI requests require a server-side Meta API key and an account-confirmed META_MODEL. Keep `SMAJ_DEMO_AUTH_ENABLED=true` and use a writable `SMAJ_HACKATHON_DB_PATH` separate from `SMAJ_DELEGATION_DB_PATH`.
 
-For regular users, retain the SMAJ PI HUB SSO configuration and a strong `SMAJ_AI_SESSION_SECRET`. Live AI planning requires `META_API_KEY`. Existing access-token sign-in remains available with a random `SMAJ_DEMO_ACCESS_TOKEN` of at least 16 characters. Secret files are excluded from Git.
+For regular users, retain the SMAJ PI HUB SSO configuration and a strong `SMAJ_AI_SESSION_SECRET`. Live AI planning requires `META_API_KEY` (or `MODEL_API_KEY`) and `META_MODEL`. The model must appear in that key's `GET https://api.meta.ai/v1/models` response. Existing access-token sign-in remains available with a random `SMAJ_DEMO_ACCESS_TOKEN` of at least 16 characters. Secret files are excluded from Git.
 
 ## Run
 
@@ -38,7 +38,7 @@ Open `http://localhost:3000` and select **Try Live Demo**. See `DEMO.md` for the
 
 Demo visitors receive a unique, restricted workspace with fictional jobs and three sample tasks (awaiting approval, approved, and verified). The random opaque session credential is stored only in an HttpOnly, SameSite=Strict cookie (Secure on HTTPS); only its SHA-256 hash and one-hour expiry are stored server-side. Logout revokes the session and deletes its sample workspace. Expired workspaces are cleaned up when new demos start. Disabling `SMAJ_DEMO_AUTH_ENABLED` also immediately blocks existing hackathon sessions.
 
-All demo catalog reads and planning use local samples, even when production API keys or write switches are configured. Execution records local mock submissions only. Demo routes use a separate SQLite database and per-session ownership checks; no demo identity is mapped to a real account or administrative role. Workspaces are capped at 50 tasks, and at most 1,000 demo sessions may be active. Regular SSO and access-token sessions continue to use the existing production database. Deploy with persistent storage; multiple instances must share compatible SQLite storage or use a single application instance for this backend.
+Demo catalog reads use fictional samples. New AI answers and Jobs plans use the real Meta API; missing or invalid credentials produce an explicit error. Preloaded historical plans are labeled sample data. Execution records local mock submissions only. Demo routes use a separate SQLite database and per-session ownership checks; no demo identity is mapped to a real account or administrative role. Workspaces are capped at 50 tasks, and at most 1,000 demo sessions may be active. Regular SSO and access-token sessions continue to use the existing production database. Deploy with persistent storage; multiple instances must share compatible SQLite storage or use a single application instance for this backend.
 
 ## Validate
 

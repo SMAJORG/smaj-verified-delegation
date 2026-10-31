@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { SmajJobsReadAdapter } from "@/src/server/jobs-adapter";
 import { SmajStoreReadAdapter } from "@/src/server/store-adapter";
-import { META_MODEL, MetaJobsPlanner } from "@/src/server/meta-planner";
+import { MetaJobsPlanner } from "@/src/server/meta-planner";
 import { jobs } from "./fixtures";
 
 test("Jobs adapter performs a GET and normalizes read-only data", async () => {
@@ -20,11 +20,13 @@ test("Jobs adapter performs a GET and normalizes read-only data", async () => {
   assert.deepEqual(result[0].skills, ["Figma"]);
 });
 
-test("Meta planner uses muse-spark-1.3 and rejects unknown job IDs", async () => {
+test("Meta planner uses the account-confirmed configured model and rejects unknown job IDs", async () => {
   const previousKey = process.env.META_API_KEY;
   process.env.META_API_KEY = "test-only-key";
+  const previousModel=process.env.META_MODEL; process.env.META_MODEL="test-account-model";
   let requestBody: Record<string, unknown> = {};
   const fetcher = async (_input: string | URL | Request, init?: RequestInit) => {
+    if(String(_input).endsWith("/models"))return new Response(JSON.stringify({data:[{id:"test-account-model"}]}));
     requestBody = JSON.parse(String(init?.body));
     return new Response(JSON.stringify({
       status: "completed",
@@ -45,11 +47,12 @@ test("Meta planner uses muse-spark-1.3 and rejects unknown job IDs", async () =>
       goal: "Find suitable engineering roles for review.",
       maxApplications: 3,
     }, jobs);
-    assert.equal(requestBody.model, META_MODEL);
+    assert.equal(requestBody.model, "test-account-model");
     assert.equal(requestBody.store, false);
     assert.deepEqual(result.recommendations.map(item => item.jobId), [jobs[0].id]);
     assert.equal(result.recommendations[0].score, 96);
   } finally {
+    if(previousModel===undefined)delete process.env.META_MODEL;else process.env.META_MODEL=previousModel;
     if (previousKey === undefined) delete process.env.META_API_KEY;
     else process.env.META_API_KEY = previousKey;
   }

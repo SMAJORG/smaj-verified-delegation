@@ -3,17 +3,17 @@
 ## Judge walkthrough (no credentials required)
 
 1. Open the application and select **Try Live Demo**.
-2. Select **Explore sample tasks** to see an awaiting-approval task, an approved task, and a verified result.
+2. Select **Sample tasks** to see an awaiting-approval task, an approved task, and a verified result.
 3. Open the awaiting-approval task, review the fictional opportunities and drafts, and approve the selected mock actions.
 4. Execute the approved plan with recovery enabled. Inspect its audit trail, independent checks, and downloadable proof receipt.
-5. Try creating another task, or connect the sample Store catalog. Planning and sensitive actions remain simulated.
+5. Try creating another task, or connect the sample Store catalog. New AI requests use the real Meta API; sensitive actions remain simulated.
 6. Select **Exit demo** to revoke the session and delete its sample workspace. Each new visit gets a fresh workspace; sessions expire after one hour.
 
-This mode requires no API key or access token and makes no outbound service calls. Keep `SMAJ_DEMO_AUTH_ENABLED=true`. Demo data lives in `SMAJ_HACKATHON_DB_PATH` (default `./data/hackathon-demo.sqlite`), which must differ from production storage. The UI and receipts identify simulated data and planning.
+Sign-in and preloaded sample history require no API key or access token. New AI requests require a server-side META_API_KEY (or MODEL_API_KEY) and META_MODEL confirmed by that account catalog. If unavailable, an explicit error is shown; no replacement AI response is generated. Keep `SMAJ_DEMO_AUTH_ENABLED=true`. Demo data lives in `SMAJ_HACKATHON_DB_PATH` (default `./data/hackathon-demo.sqlite`), which must differ from production storage. The UI and receipts identify simulated data and planning.
 
 ## Existing live-planning script
 
-The optional script below uses the live read-only SMAJ Jobs endpoint and Meta `muse-spark-1.3`, but writes only mock application records to the regular application's local database. It retains the existing access-token authentication and is separate from the judge walkthrough.
+The optional script below uses the live read-only SMAJ Jobs endpoint and Meta account-confirmed models, but writes only mock application records to the regular application's local database. It retains the existing access-token authentication and is separate from the judge walkthrough.
 
 ## Configure
 
@@ -21,6 +21,7 @@ Set these values in `.env.local` without committing them:
 
 ```dotenv
 META_API_KEY=your_meta_key
+META_MODEL=exact_id_from_your_account_catalog
 SMAJ_DEMO_ACCESS_TOKEN=a_random_secret_at_least_16_characters
 ```
 

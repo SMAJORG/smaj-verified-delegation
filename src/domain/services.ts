@@ -47,7 +47,7 @@ export type ServicePlanStep = {
 
 export type ServiceRoutePlan = {
   summary: string;
-  model: "muse-spark-1.3";
+  model: string;
   services: ServiceId[];
   steps: ServicePlanStep[];
   warnings: string[];
