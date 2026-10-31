@@ -19,6 +19,11 @@ export class AiTaskStore {
     if (!row) throw new AppError("task_not_found", "Task not found", 404);
     return { id: row.id, task: row.task, plan: JSON.parse(row.plan_json), createdAt: row.created_at };
   }
+  savePlan(owner: string, id: string, plan: ServiceRoutePlan) {
+    this.get(owner, id);
+    this.database.prepare("UPDATE ai_tasks SET plan_json = ? WHERE owner_id = ? AND id = ?").run(JSON.stringify(plan), owner, id);
+    return this.get(owner, id);
+  }
   delete(owner: string, id: string) {
     const result = this.database.prepare("DELETE FROM ai_tasks WHERE owner_id = ? AND id = ?").run(owner, id);
     if (!result.changes) throw new AppError("task_not_found", "Task not found", 404);

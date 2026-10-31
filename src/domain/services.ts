@@ -16,7 +16,7 @@ export type SmajService = {
 
 export const SMAJ_SERVICES: readonly SmajService[] = [
   { id: "store", name: "SMAJ Store", shortName: "Store", description: "Products and verified stores", platformStatus: "live", adapterMode: "connected", capabilities: ["product discovery", "price comparison"], example: "Compare products that fit my budget", accent: "#7c3aed" },
-  { id: "stream", name: "SMAJ Stream", shortName: "Stream", description: "Movies, series, and entertainment", platformStatus: "live", adapterMode: "planning_only", capabilities: ["content discovery", "watch planning"], example: "Build a weekend watchlist", accent: "#db2777" },
+  { id: "stream", name: "SMAJ Stream", shortName: "Stream", description: "Published public creator content", platformStatus: "live", adapterMode: "connected", capabilities: ["content discovery", "watch planning"], example: "Build a weekend watchlist", accent: "#db2777" },
   { id: "jobs", name: "SMAJ Jobs", shortName: "Jobs", description: "Jobs and freelance opportunities", platformStatus: "live", adapterMode: "connected", capabilities: ["read opportunities", "match roles", "mock applications"], example: "Find matching jobs and prepare applications", accent: "#6d28d9" },
   { id: "education", name: "SMAJ Education", shortName: "Education", description: "Courses and practical skills", platformStatus: "coming_soon", adapterMode: "planning_only", capabilities: ["learning plans", "course discovery"], example: "Create a learning path for product design", accent: "#2563eb" },
   { id: "sports", name: "SMAJ Sports", shortName: "Sports", description: "Sports, fixtures, and scores", platformStatus: "in_progress", adapterMode: "planning_only", capabilities: ["fixture planning", "sports summaries"], example: "Plan which matches to follow this week", accent: "#ea580c" },
@@ -46,6 +46,7 @@ export type ServicePlanStep = {
 };
 
 export type ServiceRoutePlan = {
+  discovery?: { approvedAt: string; completedAt: string; results: Array<{ serviceId: string; source: string; status: "read" | "unavailable"; records: unknown[]; error?: string }>; proofHash: string };
   summary: string;
   model: string;
   services: ServiceId[];

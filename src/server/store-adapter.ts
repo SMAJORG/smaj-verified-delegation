@@ -1,10 +1,9 @@
+import { catalogJson, catalogRows } from "@/src/server/catalog-http";
 import type { StoreApiProduct } from "@/src/domain/types";
 
 export const DEFAULT_STORE_URL = "https://smajpihub.onrender.com/marketplace/products";
 
-type StoreResponse = { products?: Array<Record<string, unknown>> };
-
-const text = (value: unknown, fallback = "") => (typeof value === "string" ? value : fallback);
+const text = (value: unknown, fallback = "") => (typeof value === "string" ? value.slice(0, 600) : fallback);
 const price = (product: Record<string, unknown>) => {
   const pi = Number(product.pricePi);
   if (Number.isFinite(pi) && pi > 0) return `${pi} Pi`;
@@ -26,18 +25,10 @@ export class SmajStoreReadAdapter {
   }
 
   async listProducts(): Promise<StoreApiProduct[]> {
-    const response = await this.fetcher(this.sourceUrl, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-      signal: AbortSignal.timeout(20_000),
-    });
-    if (!response.ok) throw new Error(`SMAJ Store read failed with HTTP ${response.status}`);
-    const body = (await response.json()) as StoreResponse;
-    if (!Array.isArray(body.products)) throw new Error("SMAJ Store returned an invalid payload");
+    const rows = catalogRows(await catalogJson(this.sourceUrl, this.fetcher), "products");
 
-    return body.products.map((product, index) => ({
-      id: text(product._id, text(product.id, `product-${index + 1}`)),
+    return rows.map(product => ({
+      id: text(product._id, text(product.id, text(product.slug))),
       title: text(product.title, text(product.name, "Untitled product")),
       category: text(product.category, "Other"),
       price: price(product),

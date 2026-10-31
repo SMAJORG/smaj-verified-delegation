@@ -23,3 +23,8 @@ export const apiError = (error: unknown) => {
   console.error(`[${requestId}] Unhandled API failure`, error);
   return NextResponse.json({ error: "internal_error", message: "The request could not be completed", requestId }, { status: 500 });
 };
+
+export function requireSameOrigin(request: Request) {
+  const origin = request.headers.get("origin");
+  if (!origin || origin !== new URL(process.env.SMAJ_AI_PUBLIC_URL || request.url).origin) throw new AppError("invalid_origin", "Same-origin request required", 403);
+}

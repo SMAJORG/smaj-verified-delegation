@@ -27,7 +27,7 @@ export default function Services({ connections, setConnection, busy }: Props) {
           {connected.map(service => <li key={service.id} aria-label={`${service.name} connected`}><ServiceIcon serviceId={service.id} /></li>)}
         </ul> : <span className={styles.empty}>No apps connected</span>}
       </div>
-      <p className={styles.note}>Choose the apps SMAJ AI can use. Authorized read-only connections; simulated actions only.</p>
+      <p className={styles.note}>Allow SMAJ AI to read public listing metadata from selected apps and share it with Meta after task approval. Purchases, playback and payments remain disabled.</p>
       <ul className={styles.list} aria-label="SMAJ PI HUB services">
         {SMAJ_SERVICES.map(service => {
           const state = states.get(service.id);

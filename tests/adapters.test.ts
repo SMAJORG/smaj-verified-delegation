@@ -11,7 +11,7 @@ test("Jobs adapter performs a GET and normalizes read-only data", async () => {
     method = init?.method || "";
     return new Response(JSON.stringify({ jobs: [{ id: "42", title: "Designer", skills: ["Figma"] }] }), { status: 200 });
   };
-  const adapter = new SmajJobsReadAdapter("https://smaj.example/jobs", fetcher as typeof fetch);
+  const adapter = new SmajJobsReadAdapter("https://smajpihub.onrender.com/jobs/jobs", fetcher as typeof fetch);
   const result = await adapter.listJobs();
 
   assert.equal(method, "GET");
@@ -64,7 +64,7 @@ test("Store adapter performs a GET and normalizes read-only products", async () 
     method = init?.method || "";
     return new Response(JSON.stringify({ products: [{ _id: "p1", title: "Solar Lamp", category: "Energy", pricePi: 12, priceUsdt: 30, sellerName: "Ada Stores", location: "Lagos", country: "Nigeria", description: "Bright solar lamp" }] }), { status: 200 });
   };
-  const adapter = new SmajStoreReadAdapter("https://smaj.example/products", fetcher as typeof fetch);
+  const adapter = new SmajStoreReadAdapter("https://smajpihub.onrender.com/marketplace/products", fetcher as typeof fetch);
   const result = await adapter.listProducts();
   assert.equal(method, "GET");
   assert.equal(result[0].id, "p1");

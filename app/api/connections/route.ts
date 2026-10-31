@@ -1,3 +1,4 @@
+import { requireSameOrigin } from "@/src/server/http";
 import { NextRequest, NextResponse } from "next/server";
 import { requireActorSession } from "@/src/server/auth";
 import { apiError } from "@/src/server/http";
@@ -16,6 +17,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    requireSameOrigin(request);
     const session = requireActorSession(request);
     const body = await request.json() as { serviceId?: unknown; connected?: unknown };
     const connections = new ServiceConnectionStore(workspaceDatabase(request)).set(session.actorId, String(body.serviceId || ""), body.connected === true);

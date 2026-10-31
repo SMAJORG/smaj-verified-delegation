@@ -1,3 +1,5 @@
+import { ServiceConnectionStore } from "@/src/server/service-connections";
+import { workspaceDatabase } from "@/src/server/demo-workspace";
 import { NextRequest, NextResponse } from "next/server";
 import type { CreateDelegationInput } from "@/src/domain/types";
 import { requireActor, requireActorSession } from "@/src/server/auth";
@@ -26,6 +28,8 @@ export async function POST(request: NextRequest) {
       }
       if (workflow.list(actorId).length >= 50) throw new AppError("demo_limit", "This demo workspace has reached its task limit. Start a fresh demo after signing out.", 429);
     }
+    const session = requireActorSession(request);
+    if (!session.sandbox && !new ServiceConnectionStore(workspaceDatabase(request)).list(actorId, session.authType).some(c => c.serviceId === "jobs" && c.connected)) throw new AppError("service_not_connected", "Connect Jobs first", 409);
     const delegation = await workflow.create(actorId, body, requestKey);
     return NextResponse.json({ delegation }, { status: 201 });
   } catch (error) { return apiError(error); }
