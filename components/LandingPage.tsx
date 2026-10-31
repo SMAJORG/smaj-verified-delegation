@@ -1,6 +1,7 @@
 "use client";
 
-import BrandLogo from "@/components/BrandLogo";
+import { useEffect, useRef, useState } from "react";
+import "./reference-landing.css";
 
 type LandingPageProps = {
   authenticated: boolean | null;
@@ -14,81 +15,149 @@ type LandingPageProps = {
   login: (event: React.FormEvent) => void;
 };
 
-const stages = ["User Goal", "Meta AI Planning", "Human Approval", "Delegated Execution", "Recovery", "Verified Proof"];
-const capabilities = [
-  { number: "01", title: "Plan with AI", text: "Transform user requests into structured, actionable plans using Meta AI.", symbol: "✧" },
-  { number: "02", title: "Approve & Delegate", text: "Stay in control by approving actions before execution.", symbol: "✓" },
-  { number: "03", title: "Verify Every Result", text: "Track execution, handle failures, and generate downloadable proof receipts.", symbol: "↗" },
+const comparison = [
+  ["What matters", "Basic chatbot", "SMAJ AI"],
+  ["Action plan", "Text suggestions", "Structured AI plan"],
+  ["Control", "You interpret replies", "Explicit approval"],
+  ["Failures", "Try again yourself", "Recovery tracking"],
+  ["Evidence", "Conversation history", "PDF + JSON proof"],
 ];
 
 export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, startDemo, accessToken, setAccessToken, busy, error, login }: LandingPageProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+  const accessRef = useRef<HTMLElement>(null);
   const checking = authenticated === null;
   const demoDisabled = checking || !demoEnabled || busy !== null;
-  const demoLabel = busy === "demo" ? "Preparing your workspace…" : "Try Live AI Demo →";
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") { setMenuOpen(false); navRef.current?.querySelector<HTMLButtonElement>(".menu")?.focus(); } };
+    const closeOutside = (event: PointerEvent) => { if (!navRef.current?.contains(event.target as Node)) setMenuOpen(false); };
+    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("pointerdown", closeOutside);
+    return () => { document.removeEventListener("keydown", closeOnEscape); document.removeEventListener("pointerdown", closeOutside); };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (authOpen) {
+      accessRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      accessRef.current?.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true });
+    }
+  }, [authOpen]);
 
   return (
-    <div className="productLanding">
-      <header className="landingHeader">
-        <a className="landingBrand" href="/" aria-label="SMAJ AI — Verified Delegation home">
-          <BrandLogo />
-          <span><strong>SMAJ AI<span className="brandSeparator">/</span><span className="brandProduct">Verified Delegation</span></strong><small>PART OF SMAJ PI HUB</small></span>
-        </a>
-        <nav aria-label="Main navigation">
-          <a href="#how-it-works">How it works</a>
-          <a href="#access">Workspace sign-in <span aria-hidden="true">↗</span></a>
+    <div className="referenceLanding">
+      <header className="nav" ref={navRef}>
+        <a className="brand" href="#top" aria-label="SMAJ AI home">SMAJ<span> AI</span></a>
+        <div className="navright">
+          <a className="pill" href="#demo">Try Live Demo</a>
+          <button className="menu" type="button" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} aria-controls="landing-menu" onClick={() => setMenuOpen(!menuOpen)}>☰</button>
+        </div>
+        <nav id="landing-menu" className="menuPanel" aria-label="Main navigation" hidden={!menuOpen} onClick={() => setMenuOpen(false)}>
+          <a href="#how">How it works</a>
+          <a href="#features">Capabilities</a>
+          <a href="#compare">Why SMAJ AI</a>
+          <a href="#demo">Live demo</a>
+          <button type="button" onClick={() => setAuthOpen(true)}>Workspace sign-in</button>
         </nav>
       </header>
-
-      <main className="landingMain">
-        {error && <div className="landingError" role="alert">{error}</div>}
-        <section className="landingHero" aria-labelledby="hero-heading">
-          <div className="heroContent">
-            <p className="landingEyebrow"><span aria-hidden="true" /> AI PLANS. YOU APPROVE. PROOF FOLLOWS.</p>
-            <h1 id="hero-heading">AI That Doesn&apos;t Just Answer. <span>It Gets Things Done.</span></h1>
-            <p className="heroDescription">Turn your goals into actionable plans. Review and approve every step. Let AI execute approved tasks and receive verifiable proof of the outcome.</p>
-            <button className="landingPrimary" onClick={startDemo} disabled={demoDisabled}>{busy === "demo" && <span className="spinner" />}{demoLabel}</button>
-            <p className="heroPowered">Powered by Meta AI <span>·</span> Connected to SMAJ PI HUB Services</p>
-            <p className="heroDemoNote" role="status">{checking ? "Checking secure session…" : busy === "demo" ? "Creating a secure session and loading sample data…" : demoEnabled ? "No account needed · Simulated actions · Private demo workspace" : "Interactive demo is currently unavailable. Use workspace sign-in below."}</p>
+      <main id="top">
+        <section className="hero">
+          <div className="eyebrow">SMAJ PI HUB · PI NETWORK ECOSYSTEM</div>
+          <h1>Not just AI answers.<br />AI actions you can verify.</h1>
+          <p>Describe your goal. Let Meta AI plan the work. Approve each action and receive a clear record of what happened.</p>
+          <a className="pill" href="#demo">Explore Live Demo →</a>
+          <small>Meta AI-powered planning · Human approval · Simulated execution</small>
+        </section>
+        <section className="wrap" id="how">
+          <span className="sectionlabel">Built for trusted delegation</span>
+          <h2 className="sectiontitle">From your goal to proof. Every step visible.</h2>
+          <div className="cards">
+            <article className="card">
+              <div className="visual" aria-label="Illustrative AI planning preview"><div className="mini">
+                <span className="chip">01 · PLAN</span>
+                <p>“Find matching opportunities on SMAJ PI HUB Jobs.”</p>
+                <strong>AI-generated action plan ✓</strong>
+                <p>Review jobs → select match → request approval</p>
+              </div></div>
+              <h3>You set the goal. Meta AI maps the steps.</h3>
+              <p>Turn a request into a clear, structured plan using live Meta model reasoning.</p>
+            </article>
+            <article className="card">
+              <div className="visual" aria-label="Illustrative human approval preview"><div className="mini">
+                <span className="chip">02 · APPROVE</span>
+                <p>Proposed action</p>
+                <strong>Prepare a mock job application</strong>
+                <p>Nothing proceeds without your approval.</p>
+                <div className="approvalPreview"><span className="chip">Approve ✓</span><span className="chip rejectChip">Reject</span></div>
+              </div></div>
+              <h3>Your approval is the control point.</h3>
+              <p>See the proposed action and authorize it before simulated execution.</p>
+            </article>
+            <article className="card" id="features">
+              <div className="visual" aria-label="Illustrative execution and recovery preview"><div className="mini">
+                <span className="chip">03 · EXECUTE &amp; RECOVER</span>
+                <p>Execution status</p>
+                <strong>Simulated task completed</strong>
+                <p>Retry and recovery events are tracked.</p>
+                <div className="steps"><span className="chip">✓ Checked</span><span className="chip">✓ Recovered</span></div>
+              </div></div>
+              <h3>Delegation with a recovery path.</h3>
+              <p>Follow execution status and see how the system responds when a step fails.</p>
+            </article>
+            <article className="card">
+              <div className="visual" aria-label="Illustrative proof receipt preview"><div className="mini">
+                <span className="chip">04 · VERIFY</span>
+                <div className="check">✓</div>
+                <strong>Proof receipt ready</strong>
+                <p>Action history · Approval · Checks · Outcome</p>
+                <div className="steps"><span className="chip">PDF receipt</span><span className="chip">JSON proof</span></div>
+              </div></div>
+              <h3>Don&apos;t just trust the result. Inspect it.</h3>
+              <p>Export a readable PDF or structured JSON receipt for the simulated workflow.</p>
+            </article>
           </div>
-
-          <aside className="delegationPreview" aria-label="Illustrative delegation workflow with simulated results">
-            <div className="previewTop"><span><i /> DELEGATION PREVIEW</span><span className="simulationBadge">Simulated</span></div>
-            <div className="previewGoal"><span className="previewAvatar" aria-hidden="true">You</span><div><small>YOUR GOAL</small><p>Find engineering roles that match my skills.</p></div></div>
-            <div className="previewSteps">
-              <div className="previewStep"><span className="previewStepIcon" aria-hidden="true">✧</span><div><strong>Meta AI builds a plan</strong><p>Match roles. Prepare application drafts.</p></div><span className="previewStatus">Planned</span></div>
-              <div className="previewStep"><span className="previewStepIcon" aria-hidden="true">✓</span><div><strong>You review & approve</strong><p>Only your selected actions can proceed.</p></div><span className="previewStatus">Approved</span></div>
-              <div className="previewStep"><span className="previewStepIcon" aria-hidden="true">↗</span><div><strong>AI executes the approved plan</strong><p>Local mock applications are submitted.</p></div><span className="previewStatus">Executed</span></div>
-              <div className="previewStep recoveryStep"><span className="previewStepIcon" aria-hidden="true">↻</span><div><strong>A failure? Recover safely.</strong><p>Retry a simulated transient error.</p></div><span className="previewStatus">Recovered</span></div>
-            </div>
-            <div className="previewProof"><span className="proofCheck" aria-hidden="true">✓</span><div><strong>Verified proof receipt</strong><p>Outcome checked. Evidence ready to download.</p></div><span className="proofFormat">PDF / JSON</span></div>
-            <p className="previewCaption">Illustrative workflow · No real applications submitted</p>
-          </aside>
         </section>
-
-        <section className="delegationPipeline" aria-label="Complete AI delegation workflow">
-          <p>FROM INTENT TO EVIDENCE</p>
-          <ol>{stages.map((stage, index) => <li key={stage}><span className="pipelineNumber">{String(index + 1).padStart(2, "0")}</span><span>{stage}</span>{index < stages.length - 1 && <span className="pipelineArrow" aria-hidden="true">→</span>}</li>)}</ol>
-        </section>
-
-        <section id="how-it-works" className="landingCapabilities" aria-label="Three core capabilities">
-          {capabilities.map(capability => <article key={capability.number}><div className="capabilityTop"><span className="capabilityIcon" aria-hidden="true">{capability.symbol}</span><span>{capability.number}</span></div><h2>{capability.title}</h2><p>{capability.text}</p></article>)}
-        </section>
-
-        <section className="landingDemo" aria-labelledby="demo-heading">
-          <div><p className="landingEyebrow">THE HACKATHON EXPERIENCE</p><h2 id="demo-heading">See AI Delegation in Action</h2><p>Experience how SMAJ AI plans, delegates, recovers from failures, and verifies outcomes using simulated SMAJ PI HUB Jobs workflows.</p></div>
-          <div className="demoCallToAction"><button className="landingPrimary" onClick={startDemo} disabled={demoDisabled}>{busy === "demo" ? "Preparing your workspace…" : "Launch Interactive Demo →"}</button><small>Demo actions are simulated. No real job applications or Pi payments are processed.</small></div>
-        </section>
-
-        <section id="access" className="landingAccess" aria-label="Workspace authentication">
-          <div><strong>Already have workspace access?</strong><p>Continue securely with your existing credentials.</p></div>
-          <div className="landingSignIn">
-            {ssoEnabled && <a className="landingSso" href="/api/auth/sso">Continue with SMAJ PI HUB ↗</a>}
-            <details className="landingToken"><summary>Sign in with an access token</summary><form onSubmit={login}><label htmlFor="landing-access-token">Access token</label><div><input id="landing-access-token" type="password" autoComplete="off" value={accessToken} onChange={event => setAccessToken(event.target.value)} placeholder="Enter your access token" required /><button className="landingPrimary" disabled={!accessToken || busy !== null || checking}>{busy === "login" ? "Signing in…" : "Open workspace →"}</button></div><small>Protected by a secure HttpOnly session.</small></form></details>
+        <section className="wrap" id="compare">
+          <span className="sectionlabel">Why it matters</span>
+          <h2 className="sectiontitle">A chatbot replies.<br />SMAJ AI tracks the work.</h2>
+          <div className="comparison" role="table" aria-label="Basic chatbot and SMAJ AI comparison">
+            {comparison.map((row, index) => <div className="row" role="row" key={row[0]}>{row.map((cell, column) => <div role={index === 0 ? "columnheader" : column === 0 ? "rowheader" : "cell"} key={cell}>{cell}</div>)}</div>)}
           </div>
         </section>
+        <section className="wrap" id="demo">
+          <div className="cta" aria-busy={busy === "demo"}>
+            <span className="eyebrow">META AI HACKATHON DEMO</span>
+            <h2>Stop guessing what AI did.<br />See the proof.</h2>
+            <p>Try a real AI planning flow with human approval and simulated SMAJ PI HUB Jobs actions.</p>
+            <button className="pill" type="button" disabled={demoDisabled} onClick={startDemo}>{busy === "demo" ? "Preparing demo…" : "Launch Demo →"}</button>
+            {checking && <p className="demoStatus" role="status">Checking secure session…</p>}
+            {!checking && !demoEnabled && <p className="demoStatus" role="status">Demo access is currently unavailable. <button className="textButton" onClick={() => setAuthOpen(true)}>Sign in to your workspace</button>.</p>}
+            {busy === "demo" && <p className="demoStatus" role="status">Creating your private demo workspace…</p>}
+            {error && <p className="demoError" role="alert">{error}</p>}
+            <p className="demoDisclaimer">Demo only: no real job applications or Pi payments. Not affiliated with or endorsed by Pi Network or Meta.</p>
+          </div>
+        </section>
+        {authOpen && <section className="wrap accessSection" id="access" ref={accessRef} aria-labelledby="access-heading">
+          <div className="accessCard">
+            <button className="accessClose" type="button" aria-label="Close workspace sign-in" onClick={() => { setAuthOpen(false); navRef.current?.querySelector<HTMLButtonElement>(".menu")?.focus(); }}>×</button>
+            <span className="sectionlabel">Existing workspace</span>
+            <h2 id="access-heading">Welcome back.</h2>
+            {ssoEnabled && <a className="pill ssoButton" href="/api/auth/sso">Continue with SMAJ PI HUB →</a>}
+            <form onSubmit={login}>
+              <label htmlFor="landing-access-token">Access token</label>
+              <input id="landing-access-token" type="password" autoComplete="off" value={accessToken} onChange={event => setAccessToken(event.target.value)} placeholder="Enter your access token" required />
+              <button className="pill" disabled={!accessToken || busy !== null || checking}>{busy === "login" ? "Signing in…" : "Open workspace →"}</button>
+            </form>
+            {error && <p className="authError" role="alert">{error}</p>}
+            <small>Protected by a secure HttpOnly session.</small>
+          </div>
+        </section>}
       </main>
-
-      <footer className="landingFooter"><p><strong>SMAJ AI</strong> — Verified Delegation<span>Built for the Pi Network Ecosystem</span></p><small>Independent project. No official Meta or Pi Network endorsement.</small></footer>
+      <footer className="footer">SMAJ AI · Verified Delegation<br />Part of SMAJ PI HUB · Built for the Pi Network ecosystem</footer>
+      <div className="sticky"><a href="#demo" className="pill">Try Live Demo →</a></div>
     </div>
   );
 }

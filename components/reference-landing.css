@@ -1,0 +1,496 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+.referenceLanding {
+  --ink: #171425;
+  --purple: #6734eb;
+  --paper: #faf7f4
+}
+.referenceLanding * {
+  box-sizing: border-box
+}
+.referenceLanding {
+  scroll-behavior: smooth
+}
+.referenceLanding {
+  margin: 0;
+  font-family: 'DM Sans',Arial,sans-serif;
+  color: var(--ink);
+  background: var(--paper)
+}
+.referenceLanding a {
+  text-decoration: none;
+  color: inherit
+}
+.referenceLanding .nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 auto;
+  max-width: 1200px;
+  padding: 16px 22px;
+  background: rgba(255,255,255,.96);
+  border-radius: 0 0 28px 28px;
+  box-shadow: 0 12px 32px #21144112
+}
+.referenceLanding .brand {
+  font-weight: 800;
+  font-size: 25px;
+  letter-spacing: -1.4px
+}
+.referenceLanding .brand span {
+  color: #6734eb
+}
+.referenceLanding .navright {
+  display: flex;
+  gap: 12px;
+  align-items: center
+}
+.referenceLanding .pill {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 999px;
+  padding: 14px 24px;
+  background: #1a1729;
+  color: #fff;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 0;
+  cursor: pointer
+}
+.referenceLanding .menu {
+  font-size: 24px;
+  border: 1px solid #e4dfe9;
+  border-radius: 50%;
+  width: 46px;
+  height: 46px;
+  background: #fff;
+  cursor: pointer
+}
+.referenceLanding .hero {
+  min-height: 660px;
+  padding: 108px 20px 95px;
+  text-align: center;
+  color: #fff;
+  background: radial-gradient(ellipse at 50% 5%,#ffbea8 0%,transparent 43%),linear-gradient(158deg,#cba3d9 0%,#9d7be8 43%,#6632f0 100%)
+}
+.referenceLanding .eyebrow {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .07em
+}
+.referenceLanding .hero h1 {
+  font-size: clamp(46px,8vw,100px);
+  letter-spacing: -.065em;
+  line-height: 1.04;
+  max-width: 950px;
+  margin: 38px auto 28px
+}
+.referenceLanding .hero p {
+  max-width: 690px;
+  font-size: clamp(18px,2.5vw,26px);
+  line-height: 1.5;
+  margin: 0 auto 38px
+}
+.referenceLanding .hero .pill {
+  background: white;
+  color: #171425;
+  min-width: 270px;
+  font-size: 18px;
+  padding: 19px
+}
+.referenceLanding .hero small {
+  display: block;
+  margin-top: 20px;
+  opacity: .9
+}
+.referenceLanding .wrap {
+  max-width: 1120px;
+  margin: auto;
+  padding: 84px 22px
+}
+.referenceLanding .sectionlabel {
+  color: #6734eb;
+  font-size: 13px;
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: .12em
+}
+.referenceLanding .sectiontitle {
+  font-size: clamp(37px,6vw,72px);
+  letter-spacing: -.06em;
+  line-height: 1.08;
+  max-width: 850px;
+  margin: 16px 0 48px
+}
+.referenceLanding .cards {
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 24px
+}
+.referenceLanding .card {
+  border-radius: 36px;
+  background: white;
+  padding: 18px 18px 34px;
+  overflow: hidden
+}
+.referenceLanding .visual {
+  min-height: 280px;
+  border-radius: 30px;
+  background: linear-gradient(135deg,#241071,#5423bf 52%,#b98de8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  color: white
+}
+.referenceLanding .card h3 {
+  font-size: clamp(27px,3vw,38px);
+  letter-spacing: -.05em;
+  line-height: 1.15;
+  margin: 28px 20px 14px
+}
+.referenceLanding .card p {
+  font-size: 18px;
+  color: #77727f;
+  line-height: 1.55;
+  margin: 0 20px
+}
+.referenceLanding .mini {
+  background: white;
+  color: #241b3d;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 14px 32px #17083c30;
+  width: 90%;
+  max-width: 350px
+}
+.referenceLanding .mini strong {
+  font-size: 17px
+}
+.referenceLanding .mini p {
+  font-size: 14px;
+  margin: 12px 0;
+  color: #665c78
+}
+.referenceLanding .chip {
+  display: inline-block;
+  border-radius: 99px;
+  background: #eae0ff;
+  color: #5320c2;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 800
+}
+.referenceLanding .steps {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center
+}
+.referenceLanding .step {
+  background: #ffffff20;
+  border: 1px solid #ffffff80;
+  padding: 12px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 700
+}
+.referenceLanding .check {
+  font-size: 38px;
+  color: #6935d9
+}
+.referenceLanding .comparison {
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid #e1dce5;
+  background: white
+}
+.referenceLanding .row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+  padding: 22px;
+  border-bottom: 1px solid #eae5ec
+}
+.referenceLanding .row:first-child {
+  background: #eae6e3;
+  font-weight: 800
+}
+.referenceLanding .row:last-child {
+  border-bottom: 0
+}
+.referenceLanding .row div {
+  line-height: 1.45
+}
+.referenceLanding .cta {
+  border-radius: 36px;
+  padding: 85px 30px;
+  text-align: center;
+  color: white;
+  background: radial-gradient(ellipse at 55% 0%,#ffbea8,transparent 45%),linear-gradient(160deg,#c99cdd,#7541fb 70%,#331086)
+}
+.referenceLanding .cta h2 {
+  font-size: clamp(43px,7vw,82px);
+  letter-spacing: -.06em;
+  line-height: 1.07;
+  margin: 0 auto 22px;
+  max-width: 800px
+}
+.referenceLanding .cta p {
+  font-size: 20px;
+  max-width: 650px;
+  margin: 0 auto 30px
+}
+.referenceLanding .cta .pill {
+  background: #fff;
+  color: #20162d;
+  min-width: 260px
+}
+.referenceLanding .footer {
+  text-align: center;
+  padding: 40px 15px;
+  color: #77727f;
+  font-size: 14px
+}
+.referenceLanding .sticky {
+  display: none
+}
+.referenceLanding .menuPanel {
+  display: none;
+  position: absolute;
+  right: 20px;
+  top: 75px;
+  background: white;
+  padding: 18px;
+  border-radius: 18px;
+  box-shadow: 0 14px 35px #0002
+}
+.referenceLanding .menuPanel a {
+  display: block;
+  padding: 12px
+}
+@media(max-width:700px) {
+  .referenceLanding .nav {
+    padding: 12px 17px
+  }
+  .referenceLanding .brand {
+    font-size: 21px
+  }
+  .referenceLanding .navright .pill {
+    padding: 12px 17px;
+    font-size: 13px
+  }
+  .referenceLanding .hero {
+    min-height: 650px;
+    padding: 95px 22px 85px
+  }
+  .referenceLanding .hero h1 {
+    margin: 32px auto
+  }
+  .referenceLanding .wrap {
+    padding: 70px 16px
+  }
+  .referenceLanding .cards {
+    grid-template-columns: 1fr;
+    gap: 20px
+  }
+  .referenceLanding .visual {
+    min-height: 250px
+  }
+  .referenceLanding .card {
+    border-radius: 28px
+  }
+  .referenceLanding .card h3 {
+    margin: 25px 12px 12px
+  }
+  .referenceLanding .card p {
+    margin: 0 12px
+  }
+  .referenceLanding .row {
+    grid-template-columns: 1fr 1fr;
+    font-size: 13px;
+    padding: 15px;
+    gap: 8px
+  }
+  .referenceLanding .row div:nth-child(2) {
+    display: none
+  }
+  .referenceLanding .cta {
+    padding: 80px 24px
+  }
+  .referenceLanding .sticky {
+    display: block;
+    position: fixed;
+    bottom: 14px;
+    left: 5%;
+    width: 90%;
+    z-index: 10;
+    padding: 12px;
+    background: white;
+    border-radius: 999px;
+    box-shadow: 0 8px 35px #1a0d4033
+  }
+  .referenceLanding .sticky .pill {
+    width: 100%
+  }
+  .referenceLanding {
+    padding-bottom: 75px
+  }
+}
+/* Keep reference styles isolated from the authenticated application. */
+.referenceLanding {
+  font-family: 'DM Sans',Arial,sans-serif;
+  line-height: normal;
+  min-height: 100vh
+}
+.referenceLanding .pill {
+  font-family: inherit;
+  font-size: 16px;
+  line-height: normal
+}
+.referenceLanding .menu {
+  font-family: inherit;
+  line-height: normal;
+  color: var(--ink);
+  padding: 2px 6px
+}
+.referenceLanding .menuPanel:not([hidden]) {
+  display: block
+}
+.referenceLanding .menuPanel button {
+  display: block;
+  background: none;
+  border: 0;
+  text-align: left;
+  padding: 12px;
+  font: inherit;
+  cursor: pointer;
+  color: inherit
+}
+.referenceLanding .menuPanel a:hover,.referenceLanding .menuPanel button:hover {
+  color: var(--purple);
+  background: #f5f0ff;
+  border-radius: 8px
+}
+.referenceLanding a:focus-visible,.referenceLanding button:focus-visible,.referenceLanding input:focus-visible {
+  outline: 3px solid #9d7be8;
+  outline-offset: 4px
+}
+.referenceLanding .pill:disabled {
+  opacity: .6;
+  cursor: not-allowed
+}
+.referenceLanding .approvalPreview {
+  display: flex;
+  gap: 8px
+}
+.referenceLanding .rejectChip {
+  background: #eee;
+  color: #333
+}
+.referenceLanding .cta .demoDisclaimer {
+  font-size: 13px;
+  opacity: .9;
+  margin-top: 20px
+}
+.referenceLanding .cta .demoStatus,.referenceLanding .cta .demoError {
+  font-size: 15px;
+  margin-top: 18px
+}
+.referenceLanding .textButton {
+  border: 0;
+  background: none;
+  text-decoration: underline;
+  color: inherit;
+  padding: 0;
+  font: inherit;
+  cursor: pointer
+}
+.referenceLanding .accessSection {
+  padding-top: 0
+}
+.referenceLanding .accessCard {
+  max-width: 480px;
+  margin: auto;
+  padding: 32px;
+  background: #fff;
+  border: 1px solid #e1dce5;
+  border-radius: 28px;
+  position: relative
+}
+.referenceLanding .accessCard h2 {
+  font-size: 36px;
+  letter-spacing: -.05em;
+  margin: 16px 0 24px
+}
+.referenceLanding .accessClose {
+  position: absolute;
+  right: 20px;
+  top: 15px;
+  background: none;
+  border: 0;
+  color: #77727f;
+  font-size: 25px
+}
+.referenceLanding .accessCard label {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 18px 0 8px
+}
+.referenceLanding .accessCard input {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #e1dce5;
+  border-radius: 12px;
+  min-width: 0
+}
+.referenceLanding .accessCard form>.pill {
+  width: 100%;
+  margin-top: 15px
+}
+.referenceLanding .accessCard small {
+  display: block;
+  margin-top: 16px;
+  font-size: 12px;
+  color: #77727f
+}
+.referenceLanding .authError {
+  font-size: 14px;
+  color: #9e2d46
+}
+.referenceLanding .ssoButton {
+  width: 100%
+}
+@media(max-width:700px) {
+  .referenceLanding .navright .pill {
+    font-size: 13px
+  }
+  .referenceLanding .sticky .pill {
+    font-size: 16px
+  }
+  .referenceLanding .accessCard {
+    padding: 28px 22px
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  .referenceLanding {
+    scroll-behavior: auto
+  }
+}
+.referenceLanding .eyebrow {
+  color: inherit;
+  text-transform: none
+}
+.referenceLanding button.pill {
+  font-family: Arial,sans-serif;
+  font-size: 13.3333px
+}
+.referenceLanding .menu {
+  font-family: Arial,sans-serif
+}
