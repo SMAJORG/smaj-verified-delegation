@@ -6,6 +6,7 @@ import ServiceIcon from "./ServiceIcon";
 import ConversationShowcase from "./ConversationShowcase";
 import HubServicesSection from "./HubServicesSection";
 import WhyItMatters from "./WhyItMatters";
+import HomepageWorkflow from "./HomepageWorkflow";
 
 type LandingPageProps = {
   authenticated: boolean | null;
@@ -110,6 +111,7 @@ export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, st
             <small>Protected by a secure HttpOnly session.</small>
           </div>
         </section>}
+        <HomepageWorkflow />
       </main>
       <footer className="footer">SMAJ AI · Verified Delegation<br />Part of SMAJ PI HUB · Built for the Pi Network ecosystem</footer>
     </div>

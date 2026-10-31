@@ -1,0 +1,95 @@
+.root { background: #faf7f4; color: #221932; }
+.learningSection, .howSection { max-width: 1120px; margin: 0 auto; padding: 36px 16px 56px; }
+.learningCard { overflow: hidden; border: 1px solid #fff; border-radius: 32px; background: #fff; box-shadow: 0 8px 35px -22px #42246935; }
+.learningCopy { padding: 38px 26px 30px; text-align: center; }
+.learningCopy h2, .sectionHeader h2 { margin: 0 0 22px; font-size: clamp(38px, 5.5vw, 64px); font-weight: 700; line-height: 1.06; letter-spacing: -.06em; }
+.learningCopy h2 span, .sectionHeader h2 span { color: #7541cb; background: linear-gradient(120deg, #352057, #8755d6 90%); background-clip: text; -webkit-text-fill-color: transparent; }
+.learningCopy p { margin: 0 auto 16px; max-width: 440px; color: #746b7b; font-size: 16px; line-height: 1.65; }
+.learningCopy .subtitle { margin-bottom: 10px; color: #30243f; font-weight: 600; font-size: 20px; }
+.learningCopy .clarification { margin-bottom: 0; font-size: 13px; color: #7a7182; }
+.illustration { position: relative; isolation: isolate; display: flex; align-items: center; justify-content: center; overflow: hidden; min-width: 0; border-radius: 30px; background: radial-gradient(ellipse at 50% 0, #b7a0ff 0%, #6a49ce 40%, #37179c 75%, #210773 100%); }
+.illustration::after { content: ""; position: absolute; z-index: -1; inset: 0; background: radial-gradient(ellipse at 100% 100%, #f0b7a72e, transparent 65%); pointer-events: none; }
+.recommendationVisual { min-height: 392px; padding: 30px 20px; }
+.decorativeSheet { position: absolute; z-index: -1; top: 24px; right: -24px; width: 200px; height: 235px; border-radius: 12px; background: repeating-linear-gradient(#fff, #fff 22px, #e4ddef 23px, #e4ddef 24px); opacity: .25; transform: rotate(6deg); }
+.decorativeSheet i { position: absolute; width: 72px; height: 13px; left: 18px; top: 35px; border-radius: 3px; background: #65bfeb; }
+.decorativeSheet i:nth-child(2) { top: 65px; left: 80px; background: #a182fc; }
+.decorativeSheet i:nth-child(3) { top: 112px; left: 35px; width: 100px; background: #f1bc82; }
+.decorativeSheet i:nth-child(4) { top: 155px; background: #d78bc9; }
+.decorativeSheet i:nth-child(5) { top: 185px; left: 85px; background: #8a65ef; }
+.glassFrame { position: relative; width: 100%; max-width: 360px; padding: 8px; border: 1px solid #ffffff8c; border-radius: 24px; background: #ffffff40; box-shadow: 0 18px 45px #1707473b, inset 0 1px 0 #ffffff59; }
+.message { padding: 18px 16px; border: 1px solid #efecf3; border-radius: 17px; background: #fff; }
+.messageHeader { display: flex; align-items: center; gap: 10px; }
+.messageHeader .logo { flex: none; width: 40px; height: 40px; padding: 3px; border: 1px solid #ece6f6; border-radius: 12px; background: #fff; object-fit: contain; }
+.messageHeader > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.messageHeader strong { color: #30233e; font-size: 13px; font-weight: 800; }
+.messageHeader div > span { color: #84798f; font-size: 10px; line-height: 1.4; }
+.spark { margin-left: auto; color: #9769d9; font-size: 20px; }
+.message > p { margin: 16px 0; color: #655b70; font-size: 12px; line-height: 1.65; }
+.recommendations { display: grid; gap: 8px; }
+.recommendation { display: flex; align-items: center; gap: 9px; padding: 10px; border: 1px solid #eae4f4; border-radius: 11px; background: linear-gradient(120deg, #fcfaff, #f7f3fc); }
+.smallIcon { display: grid; place-items: center; flex: none; width: 33px; height: 37px; color: #7b4bb9; border: 1px solid #e7dcf6; border-radius: 8px; background: #f1e9fc; }
+.smallIcon svg { width: 20px; height: 20px; }
+.recommendation > div, .proofReceipt > div { display: flex; flex-direction: column; gap: 5px; }
+.recommendation strong { color: #49385e; font-size: 10px; line-height: 1.4; font-weight: 600; }
+.recommendation div > span { color: #8a709f; font-size: 9px; }
+.recommendationArrow { margin-left: auto; color: #9c80b7; font-size: 16px; }
+.messageNote { display: flex; align-items: center; gap: 6px; margin-top: 16px; color: #8b7d99; font-size: 9px; line-height: 1.5; }
+.messageNote > span { width: 5px; height: 5px; border-radius: 50%; background: #9670c3; }
+.howSection { padding-top: 28px; padding-bottom: 64px; }
+.sectionHeader { text-align: center; margin-bottom: 36px; }
+.label { display: inline-block; margin-bottom: 22px; padding: 6px 12px; border: 1px solid #e8def5; border-radius: 999px; background: #f1eafa; color: #7749ae; font-size: 12px; font-weight: 600; }
+.sectionHeader h2 { margin-bottom: 0; }
+.steps { list-style: none; display: grid; gap: 22px; padding: 0; margin: 0; }
+.stepCard { margin: 0; overflow: hidden; border: 1px solid #fff; border-radius: 32px; background: #fff; box-shadow: 0 8px 35px -22px #42246935; }
+.stepCard .illustration { min-height: 330px; padding: 30px 22px; }
+.stepCopy { padding: 28px 26px 32px; }
+.stepNumber { display: grid; place-items: center; width: 35px; height: 35px; margin-bottom: 18px; border: 1px solid #e7ddf3; border-radius: 50%; color: #8050b7; background: #f6f0fd; font-size: 12px; font-weight: 700; }
+.stepCopy h3 { margin: 0 0 12px; font-size: clamp(26px, 3vw, 38px); line-height: 1.15; font-weight: 600; letter-spacing: -.045em; }
+.stepCopy p { max-width: 390px; margin: 0; color: #746b7b; font-size: 16px; line-height: 1.7; }
+.stepCard .goalVisual { flex-direction: column; gap: 14px; background: radial-gradient(ellipse at 30% 0%, #c2a5e4 0, #8865d3 35%, #5931bc 65%, #38217f 100%); }
+.goalBubble { display: flex; align-items: flex-start; gap: 9px; width: 90%; max-width: 320px; padding: 13px; border: 1px solid #ffffff85; border-radius: 15px; background: #ffffffef; box-shadow: 0 6px 18px #2b105e1f; }
+.userAvatar { display: grid; flex: none; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: #efdcce; color: #77554a; font-size: 9px; font-weight: 700; }
+.goalBubble p { margin: 0; color: #62516e; font-size: 11px; line-height: 1.65; }
+.stepFrame { max-width: 340px; }
+.planLine { display: flex; align-items: center; gap: 9px; padding: 9px 0; border-top: 1px solid #f1edf6; color: #645371; font-size: 10px; }
+.planLine > span { color: #a17dbd; font-size: 9px; }
+.stepCard .approvalVisual { background: radial-gradient(ellipse at 75% 0%, #d6c0f1 0%, #9d7bdc 35%, #6d45c3 70%, #472491 100%); }
+.approvalHeading { display: flex; align-items: center; gap: 9px; margin-top: 20px; }
+.approvalHeading strong { color: #49345e; font-size: 13px; }
+.selection { display: flex; align-items: center; gap: 8px; padding: 12px 10px; border: 1px solid #e9dff5; border-radius: 9px; color: #68547d; font-size: 10px; }
+.selection > span { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 4px; background: #8350bc; color: #fff; }
+.approvalStatus { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 12px; padding: 10px; border-radius: 8px; background: #f0e8fa; color: #7953a1; font-size: 10px; font-weight: 600; }
+.approvalStatus svg, .formats svg { width: 16px; height: 16px; flex: none; }
+.stepCard .proofVisual { background: radial-gradient(ellipse at 45% 0%, #bc9ef0 0, #8255d2 40%, #5124ad 70%, #2f1179 100%); }
+.progress { display: flex; justify-content: space-between; gap: 4px; margin: 22px 0; }
+.progress > span { display: flex; flex-direction: column; align-items: center; gap: 7px; color: #867093; font-size: 9px; }
+.progress i { display: grid; place-items: center; width: 23px; height: 23px; border: 1px solid #ddccef; border-radius: 50%; color: #8050ac; background: #f3ebfc; font-size: 11px; font-style: normal; }
+.proofReceipt { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid #eae0f3; border-radius: 11px; background: linear-gradient(120deg, #faf7fe, #f3edf9); }
+.proofReceipt strong { color: #5c406e; font-size: 11px; }
+.proofReceipt div > span { color: #8a759a; font-size: 9px; line-height: 1.5; }
+.formats { display: flex; gap: 8px; margin-top: 10px; }
+.formats > span { display: flex; flex: 1; align-items: center; justify-content: center; gap: 6px; padding: 9px 5px; border: 1px solid #e7dcef; border-radius: 8px; color: #7b5596; background: #fdfbff; font-size: 10px; }
+@media (min-width: 700px) {
+  .learningSection, .howSection { padding-right: 22px; padding-left: 22px; }
+  .learningSection { padding-top: 48px; padding-bottom: 80px; }
+  .learningCard { display: grid; grid-template-columns: 1fr 1.1fr; padding: 12px; }
+  .learningCopy { display: flex; flex-direction: column; justify-content: center; padding: 40px 32px; text-align: left; }
+  .learningCopy h2 { font-size: clamp(40px, 4.5vw, 60px); }
+  .learningCopy p { margin-left: 0; }
+  .recommendationVisual { min-height: 440px; padding: 32px; }
+  .howSection { padding-bottom: 90px; }
+  .sectionHeader { margin-bottom: 48px; }
+  .steps { gap: 26px; }
+  .stepCard { display: grid; grid-template-columns: 1fr 1.1fr; padding: 12px; }
+  .stepCard .illustration { grid-column: 2; grid-row: 1; min-height: 355px; padding: 30px; }
+  .stepCopy { display: flex; flex-direction: column; justify-content: center; grid-column: 1; grid-row: 1; padding: 36px 32px; }
+  .stepNumber { margin-bottom: 28px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .reveal { transition: opacity .7s ease, transform .7s cubic-bezier(.2,.65,.3,1); }
+  .motionReady .reveal { opacity: 0; transform: translateY(24px); }
+  .motionReady .visible { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal { transition: none; }
+}
