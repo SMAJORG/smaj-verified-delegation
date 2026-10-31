@@ -52,7 +52,7 @@ export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, st
       <header className="nav" ref={navRef}>
         <a className="brand" href="#top" aria-label="SMAJ AI home">SMAJ<span> AI</span></a>
         <div className="navright">
-          <a className="pill" href="#demo">Try Live Demo</a>
+          <button className="pill" type="button" disabled={demoDisabled} onClick={startDemo}>{busy === "demo" ? "Preparing demo…" : "Try Live Demo"}</button>
           <button className="menu" type="button" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} aria-controls="landing-menu" onClick={() => setMenuOpen(!menuOpen)}>☰</button>
         </div>
         <nav id="landing-menu" className="menuPanel" aria-label="Main navigation" hidden={!menuOpen} onClick={() => setMenuOpen(false)}>
@@ -68,8 +68,10 @@ export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, st
           <div className="eyebrow">SMAJ PI HUB · PI NETWORK ECOSYSTEM</div>
           <h1>Not just AI answers.<br />AI actions you can verify.</h1>
           <p>Describe your goal. Let Meta AI plan the work. Approve each action and receive a clear record of what happened.</p>
-          <a className="pill" href="#demo">Explore Live Demo →</a>
+          <button className="pill" type="button" disabled={demoDisabled} onClick={startDemo}>{busy === "demo" ? "Preparing demo…" : "Explore Live Demo →"}</button>
           <small>Meta AI-powered planning · Human approval · Simulated execution</small>
+          {busy === "demo" && <small role="status">Creating your private demo workspace…</small>}
+          {error && !authOpen && <small role="alert">{error}</small>}
         </section>
         <section className="wrap" id="how">
           <span className="sectionlabel">Built for trusted delegation</span>
@@ -157,7 +159,6 @@ export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, st
         </section>}
       </main>
       <footer className="footer">SMAJ AI · Verified Delegation<br />Part of SMAJ PI HUB · Built for the Pi Network ecosystem</footer>
-      <div className="sticky"><a href="#demo" className="pill">Try Live Demo →</a></div>
     </div>
   );
 }
