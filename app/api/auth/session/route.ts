@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSession, demoAuthEnabled, requireActorSession, SESSION_COOKIE, ssoConfigured } from "@/src/server/auth";
+import { cookieValue, createSession, demoAuthEnabled, requireActorSession, SESSION_COOKIE, ssoConfigured } from "@/src/server/auth";
+import { revokeDemoSession } from "@/src/server/demo-sessions";
 import { apiError, AppError } from "@/src/server/http";
 
 export const runtime = "nodejs";
@@ -8,12 +9,16 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   let authenticated = false;
   let authType: string | null = null;
+  let sandbox = false;
+  let expiresAt: number | undefined;
   try {
     const session = requireActorSession(request);
     authenticated = true;
     authType = session.authType;
+    sandbox = Boolean(session.sandbox);
+    expiresAt = session.expiresAt;
   } catch { /* unauthenticated */ }
-  return NextResponse.json({ authenticated, authType, ssoEnabled: ssoConfigured(), demoEnabled: demoAuthEnabled() });
+  return NextResponse.json({ authenticated, authType, sandbox, expiresAt, ssoEnabled: ssoConfigured(), demoEnabled: demoAuthEnabled() }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request: NextRequest) {
@@ -33,8 +38,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function DELETE() {
-  const response = NextResponse.json({ authenticated: false });
-  response.cookies.set(SESSION_COOKIE, "", { httpOnly: true, sameSite: "strict", path: "/", maxAge: 0 });
-  return response;
+export async function DELETE(request: NextRequest) {
+  try {
+    const token = cookieValue(request);
+    if (token.startsWith("hackathon_")) revokeDemoSession(token);
+    const response = NextResponse.json({ authenticated: false });
+    response.cookies.set(SESSION_COOKIE, "", { httpOnly: true, sameSite: "strict", path: "/", maxAge: 0 });
+    return response;
+  } catch (error) { return apiError(error); }
 }

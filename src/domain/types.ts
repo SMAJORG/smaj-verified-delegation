@@ -58,13 +58,13 @@ export type ProofReceipt = {
   delegationId: string;
   outcome: "verified";
   verifiedAt: string;
-  planner: { provider: "Meta Model API"; model: "muse-spark-1.3" };
+  planner: { provider: "Meta Model API" | "Hackathon simulation"; model: "muse-spark-1.3" };
   scope: {
     action: "mock_job_application";
     productionSideEffects: false;
     realPiPayment: false;
   };
-  source: { system: "SMAJ PI HUB"; mode: "read_only"; endpoint: string };
+  source: { system: "SMAJ PI HUB"; mode: "read_only" | "simulated"; endpoint: string };
   approval: { required: true; approvedAt: string };
   recovery: { transientFailures: number; retries: number; duplicatesPrevented: number };
   checks: Array<{ name: string; passed: boolean; evidence: string }>;

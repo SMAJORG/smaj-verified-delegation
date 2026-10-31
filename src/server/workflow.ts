@@ -89,8 +89,9 @@ export class DelegationWorkflow {
         .run(id, ownerId, goal, candidateName, JSON.stringify(skills), expiresAt, JSON.stringify(plan), JSON.stringify(jobs), JSON.stringify(selectedJobIds), this.jobsAdapter.sourceUrl, requestKey, createdAt, createdAt);
       this.remember(ownerId, "create", requestKey, id);
       this.event(id, "contract.created", "A bounded Jobs delegation contract was created.", { expiresAt, maxApplications: selectedJobIds.length });
-      this.event(id, "jobs.read", "Read current Jobs data through the production read-only adapter.", { sourceUrl: this.jobsAdapter.sourceUrl, jobsRead: jobs.length });
-      this.event(id, "plan.generated", "Meta generated a reviewable job application plan.", { model: plan.model, recommendations: selectedJobIds.length });
+      const simulated = this.jobsAdapter.sourceUrl.startsWith("demo://");
+      this.event(id, "jobs.read", simulated ? "Loaded fictional sample opportunities from the isolated demo workspace." : "Read current Jobs data through the production read-only adapter.", { sourceUrl: this.jobsAdapter.sourceUrl, jobsRead: jobs.length });
+      this.event(id, "plan.generated", simulated ? "A simulated, reviewable application plan was prepared. No live AI request was made." : "Meta generated a reviewable job application plan.", { model: plan.model, recommendations: selectedJobIds.length, simulated });
     });
     insert();
     return this.get(id, ownerId);
@@ -200,9 +201,9 @@ export class DelegationWorkflow {
     const verifiedSubmissions = this.listSubmissions(id);
     const receipt: ProofReceipt = {
       schemaVersion: "1.0", receiptId: randomUUID(), delegationId: id, outcome: "verified", verifiedAt,
-      planner: { provider: "Meta Model API", model: "muse-spark-1.3" },
+      planner: { provider: current.sourceUrl.startsWith("demo://") ? "Hackathon simulation" : "Meta Model API", model: "muse-spark-1.3" },
       scope: { action: "mock_job_application", productionSideEffects: false, realPiPayment: false },
-      source: { system: "SMAJ PI HUB", mode: "read_only", endpoint: current.sourceUrl },
+      source: { system: "SMAJ PI HUB", mode: current.sourceUrl.startsWith("demo://") ? "simulated" : "read_only", endpoint: current.sourceUrl },
       approval: { required: true, approvedAt: current.approvedAt || "" },
       recovery: { transientFailures: recovery.injected ? 1 : 0, retries: recovery.injected ? 1 : 0, duplicatesPrevented: recovery.duplicatesPrevented },
       checks: [

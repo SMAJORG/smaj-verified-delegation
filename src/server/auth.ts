@@ -1,5 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { AppError } from "@/src/server/http";
+import { readDemoSession } from "@/src/server/demo-sessions";
 
 export const SESSION_COOKIE = "smaj_delegation_session";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
@@ -9,6 +10,8 @@ export type ActorSession = {
   authType: "sso" | "demo";
   piUsername?: string;
   uid?: string;
+  sandbox?: boolean;
+  expiresAt?: number;
 };
 
 const accessToken = () => {
@@ -61,14 +64,16 @@ export const createUserSession = (identity: SsoIdentity) => {
   return { actorId, value, maxAge: SESSION_TTL_SECONDS };
 };
 
-const cookieValue = (request: Request) => {
+export const cookieValue = (request: Request) => {
   const cookies = request.headers.get("cookie") || "";
   const match = cookies.split(";").map(item => item.trim()).find(item => item.startsWith(`${SESSION_COOKIE}=`));
   return match?.slice(SESSION_COOKIE.length + 1) || "";
 };
 
 export const requireActorSession = (request: Request): ActorSession => {
-  const [payload, signature] = cookieValue(request).split(".");
+  const token = cookieValue(request);
+  if (token.startsWith("hackathon_")) return readDemoSession(token);
+  const [payload, signature] = token.split(".");
   if (!payload || !signature || !equal(signature, sign(payload))) throw new AppError("unauthorized", "Authentication is required", 401);
   try {
     const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { actorId?: string; authType?: string; piUsername?: string; uid?: string; expiresAt?: number };
