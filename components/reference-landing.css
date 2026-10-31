@@ -81,6 +81,24 @@
   color: #fff;
   background: radial-gradient(ellipse at 50% 5%,#ffbea8 0%,transparent 43%),linear-gradient(158deg,#cba3d9 0%,#9d7be8 43%,#6632f0 100%)
 }
+.referenceLanding .heroServices {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1
+}
+.referenceLanding .heroServices .hubServiceIcon {
+  display: block;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  border-radius: 0
+}
 .referenceLanding .eyebrow {
   font-size: 14px;
   font-weight: 700;

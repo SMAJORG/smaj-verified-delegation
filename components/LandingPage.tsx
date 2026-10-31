@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import "./reference-landing.css";
+import ServiceIcon from "./ServiceIcon";
 
 type LandingPageProps = {
   authenticated: boolean | null;
@@ -65,6 +66,12 @@ export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, st
       </header>
       <main id="top">
         <section className="hero">
+          <div className="heroServices" aria-label="Store, Jobs, Stream, 13+">
+            <ServiceIcon serviceId="store" />
+            <ServiceIcon serviceId="jobs" />
+            <ServiceIcon serviceId="stream" />
+            <span aria-hidden="true">13+</span>
+          </div>
           <div className="eyebrow">SMAJ PI HUB · PI NETWORK ECOSYSTEM</div>
           <h1>Not just AI answers.<br />AI actions you can verify.</h1>
           <p>Describe your goal. Let Meta AI plan the work. Approve each action and receive a clear record of what happened.</p>
