@@ -71,6 +71,14 @@ export const cookieValue = (request: Request) => {
 };
 
 export const requireActorSession = (request: Request): ActorSession => {
+  const hubToken = request.headers.get("x-smaj-hub-token");
+  if (hubToken) {
+    const secret = process.env.SMAJ_AI_SSO_SECRET?.trim();
+    if (!secret || secret.length < 32) throw new AppError("unauthorized", "Hub authentication is not configured", 401);
+    const claims = verifySmajSsoToken(hubToken, secret);
+    if (!claims.exp || claims.exp * 1000 > Date.now() + 90_000) throw new AppError("unauthorized", "Hub token lifetime is invalid", 401);
+    return { actorId: claims.sub, authType: "sso", uid: claims.uid, piUsername: claims.piUsername };
+  }
   const token = cookieValue(request);
   if (token.startsWith("hackathon_")) return readDemoSession(token);
   const [payload, signature] = token.split(".");
@@ -118,7 +126,9 @@ export const ssoConfigured = () => Boolean(
 );
 
 export const verifySmajSsoToken = (token: string, secret = ssoSigningSecret(), now = Date.now()): SmajSsoClaims => {
-  const [header, payload, signature] = String(token || "").split(".");
+  const parts = String(token || "").split(".");
+  if (parts.length !== 3) throw new AppError("invalid_sso_token", "SSO token is invalid", 401);
+  const [header, payload, signature] = parts;
   if (!header || !payload || !signature || !secret) throw new AppError("invalid_sso_token", "SSO token is invalid", 401);
   const expected = createHmac("sha256", secret).update(`${header}.${payload}`).digest("base64url");
   if (!equal(signature, expected)) throw new AppError("invalid_sso_token", "SSO token is invalid", 401);

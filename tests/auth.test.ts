@@ -63,3 +63,30 @@ test("verifies PiHub SSO tokens and rejects invalid ones", () => {
   assert.throws(() => verifySmajSsoToken(sign({ ...base, scope: "profile:read" }), secret));
   assert.throws(() => verifySmajSsoToken(sign({ ...base, exp: Math.floor(Date.now() / 1000) - 10 }), secret));
 });
+
+test("Hub bridge uses verified identity and rejects tampered, expired or long-lived tokens", () => {
+  const previous = process.env.SMAJ_AI_SSO_SECRET;
+  const secret = "hub-bridge-test-secret-at-least-32-characters";
+  process.env.SMAJ_AI_SSO_SECRET = secret;
+  const token = (exp: number, sub = "hub-user-123") => {
+    const header = Buffer.from(JSON.stringify({ alg: "HS256" })).toString("base64url");
+    const payload = Buffer.from(JSON.stringify({ sub, uid: "pi-uid", iss: "smajpihub", aud: process.env.SMAJ_AI_CLIENT_ID || "smaj-ai", scope: "profile:read jobs:read store:read", exp })).toString("base64url");
+    return `${header}.${payload}.${createHmac("sha256", secret).update(`${header}.${payload}`).digest("base64url")}`;
+  };
+  const request = (value: string) => new Request("https://ai.example/api/tasks", { headers: { "x-smaj-hub-token": value } });
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const valid = token(now + 60);
+    assert.equal(requireActorSession(request(valid)).actorId, "hub-user-123");
+    assert.equal(requireActorSession(request(valid)).authType, "sso");
+    assert.throws(() => requireActorSession(request(valid + "x")));
+    assert.throws(() => requireActorSession(request(token(now - 1))));
+    assert.throws(() => requireActorSession(request(token(now + 3600))));
+    assert.throws(() => requireActorSession(request(token(now + 60, ""))));
+    delete process.env.SMAJ_AI_SSO_SECRET;
+    assert.throws(() => requireActorSession(request(valid)));
+  } finally {
+    if (previous === undefined) delete process.env.SMAJ_AI_SSO_SECRET;
+    else process.env.SMAJ_AI_SSO_SECRET = previous;
+  }
+});
