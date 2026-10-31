@@ -10,22 +10,15 @@ test("service catalog contains the official 15 unique SMAJ services", () => {
   assert.deepEqual(SMAJ_SERVICES.filter(service => service.adapterMode === "connected").map(service => service.id), ["store", "jobs"]);
 });
 
-test("Meta router validates service IDs and blocks unavailable adapters", async () => {
+test("Meta router tolerates wrapped reasoning and fenced JSON, then validates service IDs", async () => {
   const previousKey = process.env.META_API_KEY;
   process.env.META_API_KEY = "test-only-key";
-  const previousModel=process.env.META_MODEL; process.env.META_MODEL="test-account-model";
+  const previousModel = process.env.META_MODEL; process.env.META_MODEL = "test-account-model";
   let requestBody: Record<string, any> = {};
   const fetcher = async (_input: string | URL | Request, init?: RequestInit) => {
-    if(String(_input).endsWith("/models"))return new Response(JSON.stringify({data:[{id:"test-account-model"}]}));
+    if (String(_input).endsWith("/models")) return new Response(JSON.stringify({ data: [{ id: "test-account-model" }] }));
     requestBody = JSON.parse(String(init?.body));
-    return new Response(JSON.stringify({ status: "completed", output: [{ content: [{ type: "output_text", text: JSON.stringify({
-      summary: "Use Jobs and Education.", services: ["jobs", "education", "invented"],
-      steps: [
-        { id: "one", serviceId: "jobs", title: "Find jobs", description: "Read matching roles", capability: "read opportunities", approvalRequired: false },
-        { id: "two", serviceId: "education", title: "Plan learning", description: "Prepare a learning path", capability: "learning plans", approvalRequired: false },
-        { id: "three", serviceId: "invented", title: "Unsupported", description: "Invalid", capability: "anything" },
-      ], warnings: [],
-    }) }] }] }), { status: 200 });
+    return new Response(JSON.stringify({ status: "completed", output: [{ content: [{ type: "output_text", text: `Let me reason first.\n\n```json\n{\"summary\":\"Use Jobs and Education.\",\"services\":[\"jobs\",\"education\"],\"steps\":[{\"id\":\"one\",\"serviceId\":\"jobs\",\"title\":\"Find jobs\",\"description\":\"Read matching roles\",\"capability\":\"read opportunities\",\"approvalRequired\":true},{\"id\":\"two\",\"serviceId\":\"education\",\"title\":\"Plan learning\",\"description\":\"Prepare a learning path\",\"capability\":\"learning plans\",\"approvalRequired\":true}],\"warnings\":[\"No Pi payment will be executed.\"]}\n```\nI have enough context.` }] }] }), { status: 200 });
   };
   try {
     const result = await new MetaServiceRouter(fetcher as typeof fetch).plan("Find a job and create a learning plan for missing skills.");
@@ -37,9 +30,8 @@ test("Meta router validates service IDs and blocks unavailable adapters", async 
     assert.equal(result.steps[1].status, "unavailable");
     assert.match(result.warnings.join(" "), /No Pi payment/);
   } finally {
-    if(previousModel===undefined)delete process.env.META_MODEL;else process.env.META_MODEL=previousModel;
-    if (previousKey === undefined) delete process.env.META_API_KEY;
-    else process.env.META_API_KEY = previousKey;
+    if (previousModel === undefined) delete process.env.META_MODEL; else process.env.META_MODEL = previousModel;
+    if (previousKey === undefined) delete process.env.META_API_KEY; else process.env.META_API_KEY = previousKey;
   }
 });
 
