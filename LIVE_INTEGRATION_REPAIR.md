@@ -1,3 +1,5 @@
+> Current behavior and API limits: [HACKATHON_READINESS.md](HACKATHON_READINESS.md). Search approval, real result links, separate Task History and genuine execution receipts supersede the historical demo instructions below. Existing stored records are preserved.
+
 # SMAJ AI integration repair — 2026-11-01
 
 The hackathon mission and strategy document are unchanged. The original mock Jobs executor, isolated demo sessions, recovery demonstration, verifier, and PDF/JSON exports remain available. Live operations use a separate persisted action queue, never the mock-submission table.

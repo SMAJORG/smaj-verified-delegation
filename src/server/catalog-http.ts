@@ -6,7 +6,7 @@ export async function catalogJson(source: string, fetcher: typeof fetch = fetch)
   const origin = new URL(process.env.SMAJ_HUB_API_ORIGIN || "https://smajpihub.onrender.com").origin;
   if (url.origin !== origin || url.protocol !== "https:" || url.username || url.password || url.hash) throw new AppError("invalid_catalog_url", "Catalog URL must use the configured HTTPS HUB origin", 503);
   if (!["/jobs/jobs", "/marketplace/products", "/stream/creator-content"].includes(url.pathname)) throw new AppError("invalid_catalog_url", "Catalog path is not allowlisted", 503);
-  const response = await fetcher(url.toString(), { method: "GET", headers: { Accept: "application/json" }, redirect: "error", cache: "no-store", signal: AbortSignal.timeout(20_000) });
+  const response = await fetcher(url.toString(), { method: "GET", headers: { Accept: "application/json" }, redirect: "error", cache: "no-store", signal: AbortSignal.timeout(30_000) });
   if (!response.ok) throw new AppError("catalog_unavailable", `HUB catalog returned HTTP ${response.status}`, 502);
   const reader = response.body?.getReader();
   if (!reader) throw new Error("Empty catalog response");

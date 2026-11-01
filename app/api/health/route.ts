@@ -11,9 +11,10 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     status: "ok",
     service: "smaj-ai",
+    revision: process.env.RENDER_GIT_COMMIT || process.env.GITHUB_SHA || null,
     publicUrl: process.env.SMAJ_AI_PUBLIC_URL || request.nextUrl.origin,
     ssoEnabled: ssoConfigured(),
-    readOnlyServices: ["jobs", "store"],
+    readOnlyServices: ["jobs", "store", "stream"],
     plannerConfigured: Boolean((process.env.META_API_KEY || process.env.MODEL_API_KEY)?.trim() && process.env.META_MODEL?.trim()),
     productionWrites: productionWritesEnabled(),
     realPiPayments: realPiPaymentsEnabled(),

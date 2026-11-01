@@ -1,6 +1,5 @@
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { AppError } from "@/src/server/http";
-import { readDemoSession } from "@/src/server/demo-sessions";
 
 export const SESSION_COOKIE = "smaj_delegation_session";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
@@ -14,18 +13,10 @@ export type ActorSession = {
   expiresAt?: number;
 };
 
-const accessToken = () => {
-  const value = process.env.SMAJ_DEMO_ACCESS_TOKEN?.trim();
-  if (!value || value.length < 16) throw new AppError("auth_not_configured", "Demo access is not configured", 503);
-  return value;
-};
-
-// Sessions are signed with a dedicated secret when configured so the
-// demo access token is never the long-term production signing key.
 const sessionSecret = () => {
   const value = process.env.SMAJ_AI_SESSION_SECRET?.trim();
-  if (value && value.length >= 16) return value;
-  return accessToken();
+  if (!value || value.length < 16) throw new AppError("auth_not_configured", "Configure server-only SMAJ_AI_SESSION_SECRET for Hub sign-in", 503);
+  return value;
 };
 
 const equal = (left: string, right: string) => {
@@ -39,14 +30,6 @@ const sign = (payload: string) => createHmac("sha256", sessionSecret()).update(p
 const encodeSession = (session: Record<string, unknown>) => {
   const payload = Buffer.from(JSON.stringify(session)).toString("base64url");
   return `${payload}.${sign(payload)}`;
-};
-
-export const createSession = (candidate: string) => {
-  const expected = accessToken();
-  if (!equal(candidate, expected)) throw new AppError("invalid_credentials", "Invalid access token", 401);
-  const actorId = createHash("sha256").update(expected).digest("hex").slice(0, 24);
-  const value = encodeSession({ actorId, authType: "demo", expiresAt: Date.now() + SESSION_TTL_SECONDS * 1000 });
-  return { actorId, value, maxAge: SESSION_TTL_SECONDS };
 };
 
 export type SsoIdentity = { sub: string; uid?: string; piUsername?: string };
@@ -80,26 +63,25 @@ export const requireActorSession = (request: Request): ActorSession => {
     return { actorId: claims.sub, authType: "sso", uid: claims.uid, piUsername: claims.piUsername };
   }
   const token = cookieValue(request);
-  if (token.startsWith("hackathon_")) return readDemoSession(token);
+  if (token.startsWith("hackathon_")) throw new AppError("unauthorized", "Sign in with Pi to continue.", 401);
   const [payload, signature] = token.split(".");
-  if (!payload || !signature || !equal(signature, sign(payload))) throw new AppError("unauthorized", "Authentication is required", 401);
+  if (!payload || !signature || !equal(signature, sign(payload))) throw new AppError("unauthorized", "Sign in with Pi to continue.", 401);
   try {
     const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { actorId?: string; authType?: string; piUsername?: string; uid?: string; expiresAt?: number };
-    if (!session.actorId || !session.expiresAt || session.expiresAt <= Date.now()) throw new Error("expired");
+    if (session.authType !== "sso" || !session.actorId || !session.expiresAt || session.expiresAt <= Date.now()) throw new Error("expired");
     return {
       actorId: session.actorId,
-      authType: session.authType === "sso" ? "sso" : "demo",
+      authType: "sso",
       piUsername: session.piUsername,
       uid: session.uid,
     };
   } catch {
-    throw new AppError("unauthorized", "Authentication is required", 401);
+    throw new AppError("unauthorized", "Sign in with Pi to continue.", 401);
   }
 };
 
 export const requireActor = (request: Request) => requireActorSession(request).actorId;
 
-export const demoAuthEnabled = () => process.env.SMAJ_DEMO_AUTH_ENABLED?.trim().toLowerCase() !== "false";
 export const productionWritesEnabled = () => process.env.SMAJ_PRODUCTION_WRITES_ENABLED?.trim().toLowerCase() === "true";
 export const realPiPaymentsEnabled = () => process.env.SMAJ_REAL_PI_PAYMENTS_ENABLED?.trim().toLowerCase() === "true";
 

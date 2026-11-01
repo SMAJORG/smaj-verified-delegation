@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireActorSession } from "@/src/server/auth";
 import { apiError } from "@/src/server/http";
 import { ServiceConnectionStore } from "@/src/server/service-connections";
-import { workspaceDatabase } from "@/src/server/demo-workspace";
+import { workspaceDatabase } from "@/src/server/workspace";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

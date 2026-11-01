@@ -1,3 +1,4 @@
+import { listingUrl, publicImage } from "@/src/domain/catalog-links";
 import type { CatalogQuery } from "@/src/domain/services";
 import { catalogJson, catalogRows, catalogSearchUrl } from "@/src/server/catalog-http";
 import type { StoreApiProduct } from "@/src/domain/types";
@@ -5,7 +6,10 @@ import type { StoreApiProduct } from "@/src/domain/types";
 export const DEFAULT_STORE_URL = "https://smajpihub.onrender.com/marketplace/products";
 
 const text = (value: unknown, fallback = "") => (typeof value === "string" ? value.slice(0, 600) : fallback);
-const price = (product: Record<string, unknown>) => {
+const optionalNumber = (value: unknown) => value !== undefined && value !== null && value !== "" && Number.isFinite(Number(value)) ? Number(value) : undefined;
+const price = (product: Record<string, unknown>, currency?: string) => {
+  const reference = Number(product.priceUsdt);
+  if (currency === "USD" && Number.isFinite(reference) && reference > 0) return `$${reference.toLocaleString("en-US")} USDT reference`;
   const pi = Number(product.pricePi);
   if (Number.isFinite(pi) && pi > 0) return `${pi} Pi`;
   const usdt = Number(product.priceUsdt);
@@ -35,12 +39,15 @@ export class SmajStoreReadAdapter {
     }).map(product => ({
       id: text(product._id, text(product.id, text(product.slug))),
       title: text(product.title, text(product.name, "Untitled product")),
+      url: listingUrl("store", text(product._id, text(product.id, text(product.slug)))),
+      imageUrl: publicImage((Array.isArray(product.images) ? product.images.find(image => typeof image === "string" && image.trim()) : undefined) || product.image),
+      sellerVerified: product.sellerVerified === true,
       category: text(product.category, "Other"),
-      price: price(product),
-      pricePi: Number.isFinite(Number(product.pricePi)) ? Number(product.pricePi) : undefined,
-      priceUsdt: Number.isFinite(Number(product.priceUsdt)) ? Number(product.priceUsdt) : undefined,
-      quantity: Number.isFinite(Number(product.quantity)) ? Number(product.quantity) : undefined,
-      sellerName: text(product.sellerName, "SMAJ Store seller"),
+      price: price(product, query.currency),
+      pricePi: optionalNumber(product.pricePi),
+      priceUsdt: optionalNumber(product.priceUsdt),
+      quantity: optionalNumber(product.quantity),
+      sellerName: text(product.sellerName),
       location: text(product.location, text(product.country, "Not specified")),
       summary: text(product.description, text(product.summary, "No description provided.")).slice(0, 500),
     }));

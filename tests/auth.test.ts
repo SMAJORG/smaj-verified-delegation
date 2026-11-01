@@ -1,32 +1,32 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createSession, createUserSession, requireActor, requireActorSession, SESSION_COOKIE, verifySmajSsoToken } from "@/src/server/auth";
+import { createUserSession, requireActor, requireActorSession, SESSION_COOKIE, verifySmajSsoToken } from "@/src/server/auth";
 import { createHmac } from "node:crypto";
 import { AppError } from "@/src/server/http";
 
 test("creates a signed session and rejects tampering", () => {
-  const previous = process.env.SMAJ_DEMO_ACCESS_TOKEN;
-  process.env.SMAJ_DEMO_ACCESS_TOKEN = "test-access-token-at-least-16";
+  const previous = process.env.SMAJ_AI_SESSION_SECRET;
+  process.env.SMAJ_AI_SESSION_SECRET = "test-access-token-at-least-16";
   try {
-    const session = createSession("test-access-token-at-least-16");
+    const session = createUserSession({sub:"real-hub-user"});
     const request = new Request("http://localhost/api/delegations", { headers: { cookie: `${SESSION_COOKIE}=${session.value}` } });
-    assert.match(requireActor(request), /^[a-f0-9]{24}$/);
+    assert.equal(requireActor(request), "real-hub-user");
     const tampered = new Request("http://localhost/api/delegations", { headers: { cookie: `${SESSION_COOKIE}=${session.value}x` } });
     assert.throws(() => requireActor(tampered), (error: unknown) => error instanceof AppError && error.status === 401);
   } finally {
-    if (previous === undefined) delete process.env.SMAJ_DEMO_ACCESS_TOKEN;
-    else process.env.SMAJ_DEMO_ACCESS_TOKEN = previous;
+    if (previous === undefined) delete process.env.SMAJ_AI_SESSION_SECRET;
+    else process.env.SMAJ_AI_SESSION_SECRET = previous;
   }
 });
 
 test("rejects unauthorized requests without a session", () => {
-  const previous = process.env.SMAJ_DEMO_ACCESS_TOKEN;
-  process.env.SMAJ_DEMO_ACCESS_TOKEN = "test-access-token-at-least-16";
+  const previous = process.env.SMAJ_AI_SESSION_SECRET;
+  process.env.SMAJ_AI_SESSION_SECRET = "test-access-token-at-least-16";
   try {
-    assert.throws(() => requireActor(new Request("http://localhost/api/delegations")), /Authentication is required/);
+    assert.throws(() => requireActor(new Request("http://localhost/api/delegations")), /Sign in with Pi/);
   } finally {
-    if (previous === undefined) delete process.env.SMAJ_DEMO_ACCESS_TOKEN;
-    else process.env.SMAJ_DEMO_ACCESS_TOKEN = previous;
+    if (previous === undefined) delete process.env.SMAJ_AI_SESSION_SECRET;
+    else process.env.SMAJ_AI_SESSION_SECRET = previous;
   }
 });
 

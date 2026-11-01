@@ -7,8 +7,8 @@ import { createDatabase } from "@/src/server/database";
 import { NextRequest } from "next/server";
 import { POST, GET } from "@/app/api/tasks/route";
 import { GET as detail, DELETE as remove } from "@/app/api/tasks/[id]/route";
-import { issueDemoSession } from "@/src/server/demo-sessions";
-import { SESSION_COOKIE } from "@/src/server/auth";
+
+import { SESSION_COOKIE, createUserSession } from "@/src/server/auth";
 
 test("short messages produce a provider answer and tasks remain owner-scoped through deletion", async () => {
   const previous = { ...process.env };
@@ -75,15 +75,15 @@ test("AI rejects missing credentials and blank models, uses the default model, a
 
 test("task HTTP routes authenticate, save a short answer, list, open, and enforce owner-only deletion", async () => {
   const previous = { ...process.env }, originalFetch = globalThis.fetch;
-  process.env.SMAJ_HACKATHON_DB_PATH = ":memory:";
-  process.env.SMAJ_DEMO_AUTH_ENABLED = "true";
+  process.env.SMAJ_DELEGATION_DB_PATH = ":memory:";
+  process.env.SMAJ_AI_SESSION_SECRET = "fixture-session-secret-at-least-32-characters";
   process.env.META_API_KEY = "test-only-secret";
   process.env.META_MODEL = "test-account-model";
   globalThis.fetch = async url => Response.json(String(url).endsWith("/models") ? { data: [{ id: "test-account-model" }] } : { status: "completed", output: [{ content: [{ type: "output_text", text: JSON.stringify({ summary: "Fixture greeting", steps: [], services: [], warnings: [] }) }] }] });
   const request = (cookie: string, method = "GET", body?: unknown) => new NextRequest("https://test.example/api/tasks", { method, headers: { cookie, origin: "https://test.example", "Content-Type": "application/json" }, ...(body ? { body: JSON.stringify(body) } : {}) });
   try {
     assert.equal((await GET(request(""))).status, 401);
-    const alice = `${SESSION_COOKIE}=${issueDemoSession().value}`, bob = `${SESSION_COOKIE}=${issueDemoSession().value}`;
+    const alice = `${SESSION_COOKIE}=${createUserSession({sub:"alice",uid:"pi-alice"}).value}`, bob = `${SESSION_COOKIE}=${createUserSession({sub:"bob",uid:"pi-bob"}).value}`;
     const created = await POST(request(alice, "POST", { task: "Hi" }));
     assert.equal(created.status, 201);
     const saved = (await created.json()).task;

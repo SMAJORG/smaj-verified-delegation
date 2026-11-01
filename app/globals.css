@@ -112,3 +112,32 @@
   .workspace .tasksView .jobsSetup input{display:block;width:100%;box-sizing:border-box;margin-top:8px}
   .workspace .tasksView .detailHead h2{font-size:23px;letter-spacing:-.5px}
 }
+
+/* Compact permission and live catalog cards, retaining the approved workspace palette. */
+.workspace .tasksView .taskResults{min-width:0;display:grid;gap:16px}
+.workspace .permissionCard{border:1px solid #e7dff3;background:#faf8fe;border-radius:16px;padding:16px;min-width:0}
+.workspace .permissionCard h3{font-size:17px;margin:0 0 8px}
+.workspace .permissionCard p{margin:8px 0;line-height:1.5;overflow-wrap:anywhere}
+.workspace .permissionCard small{display:block;color:#777381;font-size:12px;line-height:1.5;margin:8px 0}
+.permissionButtons{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:center}
+.permissionButtons a{text-decoration:none;display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box}
+.catalogResults{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.catalogResult{border:1px solid #eae5f0;border-radius:16px;overflow:hidden;min-width:0;background:white}
+.catalogResult>img{display:block;width:100%;aspect-ratio:4/3;max-height:220px;object-fit:contain;background:#f7f5fa}
+.catalogResultBody{padding:16px;overflow-wrap:anywhere}
+.catalogResult h3{font-size:18px;margin:0 0 8px}
+.catalogResult p{font-size:14px;line-height:1.5;margin:8px 0}
+.catalogResult small{font-size:12px;color:#777381;display:block}
+.catalogResult .catalogPrice{font-weight:750;color:#37244e;font-size:17px}
+.catalogResult a{display:inline-flex;align-items:center;box-sizing:border-box;min-height:44px;margin-top:10px;color:#7142d8;text-decoration:none}
+.verifiedSeller{display:inline-block;margin-left:8px;color:#087b52;font-size:12px}
+@media(max-width:760px){
+  .catalogResults{grid-template-columns:1fr}
+  .catalogResult>img{max-height:180px}
+  .catalogResultBody,.workspace .permissionCard{padding:14px}
+  .workspace .tasksView .permissionButtons .primaryButton{width:auto;flex:1}
+  .workspace .tasksView .permissionButtons .secondaryButton{flex:none}
+  .workspace .tasksView .routePlanHead{align-items:flex-start;flex-wrap:wrap}
+  .workspace .tasksView .routePlanHead .taskTag{width:auto;height:auto;display:inline-block}
+}
+.workspace .tasksView .routePlanHead>.taskTag{width:auto;height:auto;display:inline-block;max-width:100%;white-space:normal}

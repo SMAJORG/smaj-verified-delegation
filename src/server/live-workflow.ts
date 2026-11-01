@@ -10,8 +10,8 @@ import { HubActionAdapter, type ActionAdapter } from "@/src/server/live-actions"
 type Run = { task_id: string; owner_id: string; uid: string; state: string; attempts: number; approved_at: string; expires_at: string; actions_json: string; lease_token: string };
 export class LiveWorkflow {
   constructor(private db: AppDatabase, private adapter: ActionAdapter = new HubActionAdapter(), private now = () => new Date()) {}
-  approve(session: ActorSession, id: string, actionIds: string[], reviewHash?: string) {
-    if (session.authType !== "sso" || session.sandbox || !session.uid) throw new AppError("live_identity_required", "Live execution requires a real Hub sign-in; demo sessions cannot perform production actions", 403);
+  approve(session: ActorSession, id: string, actionIds: string[], reviewHash?: string, bindingConfirmed = false) {
+    if (session.authType !== "sso" || session.sandbox || !session.uid) throw new AppError("live_identity_required", "Live execution requires an authenticated SMAJ PI HUB identity", 403);
     if (process.env.SMAJ_PRODUCTION_WRITES_ENABLED !== "true" || (process.env.SMAJ_AI_DELEGATION_SECRET?.trim().length || 0) < 32) throw new AppError("live_delegation_not_configured", "Configure SMAJ_AI_DELEGATION_SECRET and SMAJ_PRODUCTION_WRITES_ENABLED=true on both servers before live execution", 503);
     return this.db.transaction(() => {
       const store = new AiTaskStore(this.db); const task = store.get(session.actorId, id);
@@ -22,18 +22,19 @@ export class LiveWorkflow {
         if (JSON.stringify([...new Set(actionIds)].sort()) !== JSON.stringify(approvedIds)) throw new AppError("approval_conflict", "The approved action set cannot be changed after execution is queued", 409);
         return task;
       }
-      if (!task.plan.summaryAi || task.plan.summaryError || !task.plan.discovery) throw new AppError("analysis_required", "A completed Meta analysis of live catalog evidence is required before action approval", 409);
+      if (!task.plan.ai || !task.plan.summaryAi || task.plan.summaryError || !task.plan.discovery) throw new AppError("analysis_required", "A completed Meta analysis of live catalog evidence is required before action approval", 409);
       if (Date.parse(task.plan.discovery.completedAt) < this.now().getTime() - 30 * 60_000) throw new AppError("evidence_expired", "Refresh discovery before approving live actions", 409);
       if (!reviewHash || reviewHash !== task.plan.actionReviewHash) throw new AppError("stale_approval", "The reviewed drafts changed. Reload and review the current action details before approving", 409);
       const proposals = task.plan.proposedActions || [];
       const selected = [...new Set(actionIds)].map(actionId => proposals.find(a => a.id === actionId));
       if (!selected.length || selected.length > 3 || selected.some(a => !a)) throw new AppError("invalid_actions", "Select one to three proposed actions", 400);
       const actions = selected as LiveAction[];
+      if (actions.some(action => action.kind === "apply") && bindingConfirmed !== true) throw new AppError("binding_confirmation_required", "Explicitly confirm submitting these reviewed applications to the real employers", 400);
       const connected = new ServiceConnectionStore(this.db).list(session.actorId, "sso");
       if (actions.some(a => !connected.some(c => c.serviceId === a.serviceId && c.connected))) throw new AppError("service_disconnected", "Connect each selected service before approving", 409);
       const approvedAt = this.now().toISOString(); const expiresAt = new Date(this.now().getTime() + 24 * 60 * 60_000).toISOString();
       this.db.prepare("INSERT INTO live_action_runs (task_id, owner_id, uid, state, next_at, approved_at, expires_at, actions_json) VALUES (?, ?, ?, 'queued', ?, ?, ?, ?)").run(id, session.actorId, session.uid, approvedAt, approvedAt, expiresAt, JSON.stringify(actions));
-      return store.savePlan(session.actorId, id, { ...task.plan, execution: { status: "queued", approvedAt, expiresAt, actions, attempts: 0 } });
+      return store.savePlan(session.actorId, id, { ...task.plan, execution: { status: "queued", approvedAt, expiresAt, actions, attempts: 0, bindingConfirmed: bindingConfirmed === true, events: [{ at: approvedAt, type: "approval.granted", message: "User approved the exact actions; queued for execution" }] } });
     })();
   }
   async tick() {
@@ -47,9 +48,17 @@ export class LiveWorkflow {
     if (!run) return false;
     const store = new AiTaskStore(this.db); const task = store.get(run.owner_id, run.task_id);
     const actions = JSON.parse(run.actions_json) as LiveAction[];
-    const execution: LiveExecution = { status: "running", approvedAt: run.approved_at, expiresAt: run.expires_at, actions, attempts: run.attempts, evidence: task.plan.execution?.evidence || [], events: [...(task.plan.execution?.events || []), { at, type: "execution.started", message: `Live attempt ${run.attempts} started` }] };
+    const execution: LiveExecution = { status: "running", approvedAt: run.approved_at, expiresAt: run.expires_at, actions, attempts: run.attempts, bindingConfirmed: task.plan.execution?.bindingConfirmed === true, evidence: task.plan.execution?.evidence || [], events: [...(task.plan.execution?.events || []), { at, type: "execution.started", message: `Live attempt ${run.attempts} started` }] };
     store.savePlan(run.owner_id, run.task_id, { ...task.plan, execution });
-    const contract = { ownerId: run.owner_id, uid: run.uid, taskId: run.task_id, approvedAt: run.approved_at, expiresAt: run.expires_at };
+    const transition = (status: "running" | "verifying", message: string) => {
+      execution.status = status;
+      execution.events!.push({ at: this.now().toISOString(), type: status === "verifying" ? "verification.started" : "execution.started", message });
+      this.db.transaction(() => {
+        if (!this.db.prepare("SELECT 1 FROM live_action_runs WHERE task_id = ? AND lease_token = ?").get(run.task_id, token)) throw new AppError("lease_lost", "Execution ownership changed; stopped this worker", 409);
+        store.savePlan(run.owner_id, run.task_id, { ...store.get(run.owner_id, run.task_id).plan, execution });
+      })();
+    };
+    const contract = { ownerId: run.owner_id, uid: run.uid, taskId: run.task_id, bindingConfirmed: execution.bindingConfirmed === true, approvedAt: run.approved_at, expiresAt: run.expires_at };
     try {
       if (Date.parse(run.expires_at) <= this.now().getTime()) throw new AppError("contract_expired", "Live action approval expired; inspect backend state before approving a new task", 409);
       const evidence: unknown[] = [];
@@ -57,10 +66,16 @@ export class LiveWorkflow {
         const connected = new ServiceConnectionStore(this.db).list(run.owner_id, "sso");
         if (!connected.some(c => c.serviceId === action.serviceId && c.connected)) throw new AppError("service_disconnected", "Service disconnected; pending actions stopped", 409);
         // First check for a completed action after a lost response/server restart.
+        transition("verifying", `Checking existing backend state for ${action.kind}: ${action.recordId}`);
         let verified: Record<string, unknown> | undefined;
         try { verified = await this.adapter.perform(contract, action, "verify"); }
         catch (error) { if (!(error instanceof AppError) || error.status !== 409 || error.code !== "hub_action_failed") throw error; }
-        if (!verified) { await this.adapter.perform(contract, action, "execute"); verified = await this.adapter.perform(contract, action, "verify"); }
+        if (!verified) {
+          transition("running", `Executing approved ${action.kind}: ${action.recordId}`);
+          await this.adapter.perform(contract, action, "execute");
+          transition("verifying", `Independently reading backend outcome for ${action.recordId}`);
+          verified = await this.adapter.perform(contract, action, "verify");
+        }
         evidence.push(verified);
         execution.evidence = [...evidence];
         execution.events!.push({ at: this.now().toISOString(), type: "action.verified", message: `${action.kind}: ${action.recordId} verified against Hub backend` });
@@ -70,6 +85,7 @@ export class LiveWorkflow {
       }
       const proof = { mode: "live" as const, verifiedAt: this.now().toISOString(), evidence };
       execution.status = "verified";
+      execution.events!.push({ at: proof.verifiedAt, type: "completed", message: "All approved actions verified against backend records" });
       execution.receipt = { ...proof, proof: { contract, actions, ...proof }, proofHash: createHash("sha256").update(JSON.stringify({ contract, actions, ...proof })).digest("hex") };
     } catch (error) {
       const failure = error instanceof AppError ? error : new AppError("execution_failed", "Live execution failed; outcome is unverified", 502);

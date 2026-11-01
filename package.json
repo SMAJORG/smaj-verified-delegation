@@ -6,7 +6,6 @@
     "dev": "next dev",
     "build": "next build",
     "start": "node scripts/start-server.mjs",
-    "demo": "tsx scripts/demo.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "verify:live": "tsx --tsconfig tsconfig.json scripts/verify-live.ts",
