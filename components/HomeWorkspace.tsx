@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./HomeWorkspace.module.css";
 import ServiceIcon from "@/components/ServiceIcon";
 import { SMAJ_SERVICES, type ServiceId } from "@/src/domain/services";
@@ -18,6 +18,14 @@ type Props = {
 
 export default function HomeWorkspace({ task, setTask, selectedService, selectService, routeTask, busy, connectedIds, manageApps }: Props) {
   const input = useRef<HTMLTextAreaElement>(null);
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  useEffect(() => {
+    if (task.length > 0) return;
+    const timer = window.setInterval(() => {
+      setPlaceholderIndex(index => (index + 1) % SMAJ_SERVICES.length);
+    }, 3000);
+    return () => window.clearInterval(timer);
+  }, [task.length]);
   const selected = SMAJ_SERVICES.find(service => service.id === selectedService);
   const status = (id: ServiceId) => {
     const service = SMAJ_SERVICES.find(item => item.id === id)!;
@@ -29,7 +37,10 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
     <p className={styles.eyebrow}>YOUR WORKSPACE</p><h1 className={styles.title}>What can I help you do?</h1>
     <form className={`centralComposer compactComposer ${styles.composer}`} onSubmit={routeTask} aria-label="Create an AI task" aria-busy={busy === "routing"}>
       <label className="visuallyHidden" htmlFor="ai-task">Your AI task</label>
-      <textarea ref={input} id="ai-task" value={task} onChange={event => setTask(event.target.value)} placeholder="Find software engineering jobs…" maxLength={1900} rows={3} />
+      <div className={styles.promptInput}>
+        <textarea ref={input} id="ai-task" value={task} onChange={event => setTask(event.target.value)} placeholder="" maxLength={1900} rows={3} />
+        {!task && <span className={styles.rotatingPlaceholder} aria-hidden="true"><span key={placeholderIndex}>{SMAJ_SERVICES[placeholderIndex].example}…</span></span>}
+      </div>
       <div className={styles.toolbar}>
         <button type="button" className={styles.tool} onClick={manageApps} aria-label="Manage connected apps">+</button>
         {selected ? <button type="button" className={`${styles.tool} ${styles.apps}`} onClick={() => selectService(null)} aria-label={`Clear ${selected.shortName} context`}><ServiceIcon serviceId={selected.id}/><span>{selected.shortName}</span><span className={styles.clear} aria-hidden="true">×</span></button> : <button type="button" className={`${styles.tool} ${styles.apps}`} onClick={manageApps}><span aria-hidden="true">▦</span> Apps</button>}
