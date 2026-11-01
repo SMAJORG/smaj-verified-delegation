@@ -52,6 +52,28 @@ test("worker recovers a lost execute response, performs no duplicate write, and 
   } finally { f.db.close(); process.env = old; }
 });
 
+test("manual recovery only retries a retryable failed contract and verifies the existing Hub record", async () => {
+  const old = { ...process.env }; enable(); const f = setup(); let unavailable = true; let backend: Record<string, unknown> | undefined; let writes = 0;
+  const adapter = { async perform(_contract: unknown, _action: unknown, operation: string) {
+    if (operation === "verify") { if (backend) return backend; throw new AppError("hub_action_failed", "Not submitted yet", 409); }
+    if (unavailable) throw new AppError("hub_unreachable", "Hub temporarily unavailable", 502);
+    writes++; backend = { backendId: "hub-application", status: "submitted" }; return backend;
+  } };
+  try {
+    const worker = new LiveWorkflow(f.db, adapter, f.now); const approved = worker.approve(session, f.task.id, ["one"], "fixture-review-hash");
+    for (let i = 0; i < 3; i++) { await worker.tick(); f.advance((i + 1) * 5000); }
+    const failed = f.store.get("owner", f.task.id).plan.execution!;
+    assert.equal(failed.status, "failed"); assert.equal(failed.retryable, true);
+    assert.equal(writes, 0);
+    const queued = worker.retry(session, f.task.id).plan.execution!;
+    assert.equal(queued.status, "queued"); assert.equal(queued.approvedAt, approved.plan.execution!.approvedAt);
+    unavailable = false; await worker.tick();
+    const recovered = f.store.get("owner", f.task.id).plan.execution!;
+    assert.equal(recovered.status, "verified"); assert.equal(recovered.receipt?.evidence[0] && (recovered.receipt.evidence[0] as any).backendId, "hub-application"); assert.equal(writes, 1);
+    assert.throws(() => worker.retry(session, f.task.id), /safely retryable/);
+  } finally { f.db.close(); process.env = old; }
+});
+
 test("expired lease is reclaimed; disconnection, expiry, and verification failure never issue a receipt", async () => {
   const old = { ...process.env }; enable();
   try {

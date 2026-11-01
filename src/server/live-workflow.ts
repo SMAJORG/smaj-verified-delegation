@@ -10,6 +10,20 @@ import { HubActionAdapter, type ActionAdapter } from "@/src/server/live-actions"
 type Run = { task_id: string; owner_id: string; uid: string; state: string; attempts: number; approved_at: string; expires_at: string; actions_json: string; lease_token: string };
 export class LiveWorkflow {
   constructor(private db: AppDatabase, private adapter: ActionAdapter = new HubActionAdapter(), private now = () => new Date()) {}
+  retry(session: ActorSession, id: string) {
+    if (session.authType !== "sso" || session.sandbox || !session.uid) throw new AppError("live_identity_required", "Retrying live execution requires a real Hub sign-in", 403);
+    if (process.env.SMAJ_PRODUCTION_WRITES_ENABLED !== "true" || (process.env.SMAJ_AI_DELEGATION_SECRET?.trim().length || 0) < 32) throw new AppError("live_delegation_not_configured", "Live actions are not configured on both servers", 503);
+    return this.db.transaction(() => {
+      const store = new AiTaskStore(this.db); const task = store.get(session.actorId, id); const current = task.plan.execution;
+      if (!current || current.status !== "failed" || current.retryable !== true) throw new AppError("retry_not_available", "This action has no safely retryable failure", 409);
+      if (Date.parse(current.expiresAt) <= this.now().getTime()) throw new AppError("contract_expired", "The approved action expired. Review and approve a new request.", 409);
+      const run = this.db.prepare("SELECT * FROM live_action_runs WHERE task_id = ? AND owner_id = ? AND uid = ?").get(id, session.actorId, session.uid) as (Run & { approved_at: string; expires_at: string; actions_json: string }) | undefined;
+      if (!run || run.state !== "failed" || JSON.stringify(JSON.parse(run.actions_json)) !== JSON.stringify(current.actions)) throw new AppError("retry_contract_mismatch", "The original approved action contract could not be confirmed", 409);
+      const at = this.now().toISOString();
+      this.db.prepare("UPDATE live_action_runs SET state = 'queued', attempts = 0, next_at = ?, lease_until = NULL, lease_token = NULL WHERE task_id = ? AND owner_id = ? AND state = 'failed'").run(at, id, session.actorId);
+      return store.savePlan(session.actorId, id, { ...task.plan, execution: { ...current, status: "queued", attempts: 0, error: undefined, retryable: false, events: [...(current.events || []), { at, type: "recovery.user_retry", message: "The same approved actions were queued. The worker checks Hub records before retrying writes." }] } });
+    })();
+  }
   approve(session: ActorSession, id: string, actionIds: string[], reviewHash?: string) {
     if (session.authType !== "sso" || session.sandbox || !session.uid) throw new AppError("live_identity_required", "Live execution requires a real Hub sign-in; demo sessions cannot perform production actions", 403);
     if (process.env.SMAJ_PRODUCTION_WRITES_ENABLED !== "true" || (process.env.SMAJ_AI_DELEGATION_SECRET?.trim().length || 0) < 32) throw new AppError("live_delegation_not_configured", "Configure SMAJ_AI_DELEGATION_SECRET and SMAJ_PRODUCTION_WRITES_ENABLED=true on both servers before live execution", 503);
@@ -73,8 +87,10 @@ export class LiveWorkflow {
       execution.receipt = { ...proof, proof: { contract, actions, ...proof }, proofHash: createHash("sha256").update(JSON.stringify({ contract, actions, ...proof })).digest("hex") };
     } catch (error) {
       const failure = error instanceof AppError ? error : new AppError("execution_failed", "Live execution failed; outcome is unverified", 502);
-      execution.status = run.attempts < 3 && [429, 500, 502, 503, 504].includes(failure.status) ? "retrying" : "failed";
+      const retryable = [429, 500, 502, 503, 504].includes(failure.status);
+      execution.status = run.attempts < 3 && retryable ? "retrying" : "failed";
       execution.error = failure.message;
+      execution.retryable = retryable;
       execution.events!.push({ at: this.now().toISOString(), type: execution.status, message: failure.message });
     }
     // A stale worker cannot overwrite a newer lease's outcome.
