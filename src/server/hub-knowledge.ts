@@ -5,6 +5,8 @@ export type KnowledgeSource = { id: string; title: string; url: string; file: st
 const tokens = (text: string) => [...new Set(text.toLowerCase().match(/[a-z0-9]{3,}/g) || [])].filter(word => !new Set(["the", "and", "what", "how", "does", "about", "smaj", "hub", "are", "for", "with", "can"]).has(word));
 export function retrieveHubKnowledge(question: string) {
   const terms = tokens(question);
+  const overview = /\bsmaj\s+(?:pi\s+)?hub\b/i.test(question) && terms.every(term => ["tell", "explain", "describe", "overview", "introduction", "introduce", "please", "give"].includes(term));
+  if (overview) return snapshot.documents.filter(document => ["white-paper-2", "white-paper-6", "white-paper-7", "white-paper-8"].includes(document.id));
   const ranked = snapshot.documents.map(document => {
     const title = document.title.toLowerCase(), body = document.text.toLowerCase();
     const score = terms.reduce((sum, term) => sum + (title.includes(term) ? 5 : 0) + (body.includes(term) ? 1 : 0), 0);

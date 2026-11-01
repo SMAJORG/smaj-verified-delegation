@@ -44,3 +44,14 @@ test("informational Meta answers include evidence and produce no approval or exe
     assert.ok(requests.every(url => url.startsWith('https://api.meta.ai/')));
   } finally { process.env = previous; }
 });
+
+
+test("plain platform introductions retrieve real overview evidence even when the question contains only stopwords", () => {
+  for (const question of ["What is SMAJ PI HUB?", "Tell me about SMAJ PI HUB", "Explain SMAJ PI HUB"]) {
+    const sources = retrieveHubKnowledge(question);
+    assert.ok(sources.some(source => source.id === "white-paper-2"));
+    assert.ok(sources.some(source => source.id === "white-paper-6"));
+    assert.match(hubKnowledgeContext(question).prompt, /Executive Summary/);
+  }
+  assert.equal(retrieveHubKnowledge("SMAJ PI HUB zzzzunavailablefact").length, 0);
+});
