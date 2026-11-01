@@ -18,6 +18,10 @@
 .loginCard>p:not(.eyebrow){font-size:14px}.loginCard>small{font-size:10px;line-height:1.5}
 .loginCard button:focus-visible,.loginCard a:focus-visible,.tokenLogin summary:focus-visible{outline:3px solid #aa82ed;outline-offset:4px}
 @media(max-width:480px){.loginScreen{padding:16px}.loginCard{padding:24px 18px}.loginCard h1{font-size:25px}.demoNotice{align-items:flex-start}.demoNotice button{width:100%}}
+/* Keep sidebar navigation full-height and anchor profile access at the bottom. */
+.drawer{height:100vh;height:100dvh;overflow-y:auto}
+.drawer nav{display:flex;flex:1;min-height:0;flex-direction:column}
+.drawerDivider{margin-top:auto}
 /* Compact workspace and original service launcher artwork. */
 .workspaceHeader{height:64px;padding:0 clamp(12px,3vw,36px);border-bottom:0;background:#fff}
 .workspaceHeader .headerSide{gap:10px}.workspaceHeader .headerBrand{gap:8px}
