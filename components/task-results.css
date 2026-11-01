@@ -42,6 +42,7 @@
 .workspace .workspaceBody .compactResults>h1{font-size:27px;line-height:1.15;letter-spacing:-1px;margin:0 0 18px}
 .compactResults .resultsResponse{display:flex;align-items:flex-start;gap:10px;margin-top:22px}
 .compactResults .resultsAvatar{flex:none;width:33px;height:33px;background:linear-gradient(135deg,#8657e5,#49349c);border-radius:12px;color:white;display:grid;place-items:center;font-size:12px;font-weight:800}
+.compactResults img.resultsAvatarLogo{display:block;width:33px;height:33px;margin:0;border-radius:10px;object-fit:cover;background:transparent}
 .compactResults .resultsContent{min-width:0;flex:1}
 .compactResults .resultsWho{font-size:12px;font-weight:800;margin:0 0 8px}
 .compactResults .liveTaskResults{margin:0;padding:0;border:0;box-shadow:none;background:none}

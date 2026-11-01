@@ -201,9 +201,9 @@ function DrawerItem({icon,label,badge,active,onClick}:{icon:string;label:string;
 export function Tasks(props:any){
   return <section className="tasksView compactResults" data-results-design="approved-compact-v2">
     <button className="taskHistoryBack" onClick={props.openHistory}>All Tasks</button>
-    <p className="resultsEyebrow">AI TASK RESULTS</p><h1>Your request, handled clearly.</h1>
+    <p className="resultsEyebrow">AI TASK RESULTS</p>
     {props.task&&props.routePlan&&<div className="taskRequest">{props.task}</div>}
-    {(props.routePlan||props.busy)&&<section className="resultsResponse"><div className="resultsAvatar">AI</div><div className="resultsContent"><p className="resultsWho">SMAJ AI</p>
+    {(props.routePlan||props.busy)&&<section className="resultsResponse"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><p className="resultsWho">SMAJ AI</p>
       {props.busy?<Analyzing/>:props.routePlan&&<TypedResponse text={props.routePlan.summary}/>}
       {props.liveTaskResult}
     </div></section>}
@@ -220,7 +220,7 @@ function Empty({text}:{text:string}){return <div className="emptyState"><Icon na
 function DelegationDetail({deleteDelegation,delegation,jobsById,selectedJobs,setSelectedJobs,busy,approve,execute,injectFailure,setInjectFailure,downloadReceipt}:any){
   const toggle=(id:string)=>setSelectedJobs((current:string[])=>current.includes(id)?current.filter(value=>value!==id):[...current,id]);
   const running=["executing","retrying","verifying"].includes(delegation.status);
-  return <><div className="taskRequest">{delegation.goal}</div><section className="resultsResponse"><div className="resultsAvatar">AI</div><div className="resultsContent">
+  return <><div className="taskRequest">{delegation.goal}</div><section className="resultsResponse"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent">
     <p className="resultsWho">SMAJ AI <span className="taskResultMeta">· Demo</span></p>
     {running?<Analyzing/>:<TypedResponse text={delegation.plan.summary}/>}
     <div className="taskResultCards">{delegation.plan.recommendations.map((recommendation:any)=>{const job=jobsById.get(recommendation.jobId) as JobsApiJob|undefined;if(!job)return null;return <article className="taskResultCard" key={job.id}>
