@@ -127,3 +127,5 @@
   .workspace .tasksView .jobsSetup input{display:block;width:100%;box-sizing:border-box;margin-top:8px}
   .workspace .tasksView .detailHead h2{font-size:23px;letter-spacing:-.5px}
 }
+
+@media(max-width:480px){.workspace .workspaceHeader{padding-inline:12px}.workspace .workspaceHeader .headerSide{min-width:0}.workspace .workspaceBody.homeBody{width:100%;min-width:0}}
