@@ -62,6 +62,26 @@ export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, st
       </header>
       <main id="top">
         <section className="hero">
+          <div className="heroArtwork" aria-hidden="true">
+            <svg className="infinityLoop" viewBox="0 0 800 320" fill="none">
+              <defs>
+                <linearGradient id="infinity-gradient" x1="80" y1="250" x2="720" y2="70" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#F4D6FF" />
+                  <stop offset=".48" stopColor="#FFFFFF" />
+                  <stop offset="1" stopColor="#C6A7FF" />
+                </linearGradient>
+                <filter id="infinity-glow" x="0" y="0" width="800" height="320" filterUnits="userSpaceOnUse">
+                  <feGaussianBlur stdDeviation="9" />
+                </filter>
+              </defs>
+              <path className="infinityGlow" d="M92 160C190 42 292 42 400 160s210 118 308 0C610 42 508 42 400 160S190 278 92 160Z" stroke="url(#infinity-gradient)" strokeWidth="12" filter="url(#infinity-glow)" />
+              <path className="infinityTrace" d="M92 160C190 42 292 42 400 160s210 118 308 0C610 42 508 42 400 160S190 278 92 160Z" stroke="url(#infinity-gradient)" strokeWidth="4" strokeLinecap="round" />
+            </svg>
+            <img className="heroFloat heroFloatOne" src="/assets/services/store.png" alt="" />
+            <img className="heroFloat heroFloatTwo" src="/assets/services/jobs.png" alt="" />
+            <img className="heroFloat heroFloatThree" src="/assets/smaj-stream-logo.png" alt="" />
+            <img className="heroFloat heroFloatFour" src="/assets/services/education.png" alt="" />
+          </div>
           <div className="heroServices" aria-label="Store, Jobs, Stream, 13+">
             <img src="/assets/services/store.png" alt="SMAJ Store" width={28} height={28} />
             <img src="/assets/services/jobs.png" alt="SMAJ Jobs" width={28} height={28} />

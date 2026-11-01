@@ -77,11 +77,66 @@
   cursor: pointer
 }
 .referenceLanding .hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   min-height: 660px;
   padding: 108px 20px 95px;
   text-align: center;
   color: #fff;
-  background: radial-gradient(ellipse at 50% 5%,#ffbea8 0%,transparent 43%),linear-gradient(158deg,#cba3d9 0%,#9d7be8 43%,#6632f0 100%)
+  background-image: radial-gradient(ellipse at 50% 5%,#ffbea8 0%,transparent 43%),linear-gradient(135deg,#cba3d9 0%,#9d7be8 43%,#6632f0 100%);
+  background-size: 100% 100%,220% 220%;
+  background-position: center,0% 50%;
+  animation: heroGradientDrift 18s ease-in-out infinite alternate
+}
+.referenceLanding .hero::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  background: radial-gradient(ellipse at 52% 55%,#c7a6ff55 0%,transparent 56%);
+  pointer-events: none
+}
+.referenceLanding .heroArtwork {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none
+}
+.referenceLanding .heroArtwork .infinityLoop {
+  position: absolute;
+  top: 51%;
+  left: 50%;
+  width: min(940px,94vw);
+  height: auto;
+  overflow: visible;
+  opacity: .46;
+  transform: translate(-50%,-50%)
+}
+.referenceLanding .infinityGlow {
+  opacity: .72
+}
+.referenceLanding .infinityTrace {
+  stroke-dasharray: 24 16;
+  animation: infinityTravel 8s linear infinite
+}
+.referenceLanding .heroFloat {
+  position: absolute;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  opacity: .68;
+  filter: drop-shadow(0 5px 12px #37167a40);
+  animation: heroIconFloat 6s ease-in-out infinite
+}
+.referenceLanding .heroFloatOne { top: 24%; left: max(7%,calc(50% - 390px)); animation-delay: -1s }
+.referenceLanding .heroFloatTwo { top: 39%; right: max(8%,calc(50% - 390px)); animation-delay: -3.2s }
+.referenceLanding .heroFloatThree { right: max(15%,calc(50% - 330px)); bottom: 17%; animation-delay: -2s }
+.referenceLanding .heroFloatFour { bottom: 20%; left: max(14%,calc(50% - 340px)); animation-delay: -4.1s }
+.referenceLanding .hero>*:not(.heroArtwork) {
+  position: relative;
+  z-index: 1
 }
 .referenceLanding .heroServices {
   display: flex;
@@ -316,6 +371,17 @@
     min-height: 650px;
     padding: 95px 22px 85px
   }
+  .referenceLanding .heroArtwork .infinityLoop {
+    top: 48%;
+    width: 125vw;
+    max-width: 700px;
+    opacity: .34
+  }
+  .referenceLanding .heroFloat { width: 32px; height: 32px; opacity: .55 }
+  .referenceLanding .heroFloatOne { top: 20%; left: 7% }
+  .referenceLanding .heroFloatTwo { top: 36%; right: 7% }
+  .referenceLanding .heroFloatThree { right: 11%; bottom: 13% }
+  .referenceLanding .heroFloatFour { bottom: 18%; left: 8% }
   .referenceLanding .hero h1 {
     margin: 32px auto
   }
@@ -489,6 +555,22 @@
   .referenceLanding {
     scroll-behavior: auto
   }
+  .referenceLanding .hero,
+  .referenceLanding .infinityTrace,
+  .referenceLanding .heroFloat {
+    animation: none
+  }
+}
+@keyframes heroGradientDrift {
+  from { background-position: center,0% 50% }
+  to { background-position: center,100% 50% }
+}
+@keyframes infinityTravel {
+  to { stroke-dashoffset: -160 }
+}
+@keyframes heroIconFloat {
+  0%,100% { transform: translate3d(0,0,0) }
+  50% { transform: translate3d(0,-10px,0) }
 }
 .referenceLanding .eyebrow {
   color: inherit;
