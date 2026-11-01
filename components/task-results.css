@@ -54,3 +54,5 @@
 .compactResults .taskAnalyzing{display:block;margin:0}.compactResults .taskAnalyzing>span:last-child{display:block;margin-top:6px}
 .workspace .compactResults .taskDetail{padding:14px;border-radius:17px;box-shadow:none}.compactResults .taskDetail .detailHead>small{display:none}
 @media(max-width:370px){.workspace .workspaceBody .compactResults>h1{font-size:24px}.compactResults .taskThumb{width:66px;height:66px}.compactResults .taskResultCard{gap:9px}}
+.workspace .workspaceBody:has(>.compactResults){background:#fff}
+.compactResults .taskResultCard{background:#fff}
