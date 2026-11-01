@@ -29,11 +29,11 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
     <p className={styles.eyebrow}>YOUR WORKSPACE</p><h1 className={styles.title}>What can I help you do?</h1>
     <form className={`centralComposer compactComposer ${styles.composer}`} onSubmit={routeTask} aria-label="Create an AI task" aria-busy={busy === "routing"}>
       <label className="visuallyHidden" htmlFor="ai-task">Your AI task</label>
-      <textarea ref={input} id="ai-task" value={task} onChange={event => setTask(event.target.value)} placeholder="Find software engineering jobs…" maxLength={1900} />
+      <textarea ref={input} id="ai-task" value={task} onChange={event => setTask(event.target.value)} placeholder="Find software engineering jobs…" maxLength={1900} rows={3} />
       <div className={styles.toolbar}>
         <button type="button" className={styles.tool} onClick={manageApps} aria-label="Manage connected apps">+</button>
-        {selected ? <button type="button" className={`${styles.tool} ${styles.apps}`} onClick={() => selectService(null)} aria-label={`Clear ${selected.shortName} context`}><ServiceIcon serviceId={selected.id}/><span>{selected.shortName}</span><span aria-hidden="true">×</span></button> : <button type="button" className={`${styles.tool} ${styles.apps}`} onClick={manageApps}><span aria-hidden="true">▦</span> Apps</button>}
-        <button className={styles.submit} disabled={!task.trim() || busy === "routing"}>{busy === "routing" ? <><span className="spinner"/>Asking AI…</> : <>Ask SMAJ AI <span aria-hidden="true">↗</span></>}</button>
+        {selected ? <button type="button" className={`${styles.tool} ${styles.apps}`} onClick={() => selectService(null)} aria-label={`Clear ${selected.shortName} context`}><ServiceIcon serviceId={selected.id}/><span>{selected.shortName}</span><span className={styles.clear} aria-hidden="true">×</span></button> : <button type="button" className={`${styles.tool} ${styles.apps}`} onClick={manageApps}><span aria-hidden="true">▦</span> Apps</button>}
+        <button type="submit" className={styles.submit} disabled={!task.trim() || busy === "routing"}>{busy === "routing" ? <><span className="spinner"/>Asking AI…</> : <>Ask SMAJ AI <span aria-hidden="true">↗</span></>}</button>
       </div>
     </form>
     {selected && <div className="serviceContext" role="status"><span><strong>{selected.name}</strong> · {status(selected.id)}{status(selected.id) === "Planned" ? " — integration not available yet." : !ready ? " — connect this app to continue." : " — task context selected."}</span>{!ready && selected.adapterMode === "connected" && <button onClick={manageApps}>Connect app</button>}</div>}
