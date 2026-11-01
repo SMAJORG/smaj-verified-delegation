@@ -79,3 +79,36 @@
 @media(max-width:760px){.workspace .workspaceHeader{height:68px;padding:0 18px}.workspace .workspaceBody,.workspace .workspaceBody.homeBody{padding:26px 15px 70px}.workspace .headerBrand strong{font-size:17px}.workspace .taskDetail{display:block}.workspace .taskDetail>*{margin-bottom:20px}.workspace .taskDetail>.evidenceColumns{display:grid;grid-template-columns:1fr}.workspace .taskDetail>.evidenceColumns>section{grid-column:auto;grid-row:auto}.workspace .routePlan,.workspace .taskDetail,.workspace .centralComposer{padding:21px;border-radius:22px}.workspace .approvalBar{align-items:stretch}.workspace .primaryButton{max-width:100%}}
 
 .liveAction{display:flex;gap:12px;align-items:flex-start;margin:16px 0}.liveAction input{flex:none;margin-top:5px}.liveAction small{display:block;overflow-wrap:anywhere}.liveAction p{white-space:pre-wrap}.workspace .jobCards article{min-width:0;overflow-wrap:anywhere}
+
+/* Tasks display the chat response, approvals and evidence without a second composer. */
+.workspace .tasksView{min-width:0;overflow-wrap:anywhere}
+.workspace .tasksView .routePlan,.workspace .tasksView .taskDetail{margin:0 0 18px;padding:20px;border-radius:20px;min-width:0}
+.workspace .tasksView .routePlanHead>div,.workspace .tasksView .detailHead>div,.workspace .tasksView .routeFlow article>div{min-width:0}
+.workspace .tasksView .routeFlow article{grid-template-columns:24px 40px minmax(0,1fr);padding:14px;border-radius:14px}
+.workspace .tasksView .taskList>button{padding:16px;border-radius:16px}
+.workspace .tasksView .taskList>button>div{min-width:0}
+.workspace .tasksView .routePlan code,.workspace .tasksView .routePlan small{overflow-wrap:anywhere;word-break:break-word}
+@media(max-width:760px){
+  .workspace .tasksView>h1{font-size:clamp(28px,7vw,36px);letter-spacing:-1px;margin:0 0 8px}
+  .workspace .tasksView .pageSub{margin-bottom:18px}
+  .workspace .tasksView .routePlan,.workspace .tasksView .taskDetail{padding:16px;border-radius:16px;margin-bottom:14px}
+  .workspace .tasksView .routeFlow{margin:12px 0;gap:8px}
+  .workspace .tasksView .routeFlow article{grid-template-columns:22px 32px minmax(0,1fr);gap:8px;padding:12px}
+  .workspace .tasksView .routeFlow .serviceBadge{width:32px;height:32px;border-radius:10px}
+  .workspace .tasksView .routePlan h2{font-size:19px}
+  .workspace .tasksView .knowledgeSources{padding:12px;margin:14px 0;border-radius:12px}
+  .workspace .tasksView .jobCards{grid-template-columns:1fr;gap:10px}
+  .workspace .tasksView .approvalBar{flex-direction:column;align-items:stretch;gap:12px;padding:12px}
+  .workspace .tasksView .approvalBar>div{display:block;min-width:0}
+  .workspace .tasksView .approvalBar .primaryButton{width:100%;white-space:normal}
+  .workspace .tasksView .primaryButton,.workspace .tasksView .secondaryButton{min-height:44px;padding:11px 14px}
+  .workspace .tasksView .evidenceColumns>section{padding:16px;border-radius:14px}
+  .workspace .tasksView .evidenceColumns h3{font-size:18px;margin-bottom:16px}
+  .workspace .tasksView .eventRow{margin:16px 0;gap:10px}
+  .workspace .tasksView .taskList>button{flex-wrap:wrap;gap:10px;padding:14px}
+  .workspace .tasksView .taskTag{white-space:normal;max-width:100%}
+  .workspace .tasksView .taskControls select{width:100%;max-width:100%}
+  .workspace .tasksView .jobsSetup{grid-template-columns:minmax(0,1fr)}
+  .workspace .tasksView .jobsSetup input{display:block;width:100%;box-sizing:border-box;margin-top:8px}
+  .workspace .tasksView .detailHead h2{font-size:23px;letter-spacing:-.5px}
+}
