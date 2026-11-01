@@ -21,12 +21,14 @@ export class MetaServiceRouter {
       name: service.name,
       connected: connectedIds.has(service.id),
       adapterMode: service.adapterMode,
+      platformStatus: service.platformStatus,
+      publicCatalog: ["store", "jobs", "stream"].includes(service.id),
       capabilities: service.capabilities,
     }));
 
     const knowledge = hubKnowledgeContext(request);
     const prompt = [
-      "You are SMAJ AI. Answer the user helpfully in summary and route actionable tasks across SMAJ PI HUB services. Return strict JSON only. For greetings, repository explanations, or tasks needing no service, return the actual answer in summary with empty services and steps. Never invent service results.",
+      "You are SMAJ AI. Answer the user helpfully in summary and route actionable tasks across SMAJ PI HUB services. Return strict JSON only. For greetings, repository explanations, or tasks needing no service, return the actual answer in summary with empty services and steps. Never invent service results. Public visitors may ask questions and approve reads of published Store, Jobs and Stream catalogs without Pi sign-in. Account actions and private data still require authentication.",
       "Never claim an action completed. Never plan a payment, token swap, donation, purchase, booking, or medical decision as executable. A later grounded analysis may draft a Jobs application or Store saved-product action for separate explicit approval.",
       "Use only service IDs and capabilities from the catalog. Multi-service plans are allowed. Requests for available jobs, cars/products, or Stream content ALWAYS need catalog discovery steps, even when phrased as questions. White Paper and policy questions use repository evidence and no steps. Cars for sale belong to Store, not the planned Transport service. Never claim catalog matches before discovery. A disconnected service may be proposed with a step so the user can connect and approve it.",
       "Schema: {summary:string, services:string[], steps:[{id:string,serviceId:string,title:string,description:string,capability:string,approvalRequired:boolean,query?:{search?:string,category?:string,maxPrice?:number,currency?:\"USD\"|\"PI\"}}], warnings:string[]}",

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireActor } from "@/src/server/auth";
 import { workspaceDatabase } from "@/src/server/demo-workspace";
 import { AiTaskStore } from "@/src/server/ai-tasks";
-import { apiError } from "@/src/server/http";
+import { apiError, requireSameOrigin } from "@/src/server/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +15,7 @@ export async function GET(request: NextRequest, context: Context) {
 }
 export async function DELETE(request: NextRequest, context: Context) {
   try {
+    requireSameOrigin(request);
     const actor = requireActor(request);
     new AiTaskStore(workspaceDatabase(request)).delete(actor, (await context.params).id);
     return new NextResponse(null, { status: 204 });

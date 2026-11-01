@@ -1,3 +1,4 @@
+import { POST as publicSession } from "@/app/api/public/session/route";
 import { NextRequest, NextResponse } from "next/server";
 import { demoAuthEnabled, requireActorSession, SESSION_COOKIE } from "@/src/server/auth";
 import { issueDemoSession, revokeDemoSession } from "@/src/server/demo-sessions";
@@ -11,6 +12,7 @@ export async function POST(request: NextRequest) {
   let issued: ReturnType<typeof issueDemoSession> | undefined;
   try {
     requireSameOrigin(request);
+    if (process.env.SMAJ_SAMPLE_TASKS_ENABLED !== "true") return publicSession(request);
     const protocol = request.headers.get("x-forwarded-proto")?.split(",")[0].trim() || request.nextUrl.protocol.slice(0, -1);
     if (!demoAuthEnabled()) throw new AppError("demo_disabled", "The demo is unavailable. Please use SMAJ PI HUB sign-in.", 403);
     let existing;

@@ -2,7 +2,7 @@ import { ServiceConnectionStore } from "@/src/server/service-connections";
 import { workspaceDatabase } from "@/src/server/demo-workspace";
 import { NextRequest, NextResponse } from "next/server";
 import type { CreateDelegationInput } from "@/src/domain/types";
-import { requireActor, requireActorSession } from "@/src/server/auth";
+import { requireProtectedActor, requireActorSession } from "@/src/server/auth";
 import { apiError, AppError, requireIdempotencyKey } from "@/src/server/http";
 import { workspaceWorkflow } from "@/src/server/demo-workspace";
 
@@ -11,14 +11,15 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
-    const actorId = requireActor(request);
+    if (requireActorSession(request).authType === "public") return NextResponse.json({delegations:[]});
+    const actorId = requireProtectedActor(request);
     return NextResponse.json({ delegations: workspaceWorkflow(request).list(actorId) });
   } catch (error) { return apiError(error); }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const actorId = requireActor(request);
+    const actorId = requireProtectedActor(request);
     const requestKey = requireIdempotencyKey(request);
     const body = await request.json() as CreateDelegationInput;
     const workflow = workspaceWorkflow(request);

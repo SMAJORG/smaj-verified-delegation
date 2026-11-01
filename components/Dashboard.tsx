@@ -37,6 +37,7 @@ export default function Dashboard() {
   const demoEntryPending=useRef(false);
   const resumedSearch=useRef(false);
   const [sampleTasksEnabled,setSampleTasksEnabled]=useState(false);
+  const [publicAccess,setPublicAccess]=useState(false);
   useLayoutEffect(()=>{
     if(!demoEntryPending.current)return;
     const previousRestoration=window.history.scrollRestoration;
@@ -57,7 +58,13 @@ export default function Dashboard() {
     const load=async()=>{
       const response=await fetch("/api/auth/session",{cache:"no-store",signal:controller.signal});
       if(!response.ok)throw new Error("Your sign-in status could not be checked. Please try again.");
-      const payload=await response.json();
+      let payload=await response.json();
+      if ((!payload.authenticated && !payload.publicAccess) || payload.sandbox) {
+        const opened=await fetch("/api/public/session",{method:"POST",signal:controller.signal});
+        payload=await opened.json();
+        if(!opened.ok)throw new Error(payload.message || "Public AI could not be opened. Please try again.");
+      }
+      setPublicAccess(Boolean(payload.publicAccess));
       setSampleTasksEnabled(Boolean(payload.sampleTasksEnabled));setSsoEnabled(Boolean(payload.ssoEnabled));setDemoEnabled(Boolean(payload.demoEnabled));setSandbox(Boolean(payload.sandbox));setExpiresAt(payload.expiresAt||null);
       await loadWorkspace(controller.signal);
     };
@@ -66,7 +73,7 @@ export default function Dashboard() {
   },[]);
   useEffect(()=>{if(!sandbox||!expiresAt)return;const expire=()=>{streamRef.current?.close();setAuthenticated(false);setHistory([]);setAiTasks([]);setTask("");setSelectedService(null);setConnections([]);setDelegation(null);setRoutePlan(null);setSandbox(false);setExpiresAt(null);setError("Your demo session expired. Try Live Demo to start a fresh workspace.");};const timer=setTimeout(expire,Math.max(0,expiresAt-Date.now()));return()=>clearTimeout(timer);},[sandbox,expiresAt]);
   const login=async(event:React.FormEvent)=>{event.preventDefault();setBusy("login");setError("");try{const response=await fetch("/api/auth/session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({accessToken})});const payload=await response.json() as ApiResponse;if(!response.ok)throw new Error(payload.message||"Authentication failed");setAccessToken("");await loadWorkspace();}catch(loginError){setError(loginError instanceof Error?loginError.message:"Authentication failed");}finally{setBusy(null);}};
-  const startDemo=async()=>{demoEntryPending.current=true;setView("home");setMenuOpen(false);setBusy("demo");setError("");const signal=AbortSignal.timeout(30000);try{const response=await fetch("/api/auth/demo",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}",signal});const payload=await response.json();if(!response.ok)throw new Error(payload.message||"The demo could not be started. Please try again.");setSandbox(true);setExpiresAt(payload.expiresAt);if(!await loadWorkspace(signal))throw new Error("The demo workspace could not be loaded. Please try again.");}catch(error){setError(error instanceof Error?error.message:"The demo could not be started. Please try again.");}finally{setBusy(null);}};
+  const startDemo=async()=>{demoEntryPending.current=true;setView("home");setMenuOpen(false);setBusy("demo");setError("");const signal=AbortSignal.timeout(30000);try{const response=await fetch("/api/public/session",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}",signal});const payload=await response.json();if(!response.ok)throw new Error(payload.message||"The demo could not be started. Please try again.");setPublicAccess(Boolean(payload.publicAccess));setSandbox(false);setExpiresAt(payload.expiresAt);if(!await loadWorkspace(signal))throw new Error("The demo workspace could not be loaded. Please try again.");}catch(error){setError(error instanceof Error?error.message:"The demo could not be started. Please try again.");}finally{setBusy(null);}};
   const logout=async()=>{setError("");try{const response=await fetch("/api/auth/session",{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok)throw new Error("Sign-out failed. Please try again.");streamRef.current?.close();setAuthenticated(false);setHistory([]);setAiTasks([]);setTask("");setSelectedService(null);setConnections([]);setDelegation(null);setRoutePlan(null);setSandbox(false);setExpiresAt(null);setView("home");setMenuOpen(false);}catch(error){setError(error instanceof Error?error.message:"Sign-out failed. Please try again.");}};
   const navigate=(next:View)=>{setView(next);setMenuOpen(false);window.scrollTo({top:0,behavior:"smooth"});};
   const routeTask=async(event:React.FormEvent)=>{event.preventDefault();if(!task.trim()){setError("Enter a message or task.");return;}const service=SMAJ_SERVICES.find(item=>item.id===selectedService);setBusy("routing");setError("");try{const response=await fetch("/api/tasks",{signal:AbortSignal.timeout(135000),method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({task:service?`${service.name}: ${task}`:task})});const payload=await response.json() as ApiResponse;if(!response.ok||!payload.plan)throw new Error(payload.message||"Meta could not route this task");if(payload.task)setAiTasks(items=>[payload.task!,...items.filter(item=>item.id!==payload.task!.id)]);setDelegation(null);setRoutePlan(payload.plan);navigate("tasks");}catch(routeError){setError(routeError instanceof Error?routeError.message:"Task routing stopped safely");}finally{setBusy(null);}};
@@ -112,6 +119,18 @@ export default function Dashboard() {
   const activeTask = aiTasks.find(item => item.plan === routePlan || JSON.stringify(item.plan) === JSON.stringify(routePlan));
   const approveLive = async (actionIds: string[]) => {
     if (!activeTask) return;
+    if (publicAccess) {
+      setBusy("live-approval");setError("");
+      try {
+        const response=await fetch("/api/auth/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({taskId:activeTask.id,approved:true})});
+        const payload=await response.json();
+        if(!response.ok)throw new Error(payload.message || "Sign in to SMAJ PI HUB to perform protected actions.");
+        window.sessionStorage.setItem("smaj_pending_search",activeTask.id);
+        window.location.assign(payload.signInUrl);
+      } catch(error) {setError(error instanceof Error?error.message:"Sign-in is required for protected actions.");}
+      finally {setBusy(null);}
+      return;
+    }
     setBusy("live-approval"); setError("");
     try {
       const response = await fetch(`/api/tasks/${activeTask.id}/approve`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ approved: true, actionIds, reviewHash: activeTask.plan.actionReviewHash }) });

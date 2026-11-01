@@ -8,10 +8,12 @@ import { ServiceConnectionStore } from "@/src/server/service-connections";
 import { discoverCatalogs } from "@/src/server/catalog-discovery";
 import { metaResponse, extractMetaOutputText } from "@/src/server/meta-client";
 import { SearchSignInStore, SEARCH_SIGNIN_COOKIE } from "@/src/server/search-signin";
+import { beginPublicWork, publicJson } from "@/src/server/public-access";
 export const runtime = "nodejs";
 export const maxDuration = 180;
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   let resuming = false;
+  let release = () => {};
   const finish = (response: NextResponse) => {
     if (resuming) response.cookies.set(SEARCH_SIGNIN_COOKIE, "", {httpOnly:true, sameSite:"lax", path:"/", maxAge:0});
     return response;
@@ -20,7 +22,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     requireSameOrigin(request);
     const session = requireActorSession(request);
     if (session.sandbox) throw new AppError("demo_only", "Live catalog discovery is disabled in the fictional demo workspace", 409);
-    const consent = await request.json();
+    const consent = await (session.authType === "public" ? publicJson(request) : request.json());
     resuming = consent.resume === true;
     if (consent.approved !== true && consent.resume !== true) throw new AppError("approval_required", "Approve read-only discovery and sharing catalog metadata with Meta", 400);
     const db = workspaceDatabase(request); const store = new AiTaskStore(db);
@@ -30,6 +32,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       if (session.authType !== "sso") throw new AppError("unauthorized", "Sign in to SMAJ PI HUB to continue.", 401);
       new SearchSignInStore().consume(request.cookies.get(SEARCH_SIGNIN_COOKIE)?.value || "", session.actorId, task.id);
     }
+    release = beginPublicWork(request, session);
     const connections = new ServiceConnectionStore(db);
     connections.list(session.actorId, session.authType);
     for (const id of task.plan.services.filter(id => ["store", "jobs", "stream"].includes(id))) connections.set(session.actorId, id, true);
@@ -72,5 +75,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const current = store.get(session.actorId, task.id);
     if (current.plan.execution) throw new AppError("execution_exists", "An action approval was recorded during discovery; its contract was preserved", 409);
     return finish(NextResponse.json({ task: store.savePlan(session.actorId, task.id, plan), plan }, { headers: { "Cache-Control": "no-store" } }));
-  } catch (error) { return finish(apiError(error)); }
+  } catch (error) { const response=finish(apiError(error));if(response.status===429)response.headers.set("Retry-After","60");return response; }
+  finally { release(); }
 }

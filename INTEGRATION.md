@@ -115,9 +115,9 @@ Android Chrome, and iOS Safari: sign in, connect/disconnect Store, Stream, Jobs,
 and reload to confirm persistence. Confirm `POST /api/connections` returns 200.
 
 
-## Live-search sign-in configuration
+## Protected account sign-in configuration
 
-The standalone AI approval flow uses a one-time Hub authorization code. Configure these server-only values before enabling production sign-in:
+Public questions and published catalog searches do not use SSO. Protected account actions use a one-time Hub authorization code. Configure these server-only values before enabling protected production sign-in:
 
 - On both services: identical `SMAJ_AI_CLIENT_ID` (`smaj-ai`), `SMAJ_AI_CLIENT_SECRET` (at least 32 characters), and `SMAJ_AI_SSO_SECRET` (a separate shared signing secret, at least 32 characters).
 - On AI: `PIHUB_API_BASE_URL=https://smajpihub.onrender.com` and `SMAJ_AI_PUBLIC_URL=https://smaj-verified-delegation.onrender.com` (or the working registered custom origin). Render's `RENDER_EXTERNAL_URL` is the fallback when no public URL is configured.
@@ -126,3 +126,12 @@ The standalone AI approval flow uses a one-time Hub authorization code. Configur
 Deploy both repositories, including the Hub frontend. Do not put any client/signing secret in frontend environment variables. Hub validates the Pi session, registers a hashed 60-second code in MongoDB, and exchanges it once with the confidential AI client. AI binds the approved request to its browser's SSO state and transfers only that request after identity verification. A one-use consent record permits the resumed catalog read; it never authorizes an application, saved product, purchase, or payment.
 
 `SMAJ_SAMPLE_TASKS_ENABLED` defaults to false. Enabling it is reserved for explicit isolated demonstrations. Production shows no seeded tasks or sample-task controls. Missing SSO configuration fails closed with a visible message and preserves the request.
+
+
+## Public judge access
+
+Opening the AI site automatically creates an eight-hour anonymous workspace; no Pi account, client credential, or judge-side configuration is required. Anonymous visitors can ask the real Meta provider questions and approve sharing published Store, Jobs and Stream catalog metadata for analysis. The existing server-side Meta configuration remains required and credentials never reach the browser. Public reads use the allowlisted published-listing adapters; an empty Jobs catalog remains empty rather than being filled with demo jobs.
+
+Visitor cookies contain a random opaque token whose hash is stored in SQLite. They never grant an authenticated identity. Requests and preferences are scoped to that visitor and removed on expiry or sign-out. Protected account actions, private delegation history, applications and saved products reject public identities. Catalog-read consent cannot authorize a write.
+
+Persistent limits apply before public provider calls: 10 requests/minute and 60/hour per visitor, 40/minute and 240/hour per client, 240/hour and 1,000/day across the app, one concurrent call per visitor and eight across the app. Session issuance is also bounded. Expiring leases recover after interrupted requests. Oversized public JSON bodies are rejected. No additional configuration is needed for these defaults.

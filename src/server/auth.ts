@@ -1,4 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { readPublicSession } from "@/src/server/public-access";
 import { AppError } from "@/src/server/http";
 import { readDemoSession } from "@/src/server/demo-sessions";
 
@@ -7,7 +8,7 @@ const SESSION_TTL_SECONDS = 8 * 60 * 60;
 
 export type ActorSession = {
   actorId: string;
-  authType: "sso" | "demo";
+  authType: "sso" | "demo" | "public";
   piUsername?: string;
   uid?: string;
   sandbox?: boolean;
@@ -80,6 +81,7 @@ export const requireActorSession = (request: Request): ActorSession => {
     return { actorId: claims.sub, authType: "sso", uid: claims.uid, piUsername: claims.piUsername };
   }
   const token = cookieValue(request);
+  if (token.startsWith("visitor_")) return readPublicSession(token);
   if (token.startsWith("hackathon_")) return readDemoSession(token);
   const [payload, signature] = token.split(".");
   if (!payload || !signature || !equal(signature, sign(payload))) throw new AppError("unauthorized", "Authentication is required", 401);
@@ -96,6 +98,13 @@ export const requireActorSession = (request: Request): ActorSession => {
     throw new AppError("unauthorized", "Authentication is required", 401);
   }
 };
+
+export const requireAuthenticatedSession = (request: Request) => {
+  const session = requireActorSession(request);
+  if (session.authType === "public") throw new AppError("authentication_required", "Sign in to SMAJ PI HUB before accessing account data or performing protected actions.", 401);
+  return session;
+};
+export const requireProtectedActor = (request: Request) => requireAuthenticatedSession(request).actorId;
 
 export const requireActor = (request: Request) => requireActorSession(request).actorId;
 

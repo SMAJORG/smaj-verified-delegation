@@ -5,6 +5,7 @@ import { apiError } from "@/src/server/http";
 import { ServiceConnectionStore } from "@/src/server/service-connections";
 import { workspaceDatabase } from "@/src/server/demo-workspace";
 
+import { publicJson } from "@/src/server/public-access";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
   try {
     requireSameOrigin(request);
     const session = requireActorSession(request);
-    const body = await request.json() as { serviceId?: unknown; connected?: unknown };
+    const body = await (session.authType === "public" ? publicJson(request) : request.json()) as { serviceId?: unknown; connected?: unknown };
     const connections = new ServiceConnectionStore(workspaceDatabase(request)).set(session.actorId, String(body.serviceId || ""), body.connected === true);
     return NextResponse.json({ connections });
   } catch (error) { return apiError(error); }

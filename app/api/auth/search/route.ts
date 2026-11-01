@@ -4,12 +4,13 @@ import { apiError, AppError, requireSameOrigin } from "@/src/server/http";
 import { AiTaskStore } from "@/src/server/ai-tasks";
 import { workspaceDatabase } from "@/src/server/demo-workspace";
 import { SearchSignInStore, SEARCH_SIGNIN_COOKIE, SEARCH_SIGNIN_TTL } from "@/src/server/search-signin";
+import { publicJson } from "@/src/server/public-access";
 export const runtime = "nodejs";
 export async function POST(request: NextRequest) {
   try {
     requireSameOrigin(request);
     const session = requireActorSession(request);
-    const body = await request.json();
+    const body = await (session.authType === "public" ? publicJson(request) : request.json());
     if (body.approved !== true || typeof body.taskId !== "string") throw new AppError("approval_required", "Approve this search before continuing to sign-in.", 400);
     const task = new AiTaskStore(workspaceDatabase(request)).get(session.actorId, body.taskId);
     if (task.plan.execution) throw new AppError("execution_exists", "Start a new request to search again.", 409);

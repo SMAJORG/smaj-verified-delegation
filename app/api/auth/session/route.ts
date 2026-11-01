@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revokePublicSession } from "@/src/server/public-access";
 import { cookieValue, createSession, demoAuthEnabled, requireActorSession, SESSION_COOKIE, ssoConfigured } from "@/src/server/auth";
 import { revokeDemoSession } from "@/src/server/demo-sessions";
 import { apiError, AppError } from "@/src/server/http";
@@ -13,12 +14,12 @@ export async function GET(request: NextRequest) {
   let expiresAt: number | undefined;
   try {
     const session = requireActorSession(request);
-    authenticated = true;
+    authenticated = session.authType !== "public";
     authType = session.authType;
     sandbox = Boolean(session.sandbox);
     expiresAt = session.expiresAt;
   } catch { /* unauthenticated */ }
-  return NextResponse.json({ authenticated, authType, sandbox, expiresAt, ssoEnabled: ssoConfigured(), demoEnabled: demoAuthEnabled(), sampleTasksEnabled: process.env.SMAJ_SAMPLE_TASKS_ENABLED === "true" }, { headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json({ authenticated, publicAccess: authType === "public", authType, sandbox, expiresAt, ssoEnabled: ssoConfigured(), demoEnabled: demoAuthEnabled(), sampleTasksEnabled: process.env.SMAJ_SAMPLE_TASKS_ENABLED === "true" }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request: NextRequest) {
@@ -41,6 +42,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const token = cookieValue(request);
+    if (token.startsWith("visitor_")) revokePublicSession(token);
     if (token.startsWith("hackathon_")) revokeDemoSession(token);
     const response = NextResponse.json({ authenticated: false });
     response.cookies.set(SESSION_COOKIE, "", { httpOnly: true, sameSite: "strict", path: "/", maxAge: 0 });
