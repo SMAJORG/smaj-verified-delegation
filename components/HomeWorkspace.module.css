@@ -1,0 +1,41 @@
+.root.root {
+  max-width: 520px;
+  margin: 0 auto;
+  color: #171327;
+}
+.root.root > .eyebrow { margin: 0; color: #7951c7; font-size: 12px; letter-spacing: 2px; font-weight: 800; }
+.root.root > .title { text-align: left; font-size: clamp(27px, 7vw, 36px); letter-spacing: -1.3px; line-height: 1.15; margin: 14px 0 26px; font-weight: 800; }
+.root.root .composer { padding: 17px; border: 1px solid #e9e3f1; border-radius: 23px; background: #fff; box-shadow: 0 8px 25px #3121520a; }
+.root.root .composer:focus-within { border-color: #a98ce4; box-shadow: 0 0 0 3px #7951c714; }
+.root.root .composer textarea { display: block; width: 100%; min-height: 72px; height: 72px; max-height: 240px; padding: 0; border: 0; outline: 0; resize: vertical; background: transparent; color: #201a2d; font: inherit; font-size: 16px; line-height: 1.5; }
+.root.root .composer textarea::placeholder { color: #96919f; }
+.root.root .toolbar { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.root.root .tool { display: flex; align-items: center; justify-content: center; gap: 6px; height: 42px; min-width: 42px; padding: 0 12px; border: 1px solid #eee9f4; border-radius: 14px; background: #fff; color: #625a70; font-size: 14px; }
+.root.root .apps { background: #f7f3fc; border-color: #f7f3fc; max-width: calc(100% - 50px); }
+.root.root .apps > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.root.root .apps > span:first-child:not(:last-child) { flex: none; }
+.root.root .apps :global(.serviceBadge) { width: 22px; height: 22px; margin: 0; border-radius: 6px; }
+.root.root .submit { display: flex; align-items: center; justify-content: center; gap: 7px; margin-left: auto; min-height: 44px; padding: 0 17px; border: 0; border-radius: 14px; background: #7951c7; color: #fff; font-size: 14px; font-weight: 750; white-space: nowrap; box-shadow: none; }
+.root.root .submit:hover:not(:disabled) { background: #6840b6; }
+.root.root .submit:disabled { opacity: .5; cursor: not-allowed; }
+.root.root button:focus-visible { outline: 3px solid #a98ce4; outline-offset: 3px; }
+.suggestions { display: flex; gap: 8px; overflow-x: auto; padding: 17px 3px 5px; scrollbar-width: thin; }
+.suggestions button { flex: none; white-space: nowrap; border: 1px solid #ece6f4; border-radius: 100px; background: #fff; padding: 10px 13px; color: #625970; font-size: 13px; }
+.servicesHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 30px 0 18px; }
+.servicesHeading h2 { margin: 0 0 5px; font-size: 17px; letter-spacing: -.3px; }
+.servicesHeading small { color: #7b7788; font-size: 12px; }
+.manage { flex: none; border: 1px solid #e9e3f1; background: #fff; border-radius: 100px; padding: 10px 14px; color: #7951c7; font-size: 13px; font-weight: 700; }
+.root.root .legend { justify-content: flex-start; gap: 12px; margin-bottom: 14px; font-size: 10px; }
+.root.root .services { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 10px; }
+.root.root .service { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-width: 0; min-height: 100px; border: 1px solid #f0ebf5; background: #fff; border-radius: 17px; padding: 13px 6px; color: #302a38; font-size: 13px; font-weight: 700; }
+.root.root .service:hover { border-color: #cbb9e8; background: #fcfaff; }
+.root.root .service[aria-pressed=true] { border-color: #a98ce4; background: #f7f3fc; color: #6840b6; }
+.root.root .art :global(.serviceBadge) { width: 38px; height: 38px; margin: 0; border-radius: 10px; }
+.serviceLabel { display: flex; align-items: center; justify-content: center; gap: 5px; max-width: 100%; overflow-wrap: anywhere; }
+@media (max-width: 360px) {
+  .root.root .composer { padding: 13px; }
+  .root.root .toolbar { gap: 6px; }
+  .root.root .tool { padding: 0 9px; }
+  .root.root .submit { padding: 0 11px; font-size: 12px; }
+  .root.root .service { font-size: 12px; }
+}

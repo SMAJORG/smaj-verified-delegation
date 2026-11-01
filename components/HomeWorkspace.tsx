@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import styles from "./HomeWorkspace.module.css";
 import ServiceIcon from "@/components/ServiceIcon";
 import { SMAJ_SERVICES, type ServiceId } from "@/src/domain/services";
 
@@ -24,30 +25,32 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
   };
   const ready = !selected || status(selected.id) === "Connected";
 
-  return <section className="homeView launcherHome">
-    <p className="eyebrow">YOUR WORKSPACE</p><h1>What will we create today?</h1><p className="workspaceIntro">Ask about SMAJ PI HUB, its White Paper, policies, or services. White Paper and policy answers need no task approval. Live catalog reads and real actions require separate approvals.</p>
-    <form className="centralComposer compactComposer" onSubmit={routeTask} aria-label="Create an AI task" aria-busy={busy === "routing"}>
+  return <section className={`homeView launcherHome ${styles.root}`}>
+    <p className={styles.eyebrow}>YOUR WORKSPACE</p><h1 className={styles.title}>What can I help you do?</h1>
+    <form className={`centralComposer compactComposer ${styles.composer}`} onSubmit={routeTask} aria-label="Create an AI task" aria-busy={busy === "routing"}>
       <label className="visuallyHidden" htmlFor="ai-task">Your AI task</label>
-      <textarea ref={input} id="ai-task" value={task} onChange={event => setTask(event.target.value)} placeholder="Find software engineering jobs, cars under $30,000, or content on SMAJ Stream…" maxLength={1900} />
-      <div className="composerToolbar">
-        <button type="button" className="roundButton" onClick={manageApps} aria-label="Manage connected apps">+</button>
-        {selected ? <button type="button" className="contextChip" onClick={() => selectService(null)} aria-label={`Clear ${selected.shortName} context`}><ServiceIcon serviceId={selected.id}/><span>{selected.shortName}</span><span aria-hidden="true">×</span></button> : <button type="button" className="contextChip" onClick={manageApps}><span aria-hidden="true">▦</span> Apps</button>}
-        <button className="createButton" disabled={!task.trim() || busy === "routing"}>{busy === "routing" ? <><span className="spinner"/>Asking AI…</> : <>Ask SMAJ AI <span aria-hidden="true">↗</span></>}</button>
+      <textarea ref={input} id="ai-task" value={task} onChange={event => setTask(event.target.value)} placeholder="Find software engineering jobs…" maxLength={1900} />
+      <div className={styles.toolbar}>
+        <button type="button" className={styles.tool} onClick={manageApps} aria-label="Manage connected apps">+</button>
+        {selected ? <button type="button" className={`${styles.tool} ${styles.apps}`} onClick={() => selectService(null)} aria-label={`Clear ${selected.shortName} context`}><ServiceIcon serviceId={selected.id}/><span>{selected.shortName}</span><span aria-hidden="true">×</span></button> : <button type="button" className={`${styles.tool} ${styles.apps}`} onClick={manageApps}><span aria-hidden="true">▦</span> Apps</button>}
+        <button className={styles.submit} disabled={!task.trim() || busy === "routing"}>{busy === "routing" ? <><span className="spinner"/>Asking AI…</> : <>Ask SMAJ AI <span aria-hidden="true">↗</span></>}</button>
       </div>
     </form>
     {selected && <div className="serviceContext" role="status"><span><strong>{selected.name}</strong> · {status(selected.id)}{status(selected.id) === "Planned" ? " — integration not available yet." : !ready ? " — connect this app to continue." : " — task context selected."}</span>{!ready && selected.adapterMode === "connected" && <button onClick={manageApps}>Connect app</button>}</div>}
-    <button className="connectionStrip" onClick={manageApps}>
-      <span className="connectionArt" aria-hidden="true"><ServiceIcon serviceId="jobs"/><ServiceIcon serviceId="store"/></span>
-      <span><strong>Your connected workspace</strong><small>{connectedIds.size} app{connectedIds.size === 1 ? "" : "s"} connected</small></span>
-      <span className="managePill">Manage <span aria-hidden="true">↗</span></span>
-    </button>
-    <div className="launcherLegend" aria-label="Service status legend"><span><i className="statusDot connected"/>Connected</span><span><i className="statusDot disconnected"/>Not connected</span><span><i className="statusDot unavailable"/>Planned</span></div>
-    <div className="serviceLauncher" aria-label="Choose a service">
+    <div className={styles.suggestions} aria-label="Suggested requests">
+      {[{ label: "Find jobs", prompt: "Find software engineering jobs" }, { label: "Shop cars", prompt: "Find cars under $30,000" }, { label: "Explore courses", prompt: "Show available online courses" }, { label: "Health services", prompt: "Find nearby health services" }].map(suggestion => <button key={suggestion.label} type="button" onClick={() => { selectService(null); setTask(suggestion.prompt); input.current?.focus({ preventScroll: true }); }}>{suggestion.label}</button>)}
+    </div>
+    <div className={styles.servicesHeading}>
+      <div><h2>Connected services</h2><small>Explore SMAJ PI HUB · {connectedIds.size} connected</small></div>
+      <button type="button" className={styles.manage} onClick={manageApps}>Manage <span aria-hidden="true">↗</span></button>
+    </div>
+    <div className={`launcherLegend ${styles.legend}`} aria-label="Service status legend"><span><i className="statusDot connected"/>Connected</span><span><i className="statusDot disconnected"/>Not connected</span><span><i className="statusDot unavailable"/>Planned</span></div>
+    <div className={styles.services} aria-label="Choose a service">
       {SMAJ_SERVICES.map(service => {
         const state = status(service.id);
-        return <button key={service.id} type="button" className="launcherItem" aria-pressed={selectedService === service.id} aria-label={`${service.shortName}, ${state}`} onClick={() => { selectService(service.id); setTask(service.example); input.current?.focus({ preventScroll: true }); }}>
-          <span className="launcherArt"><ServiceIcon serviceId={service.id}/><i className={`statusDot ${state === "Connected" ? "connected" : state === "Not connected" ? "disconnected" : "unavailable"}`}/></span>
-          <span>{service.shortName}</span>
+        return <button key={service.id} type="button" className={styles.service} aria-pressed={selectedService === service.id} aria-label={`${service.shortName}, ${state}`} onClick={() => { selectService(service.id); setTask(service.example); input.current?.focus({ preventScroll: true }); }}>
+          <span className={styles.art}><ServiceIcon serviceId={service.id}/></span>
+          <span className={styles.serviceLabel}>{service.shortName}<i className={`statusDot ${state === "Connected" ? "connected" : state === "Not connected" ? "disconnected" : "unavailable"}`}/></span>
         </button>;
       })}
     </div>
