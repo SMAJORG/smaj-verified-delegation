@@ -14,7 +14,7 @@ export default function LiveTaskResult({ task, busy, sandbox, discover, approve,
     {plan.discovery && <>
       {plan.summaryError && <p role="alert">AI analysis is unavailable. You can still review the listings below.</p>}
       {plan.discovery.results.map(result => {
-        const records = plan.summaryAi ? result.records.filter(value => plan.matches?.some(match => match.serviceId === result.serviceId && match.id === String((value as {id?:unknown}).id))) : result.records;
+        const records = plan.summaryAi && result.serviceId !== "jobs" ? result.records.filter(value => plan.matches?.some(match => match.serviceId === result.serviceId && match.id === String((value as {id?:unknown}).id))) : result.records;
         return <section key={result.serviceId}>
         <h3>{result.serviceId} · {result.status === "read" ? "Results" : "Unavailable"}</h3>
         {result.error && <p role="alert">{result.error}</p>}

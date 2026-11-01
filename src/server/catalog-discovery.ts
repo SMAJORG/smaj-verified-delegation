@@ -14,7 +14,7 @@ export async function discoverCatalogs(ids: ServiceId[], authorized: (id: Servic
     if (!authorized(id)) { results.push({ serviceId: id, source: "", status: "unavailable", records: [], error: "Service disconnected; no request sent" }); continue; }
     const adapter = id === "jobs" ? new SmajJobsReadAdapter() : id === "store" ? new SmajStoreReadAdapter() : new SmajStreamReadAdapter();
     const query = steps.find(step => step.serviceId === id)?.query;
-    const source = catalogSearchUrl(adapter.sourceUrl, query, id);
+    const source = id === "jobs" ? adapter.sourceUrl : catalogSearchUrl(adapter.sourceUrl, query, id);
     try {
       const records = adapter instanceof SmajJobsReadAdapter ? await adapter.listJobs(query) : adapter instanceof SmajStoreReadAdapter ? await adapter.listProducts(query) : await adapter.listContent(query);
       if (!authorized(id)) throw new Error("Service disconnected during read");

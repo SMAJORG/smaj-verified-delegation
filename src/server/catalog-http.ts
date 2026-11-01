@@ -27,13 +27,16 @@ export function catalogRows(body: Record<string, unknown>, key: string): Record<
 export function catalogSearchUrl(source: string, query: import("@/src/domain/services").CatalogQuery = {}, service: string): string {
   query = normalizeCatalogQuery(query, service);
   const url = new URL(source);
-  if (query.search) url.searchParams.set("search", query.search.slice(0, 80));
-  if (query.category) url.searchParams.set("category", query.category.slice(0, 80));
+  // Jobs search is performed against the complete bounded catalog by the
+  // adapter. Hub's public endpoint interprets phrases as literal substrings,
+  // which drops otherwise relevant title/skill matches.
+  if (query.search && service !== "jobs") url.searchParams.set("search", query.search.slice(0, 80));
+  if (query.category && service !== "jobs") url.searchParams.set("category", query.category.slice(0, 80));
   if (service === "store" && Number.isFinite(query.maxPrice) && query.maxPrice! >= 0 && query.currency) {
     url.searchParams.set("maxPrice", String(query.maxPrice));
     url.searchParams.set("currency", query.currency);
   }
-  if (service === "jobs") { url.searchParams.set("catalog_read", "true"); url.searchParams.set("pageSize", "60"); }
+  if (service === "jobs") { url.searchParams.set("catalog_read", "true"); url.searchParams.set("pageSize", "50"); }
   return url.toString();
 }
 
