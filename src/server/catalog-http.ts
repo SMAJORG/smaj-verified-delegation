@@ -36,7 +36,7 @@ export function catalogSearchUrl(source: string, query: import("@/src/domain/ser
     url.searchParams.set("maxPrice", String(query.maxPrice));
     url.searchParams.set("currency", query.currency);
   }
-  if (service === "jobs") { url.searchParams.set("catalog_read", "true"); url.searchParams.set("pageSize", "50"); }
+  if (service === "jobs") url.searchParams.set("pageSize", "50");
   return url.toString();
 }
 

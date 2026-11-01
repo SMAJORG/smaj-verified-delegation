@@ -15,7 +15,8 @@ test("Jobs adapter reads Hub's public listings endpoint and marks unbacked entri
     assert.equal(url.searchParams.has("search"), false);
     return new Response(JSON.stringify({ jobs: [{ employerId: "employer-42", id: "42", title: "Designer", skills: ["Figma"] }, { id: "react-engineer", title: "React Frontend Engineer", company: "Orbit Commerce", skills: ["React", "TypeScript"] }] }), { status: 200 });
   };
-  const adapter = new SmajJobsReadAdapter("https://smajpihub.onrender.com/jobs/jobs", fetcher as typeof fetch);
+  const adapter = new SmajJobsReadAdapter(undefined, fetcher as typeof fetch);
+  assert.equal(new URL(adapter.sourceUrl).pathname, "/jobs/jobs");
   const result = await adapter.listJobs();
 
   assert.equal(method, "GET");

@@ -3,7 +3,7 @@ import { catalogJson, catalogRows } from "@/src/server/catalog-http";
 import { AppError } from "@/src/server/http";
 import type { JobsApiJob } from "@/src/domain/types";
 
-export const DEFAULT_JOBS_URL = "https://smajpihub.com/services/jobs/search";
+export const DEFAULT_JOBS_URL = "https://smajpihub.com/jobs/jobs";
 
 const text = (value: unknown, fallback = "") => (typeof value === "string" ? value.slice(0, 600) : fallback);
 const PAGE_SIZE = 50;
@@ -58,7 +58,6 @@ export class SmajJobsReadAdapter {
     // fields locally so trailing words like "job" do not hide a title match.
     const pageUrl = new URL(this.sourceUrl);
     pageUrl.search = "";
-    pageUrl.searchParams.set("catalog_read", "true");
     pageUrl.searchParams.set("pageSize", String(PAGE_SIZE));
     const allRows: Record<string, unknown>[] = [];
     let pages = 1;
