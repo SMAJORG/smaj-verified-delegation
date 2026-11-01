@@ -90,7 +90,7 @@ export default function TaskHistory({
   }, [tasks, delegations, busy, openAiTask, deleteAiTask, openDelegation, deleteDelegation]);
 
   return <section className="taskHistoryPage">
-    <header><p className="resultsEyebrow">WORKSPACE</p><h1>All Tasks</h1><p>Open a saved request to review its conversation, results, approvals, and status.</p></header>
+    <p className="taskHistoryIntro">Open a saved request to review its conversation, results, approvals, and status.</p>
     {!tasks.length && !delegations.length ? <p className="taskHistoryEmpty">Your saved tasks will appear here.</p> : <div className="taskHistoryGroups">
       {groups.map(([label, entries]) => <section className="taskHistoryGroup" key={label} aria-label={label}>
         <h2>{label}</h2>

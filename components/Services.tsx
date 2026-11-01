@@ -18,8 +18,7 @@ export default function Services({ connections, setConnection, busy }: Props) {
   });
 
   return (
-    <section className={styles.page} aria-labelledby="connect-apps-heading">
-      <h1 id="connect-apps-heading">Connect your SMAJ PI HUB apps</h1>
+    <section className={styles.page} aria-label="Connect SMAJ PI HUB apps">
       <div className={styles.banner} aria-label="Your connected apps">
         <BrandLogo className={styles.logo} />
         <span className={styles.link} aria-hidden="true">↔</span>

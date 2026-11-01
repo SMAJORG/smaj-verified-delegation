@@ -57,10 +57,6 @@
 .compactResults .taskResultCard{background:#fff}
 
 .taskHistoryPage{width:100%;max-width:760px;min-width:0;margin:0 auto;color:#20192f}
-.taskHistoryPage>header{margin-bottom:24px}
-.taskHistoryPage>header .resultsEyebrow{margin-bottom:8px}
-.taskHistoryPage>header h1{margin:0;font-size:28px;letter-spacing:-.7px}
-.taskHistoryPage>header>p:last-child{margin:8px 0 0;color:#827a90;font-size:13px;line-height:1.5}
 .taskHistoryGroups{display:grid;gap:22px;min-width:0}
 .taskHistoryGroup{min-width:0}
 .taskHistoryGroup>h2{margin:0 0 7px;padding:0 4px;color:#81798d;font-size:12px;font-weight:700}
@@ -85,10 +81,7 @@
 .taskHistoryMenuPopover button:hover{background:#fff3f4}
 .taskHistoryMenuPopover button:disabled{opacity:.6}
 .taskHistoryEmpty{padding:30px 12px;border:1px dashed #e6e0ed;border-radius:14px;color:#827a90;text-align:center;font-size:13px}
-.taskHistoryBack{margin:0 0 20px;padding:7px 10px;border:0;border-radius:8px;background:#f5f2f9;color:#65429d;font-size:12px;font-weight:650}
-.taskHistoryBack:hover{background:#eee8f8}
 @media(max-width:480px){
-  .taskHistoryPage>header h1{font-size:25px}
   .taskHistoryRow{grid-template-columns:minmax(0,1fr) 34px;gap:4px}
   .taskHistoryStatus{grid-column:1;grid-row:2;justify-self:start;margin:0 9px 6px}
   .taskHistoryMenu{grid-column:2;grid-row:1;align-self:start}
