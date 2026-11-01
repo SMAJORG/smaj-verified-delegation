@@ -28,6 +28,7 @@ test("complete restricted demo login, approval, execution, isolation, expiry and
   process.env.SMAJ_HACKATHON_DB_PATH = join(directory, "demo.sqlite");
   process.env.SMAJ_DELEGATION_DB_PATH = join(directory, "production.sqlite");
   process.env.SMAJ_DEMO_AUTH_ENABLED = "true";
+  process.env.SMAJ_SAMPLE_TASKS_ENABLED = "true";
   process.env.SMAJ_AI_SESSION_SECRET = "test-only-session-secret-at-least-32";
   process.env.SMAJ_DEMO_ACCESS_TOKEN = "test-only-access-token-at-least-32";
   delete process.env.META_API_KEY;

@@ -113,3 +113,16 @@ Run `npm test`, `npm run typecheck`, and `npm run build` before deployment.
 After deployment, verify both the canonical and Render URLs in desktop Chrome,
 Android Chrome, and iOS Safari: sign in, connect/disconnect Store, Stream, Jobs,
 and reload to confirm persistence. Confirm `POST /api/connections` returns 200.
+
+
+## Live-search sign-in configuration
+
+The standalone AI approval flow uses a one-time Hub authorization code. Configure these server-only values before enabling production sign-in:
+
+- On both services: identical `SMAJ_AI_CLIENT_ID` (`smaj-ai`), `SMAJ_AI_CLIENT_SECRET` (at least 32 characters), and `SMAJ_AI_SSO_SECRET` (a separate shared signing secret, at least 32 characters).
+- On AI: `PIHUB_API_BASE_URL=https://smajpihub.onrender.com` and `SMAJ_AI_PUBLIC_URL=https://smaj-verified-delegation.onrender.com` (or the working registered custom origin). Render's `RENDER_EXTERNAL_URL` is the fallback when no public URL is configured.
+- On Hub: `SMAJ_AI_BACKEND_URL` pointing to that AI origin and `SMAJ_AI_REDIRECT_URI` exactly equal to the AI origin plus `/api/auth/callback`. `SMAJ_HUB_PUBLIC_URL=https://smajpihub.com` hosts `/ai/sign-in`.
+
+Deploy both repositories, including the Hub frontend. Do not put any client/signing secret in frontend environment variables. Hub validates the Pi session, registers a hashed 60-second code in MongoDB, and exchanges it once with the confidential AI client. AI binds the approved request to its browser's SSO state and transfers only that request after identity verification. A one-use consent record permits the resumed catalog read; it never authorizes an application, saved product, purchase, or payment.
+
+`SMAJ_SAMPLE_TASKS_ENABLED` defaults to false. Enabling it is reserved for explicit isolated demonstrations. Production shows no seeded tasks or sample-task controls. Missing SSO configuration fails closed with a visible message and preserves the request.

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUserSession, SESSION_COOKIE } from "@/src/server/auth";
-import { exchangeSsoCode } from "@/src/server/sso";
+import { SearchSignInStore, SEARCH_SIGNIN_COOKIE } from "@/src/server/search-signin";
+import { exchangeSsoCode, ssoPublicBaseUrl } from "@/src/server/sso";
 import { SSO_NONCE_COOKIE, SSO_STATE_COOKIE } from "@/src/server/sso";
 
 export const runtime = "nodejs";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 const cookieValue = (request: NextRequest, name: string) => request.cookies.get(name)?.value || "";
 
 export async function GET(request: NextRequest) {
-  const home = new URL("/", request.nextUrl.origin);
+  const home = new URL("/", ssoPublicBaseUrl());
   try {
     const code = request.nextUrl.searchParams.get("code") || "";
     const state = request.nextUrl.searchParams.get("state") || "";
@@ -19,11 +20,18 @@ export async function GET(request: NextRequest) {
     }
     const claims = await exchangeSsoCode(code);
     const session = createUserSession({ sub: claims.sub, uid: claims.uid, piUsername: claims.piUsername });
-    const response = NextResponse.redirect(new URL("/", home));
+    const target = new URL("/", home);
+    const pending = request.cookies.get(SEARCH_SIGNIN_COOKIE)?.value;
+    if (pending) {
+      const task = new SearchSignInStore().complete(pending, state, claims.sub);
+      target.searchParams.set("task", task.id);
+      target.searchParams.set("resumeSearch", "1");
+    }
+    const response = NextResponse.redirect(target);
     response.cookies.set(SESSION_COOKIE, session.value, {
       httpOnly: true,
-      sameSite: "strict",
-      secure: request.nextUrl.protocol === "https:" || request.headers.get("x-forwarded-proto") === "https",
+      sameSite: "lax",
+      secure: request.nextUrl.protocol === "https:" || request.headers.get("x-forwarded-proto")?.split(",")[0].trim() === "https",
       path: "/",
       maxAge: session.maxAge,
     });

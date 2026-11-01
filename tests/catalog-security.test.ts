@@ -68,7 +68,7 @@ test("discovery HTTP requires approval and task ownership, persists receipts des
     const saved = tasks.get("catalog-alice", task.id);
     assert.equal(saved.plan.discovery?.results[0].records.length, 1);
     assert.equal(saved.plan.discovery?.proofHash.length, 64);
-    assert.match(saved.plan.summary, /No Meta analysis was received/);
+    assert.match(saved.plan.summary, /Search finished/);
     assert.equal(saved.plan.summaryAi, undefined);
     assert.equal(saved.plan.summaryError?.code, "meta_not_configured");
     assert.throws(() => tasks.get("catalog-bob", task.id), /not found/);

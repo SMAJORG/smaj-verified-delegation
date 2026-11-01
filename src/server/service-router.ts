@@ -43,6 +43,8 @@ export class MetaServiceRouter {
     catch { throw new AppError("invalid_meta_plan", "Meta returned an invalid routing plan", 502); }
 
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || !Array.isArray(parsed.steps)) throw new AppError("invalid_meta_plan", "Meta returned an invalid plan schema", 502);
+    const dollarBudget = /(?:under|below|less than|up to|budget(?: of)?|maximum(?: of)?)\s*\$([\d,]+(?:\.\d+)?)(k)?\b/i.exec(request);
+    const requestedBudget = dollarBudget ? Number(dollarBudget[1].replace(/,/g, "")) * (dollarBudget[2] ? 1000 : 1) : undefined;
     const rawSteps = Array.isArray(parsed.steps) ? parsed.steps : [];
     const steps: ServicePlanStep[] = rawSteps.map((value: any, index: number): ServicePlanStep | null => {
       const serviceId = String(value?.serviceId || "") as ServiceId;
@@ -54,9 +56,12 @@ export class MetaServiceRouter {
 
       return {
         query: {
+          ...(serviceId === "store" && /\bcars?\b/i.test(request) && !value?.query?.search ? { search: "car" } : {}),
           ...(typeof value?.query?.search === "string" ? { search: value.query.search.trim().slice(0, 80) } : {}),
           ...(typeof value?.query?.category === "string" ? { category: value.query.category.trim().slice(0, 80) } : {}),
           ...(typeof value?.query?.maxPrice === "number" && Number.isFinite(value.query.maxPrice) && value.query.maxPrice >= 0 && ["USD", "PI"].includes(value.query.currency) ? { maxPrice: value.query.maxPrice, currency: value.query.currency as "USD" | "PI" } : {}),
+          ...(serviceId === "store" && /\bcars?\b/i.test(request) && (!value?.query?.search || /^(?:cars?|vehicles?|automobiles?)$/i.test(value.query.search.trim())) ? { search: "car", category: "Vehicles" } : {}),
+          ...(serviceId === "store" && requestedBudget !== undefined && Number.isFinite(requestedBudget) ? { maxPrice: requestedBudget, currency: "USD" as const } : {}),
         },
         id: clean(value?.id, `step-${index + 1}`, 60),
         serviceId,

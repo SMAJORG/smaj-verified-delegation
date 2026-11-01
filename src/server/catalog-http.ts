@@ -25,6 +25,7 @@ export function catalogRows(body: Record<string, unknown>, key: string): Record<
 }
 
 export function catalogSearchUrl(source: string, query: import("@/src/domain/services").CatalogQuery = {}, service: string): string {
+  query = normalizeCatalogQuery(query, service);
   const url = new URL(source);
   if (query.search) url.searchParams.set("search", query.search.slice(0, 80));
   if (query.category) url.searchParams.set("category", query.category.slice(0, 80));
@@ -34,4 +35,12 @@ export function catalogSearchUrl(source: string, query: import("@/src/domain/ser
   }
   if (service === "jobs") { url.searchParams.set("catalog_read", "true"); url.searchParams.set("pageSize", "60"); }
   return url.toString();
+}
+
+export const isCarSearch = (query: import("@/src/domain/services").CatalogQuery) => /^(?:cars?|automobiles?)$/i.test(query.search?.trim() || "") || /^(?:cars?|automobiles?)$/i.test(query.category?.trim() || "");
+export function normalizeCatalogQuery(query: import("@/src/domain/services").CatalogQuery, service: string) {
+  const normalized = {...query};
+  if (service === "store" && isCarSearch(query)) { delete normalized.search; normalized.category = "Vehicles"; }
+  if (service === "jobs" && /^(?:jobs?|opportunities|job listings)$/i.test(query.search || "")) delete normalized.search;
+  return normalized;
 }

@@ -15,7 +15,7 @@ const required = (name: string) => {
   return value.replace(/\/+$/, "");
 };
 
-export const ssoPublicBaseUrl = () => (process.env.SMAJ_AI_PUBLIC_URL?.trim() || "https://ai.smajpihub.com").replace(/\/+$/, "");
+export const ssoPublicBaseUrl = () => (process.env.SMAJ_AI_PUBLIC_URL?.trim() || process.env.RENDER_EXTERNAL_URL?.trim() || "https://ai.smajpihub.com").replace(/\/+$/, "");
 export const ssoRedirectUri = () => `${ssoPublicBaseUrl()}/api/auth/callback`;
 export const createSsoState = () => randomBytes(32).toString("base64url");
 
@@ -42,6 +42,7 @@ export const exchangeSsoCode = async (code: string, fetcher: typeof fetch = fetc
       client_secret: process.env.SMAJ_AI_CLIENT_SECRET?.trim(),
     }),
     cache: "no-store",
+    redirect: "error",
     signal: AbortSignal.timeout(20_000),
   });
   if (!response.ok) throw new AppError("sso_exchange_failed", "SMAJ PI HUB sign-in could not be completed", 401);

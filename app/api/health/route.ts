@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     status: "ok",
     service: "smaj-ai",
-    publicUrl: process.env.SMAJ_AI_PUBLIC_URL || request.nextUrl.origin,
+    publicUrl: process.env.SMAJ_AI_PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || request.nextUrl.origin,
     ssoEnabled: ssoConfigured(),
     readOnlyServices: ["jobs", "store"],
     plannerConfigured: Boolean((process.env.META_API_KEY || process.env.MODEL_API_KEY)?.trim() && process.env.META_MODEL?.trim()),

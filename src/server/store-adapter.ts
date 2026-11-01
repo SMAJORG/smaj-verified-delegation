@@ -1,5 +1,5 @@
 import type { CatalogQuery } from "@/src/domain/services";
-import { catalogJson, catalogRows, catalogSearchUrl } from "@/src/server/catalog-http";
+import { catalogJson, catalogRows, catalogSearchUrl, isCarSearch } from "@/src/server/catalog-http";
 import type { StoreApiProduct } from "@/src/domain/types";
 
 export const DEFAULT_STORE_URL = "https://smajpihub.onrender.com/marketplace/products";
@@ -29,6 +29,13 @@ export class SmajStoreReadAdapter {
     const rows = catalogRows(await catalogJson(catalogSearchUrl(this.sourceUrl, query, "store"), this.fetcher), "products");
 
     return rows.filter(product => {
+      if (product.isDemo === true) return false;
+      if (isCarSearch(query)) {
+        const title = text(product.title, text(product.name));
+        const evidence = `${title} ${text(product.description)} ${text(product.summary)}`;
+        if (/\b(?:motorcycles?|motorbikes?|bikes?|scooters?|covers?|accessories|parts?|tires?|tyres?|mats?|chargers?|toys?)\b/i.test(title)) return false;
+        if (!/\b(?:cars?|automobiles?|sedan|suv|hatchback|coupe|convertible|pickup|saloon|crossover|lexus|toyota|honda|bmw|mercedes|ford|nissan|hyundai|kia|volkswagen|audi|tesla)\b/i.test(evidence)) return false;
+      }
       if (query.maxPrice === undefined || !query.currency) return true;
       const value = product[query.currency === "USD" ? "priceUsdt" : "pricePi"];
       return value !== undefined && value !== null && Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= query.maxPrice;
@@ -36,8 +43,8 @@ export class SmajStoreReadAdapter {
       id: text(product._id, text(product.id, text(product.slug))),
       title: text(product.title, text(product.name, "Untitled product")),
       category: text(product.category, "Other"),
-      price: price(product),
-      imageUrl: typeof product.imageUrl === "string" ? product.imageUrl : Array.isArray(product.images) && typeof product.images[0] === "string" ? product.images[0] : undefined,
+      price: query.currency === "USD" && product.priceUsdt != null ? `$${Number(product.priceUsdt).toLocaleString("en-US")}` : price(product),
+      imageUrl: typeof product.imageUrl === "string" ? product.imageUrl : typeof product.image === "string" ? product.image : Array.isArray(product.images) && typeof product.images[0] === "string" ? product.images[0] : undefined,
       pricePi: Number.isFinite(Number(product.pricePi)) ? Number(product.pricePi) : undefined,
       priceUsdt: Number.isFinite(Number(product.priceUsdt)) ? Number(product.priceUsdt) : undefined,
       quantity: Number.isFinite(Number(product.quantity)) ? Number(product.quantity) : undefined,

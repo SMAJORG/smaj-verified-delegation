@@ -121,8 +121,8 @@ const ssoSigningSecret = () => process.env.SMAJ_AI_SSO_SECRET?.trim() || process
 export const ssoConfigured = () => Boolean(
   process.env.PIHUB_API_BASE_URL?.trim()
   && process.env.SMAJ_AI_CLIENT_ID?.trim()
-  && process.env.SMAJ_AI_CLIENT_SECRET?.trim()
-  && ssoSigningSecret(),
+  && (process.env.SMAJ_AI_CLIENT_SECRET?.trim().length || 0) >= 32
+  && ssoSigningSecret().length >= 32,
 );
 
 export const verifySmajSsoToken = (token: string, secret = ssoSigningSecret(), now = Date.now()): SmajSsoClaims => {

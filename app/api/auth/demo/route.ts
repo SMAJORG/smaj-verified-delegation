@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     if (existing && !existing.sandbox) throw new AppError("already_authenticated", "Sign out before starting a demo workspace.", 409);
     if (existing?.sandbox) return NextResponse.json({ authenticated: true, authType: "demo", sandbox: true, expiresAt: existing.expiresAt }, { headers: { "Cache-Control": "no-store" } });
     issued = issueDemoSession();
-    await seedDemoWorkspace(issued.actorId);
+    if (process.env.SMAJ_SAMPLE_TASKS_ENABLED === "true") await seedDemoWorkspace(issued.actorId);
     const response = NextResponse.json({ authenticated: true, authType: "demo", sandbox: true, expiresAt: issued.expiresAt }, { headers: { "Cache-Control": "no-store" } });
     response.cookies.set(SESSION_COOKIE, issued.value, {
       httpOnly: true, sameSite: "strict", secure: protocol === "https",

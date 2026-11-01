@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     sandbox = Boolean(session.sandbox);
     expiresAt = session.expiresAt;
   } catch { /* unauthenticated */ }
-  return NextResponse.json({ authenticated, authType, sandbox, expiresAt, ssoEnabled: ssoConfigured(), demoEnabled: demoAuthEnabled() }, { headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json({ authenticated, authType, sandbox, expiresAt, ssoEnabled: ssoConfigured(), demoEnabled: demoAuthEnabled(), sampleTasksEnabled: process.env.SMAJ_SAMPLE_TASKS_ENABLED === "true" }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request: NextRequest) {
