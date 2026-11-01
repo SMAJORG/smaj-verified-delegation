@@ -23,3 +23,15 @@ export function catalogRows(body: Record<string, unknown>, key: string): Record<
   for (const row of rows) if (typeof (row.id || row._id || row.slug) !== "string" || typeof row.title !== "string" || !row.title.trim()) throw new Error("Catalog record lacks identity or title");
   return rows;
 }
+
+export function catalogSearchUrl(source: string, query: import("@/src/domain/services").CatalogQuery = {}, service: string): string {
+  const url = new URL(source);
+  if (query.search) url.searchParams.set("search", query.search.slice(0, 80));
+  if (query.category) url.searchParams.set("category", query.category.slice(0, 80));
+  if (service === "store" && Number.isFinite(query.maxPrice) && query.maxPrice! >= 0 && query.currency) {
+    url.searchParams.set("maxPrice", String(query.maxPrice));
+    url.searchParams.set("currency", query.currency);
+  }
+  if (service === "jobs") { url.searchParams.set("catalog_read", "true"); url.searchParams.set("pageSize", "60"); }
+  return url.toString();
+}

@@ -1,4 +1,5 @@
-import { catalogJson, catalogRows } from "@/src/server/catalog-http";
+import type { CatalogQuery } from "@/src/domain/services";
+import { catalogJson, catalogRows, catalogSearchUrl } from "@/src/server/catalog-http";
 import type { JobsApiJob } from "@/src/domain/types";
 
 export const DEFAULT_JOBS_URL = "https://smajpihub.onrender.com/jobs/jobs";
@@ -16,11 +17,11 @@ export class SmajJobsReadAdapter {
     this.sourceUrl = url.toString();
   }
 
-  async listJobs(): Promise<JobsApiJob[]> {
-    const rows = catalogRows(await catalogJson(this.sourceUrl, this.fetcher), "jobs");
+  async listJobs(query: CatalogQuery = {}): Promise<JobsApiJob[]> {
+    const rows = catalogRows(await catalogJson(catalogSearchUrl(this.sourceUrl, query, "jobs"), this.fetcher), "jobs");
 
-    return rows.map(job => ({
-      id: text(job.id, text(job.slug, text(job._id))),
+    return rows.filter(job => typeof job.employerId === "string" && job.employerId.trim() && job.isDemo !== true).map(job => ({
+      id: text(job.slug, text(job.id, text(job._id))),
       title: text(job.title, "Untitled opportunity"),
       company: text(job.company, "SMAJ Jobs employer"),
       location: text(job.location, "Not specified"),

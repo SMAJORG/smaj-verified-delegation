@@ -50,7 +50,8 @@ async function request(path: string, apiKey: string, fetcher: typeof fetch, body
       method: body ? "POST" : "GET",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       ...(body ? { body: JSON.stringify(body) } : {}),
-      signal: AbortSignal.timeout(60_000),
+      signal: AbortSignal.timeout(path === "models" ? 10_000 : 60_000),
+      redirect: "error",
       cache: "no-store",
     });
   } catch {
@@ -61,7 +62,6 @@ async function request(path: string, apiKey: string, fetcher: typeof fetch, body
     const payload = await response.json().catch(() => ({}));
     const rawCode = payload?.error?.code;
     const code = typeof rawCode === "string" && /^[a-z_]{1,64}$/.test(rawCode) ? rawCode : "request_failed";
-    const providerMessage = typeof payload?.error?.message === "string" ? payload.error.message : undefined;
 
     console.error(JSON.stringify({
       provider: "meta",
@@ -69,7 +69,7 @@ async function request(path: string, apiKey: string, fetcher: typeof fetch, body
       status: response.status,
       code,
       requestId: response.headers.get("x-request-id"),
-      message: providerMessage ? providerMessage.replace(/(?<=Bearer\s)[A-Za-z0-9._-]+/gi, "[REDACTED]") : undefined,
+      // Provider error bodies can echo inputs or secrets; log codes and request IDs only.
     }));
 
     const message = code === "model_not_found"
@@ -83,7 +83,8 @@ async function request(path: string, apiKey: string, fetcher: typeof fetch, body
     throw new AppError(`meta_${code}`, message, response.status === 429 ? 429 : 502);
   }
 
-  return response.json();
+  try { return await response.json(); }
+  catch { throw new AppError("meta_invalid_response", "Meta returned invalid JSON.", 502); }
 }
 
 export async function metaResponse(input: string, maxTokens: number, fetcher: typeof fetch = fetch) {
@@ -91,7 +92,7 @@ export async function metaResponse(input: string, maxTokens: number, fetcher: ty
   const model = normalizeModelId((process.env.META_MODEL || DEFAULT_META_MODEL).trim());
 
   if (!apiKey) {
-    throw new AppError("meta_not_configured", "AI is unavailable: the server Meta API key is not configured.", 503);
+    throw new AppError("meta_not_configured", "AI credentials are not configured: set server-only META_API_KEY (or MODEL_API_KEY) and META_MODEL.", 503);
   }
   if (!model) {
     throw new AppError("meta_model_not_configured", "AI is unavailable: configure META_MODEL using a model available to your Meta account.", 503);
@@ -124,5 +125,7 @@ export async function metaResponse(input: string, maxTokens: number, fetcher: ty
     throw new AppError("meta_incomplete", "The AI response did not complete. Please retry.", 502);
   }
 
-  return { payload, model };
+  if (!extractMetaOutputText(payload)) throw new AppError("meta_empty_response", "Meta returned no answer text. Please retry.", 502);
+  const actualModel = typeof payload.model === "string" ? payload.model : model;
+  return { payload, model: actualModel, provenance: { provider: "meta" as const, model: actualModel, responseId: typeof payload.id === "string" ? payload.id : null, receivedAt: new Date().toISOString() } };
 }

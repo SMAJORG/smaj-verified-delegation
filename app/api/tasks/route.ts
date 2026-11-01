@@ -8,6 +8,7 @@ import { MetaServiceRouter } from "@/src/server/service-router";
 import { ServiceConnectionStore } from "@/src/server/service-connections";
 
 export const runtime = "nodejs";
+export const maxDuration = 180;
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {

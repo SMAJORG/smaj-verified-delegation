@@ -13,7 +13,7 @@ for (const service of ["jobs", "store", "stream"] as const) {
       assert.equal(init?.method, "GET"); assert.equal(init?.redirect, "error");
       assert.deepEqual(init?.headers, { Accept: "application/json" });
       const key = service === "jobs" ? "jobs" : service === "store" ? "products" : "videos";
-      return Response.json({ [key]: [{ id: "a", _id: "a", title: "Published item", privateEmail: "private" }] });
+      return Response.json({ [key]: [{ employerId: "real-employer", id: "a", _id: "a", title: "Published item", privateEmail: "private" }] });
     }) as typeof fetch;
     const adapter = service === "jobs" ? new SmajJobsReadAdapter(undefined, fetcher) : service === "store" ? new SmajStoreReadAdapter(undefined, fetcher) : new SmajStreamReadAdapter(undefined, fetcher);
     const records = adapter instanceof SmajJobsReadAdapter ? await adapter.listJobs() : adapter instanceof SmajStoreReadAdapter ? await adapter.listProducts() : await adapter.listContent();
@@ -68,11 +68,23 @@ test("discovery HTTP requires approval and task ownership, persists receipts des
     const saved = tasks.get("catalog-alice", task.id);
     assert.equal(saved.plan.discovery?.results[0].records.length, 1);
     assert.equal(saved.plan.discovery?.proofHash.length, 64);
-    assert.match(saved.plan.summary, /Meta summary unavailable/);
+    assert.match(saved.plan.summary, /No Meta analysis was received/);
+    assert.equal(saved.plan.summaryAi, undefined);
+    assert.equal(saved.plan.summaryError?.code, "meta_not_configured");
     assert.throws(() => tasks.get("catalog-bob", task.id), /not found/);
   } finally {
     globalThis.fetch = original;
     for (const name of Object.keys(process.env)) if (!(name in previous)) delete process.env[name];
     Object.assign(process.env, previous);
   }
+});
+
+test("search preserves dollar budgets and filters unbacked Jobs seeds", async () => {
+  const { catalogSearchUrl } = await import("@/src/server/catalog-http");
+  const url = new URL(catalogSearchUrl("https://smajpihub.onrender.com/marketplace/products", { search: "car", maxPrice: 30000, currency: "USD" }, "store"));
+  assert.equal(url.searchParams.get("currency"), "USD"); assert.equal(url.searchParams.get("maxPrice"), "30000");
+  const store = new SmajStoreReadAdapter(undefined, async () => Response.json({ products: [{ id: "cheap", title: "Car A", pricePi: 2, priceUsdt: 25000 }, { id: "expensive", title: "Car B", pricePi: 1, priceUsdt: 50000 }] }));
+  assert.deepEqual((await store.listProducts({maxPrice:30000,currency:"USD"})).map(p=>p.id), ["cheap"]);
+  const jobs = new SmajJobsReadAdapter(undefined, async () => Response.json({ jobs: [{ id: "seed", title: "Fictional seed" }, { id: "demo", title: "Demo employer", employerId: "employer", isDemo: true }, { id: "published", slug: "published-slug", title: "Published employer job", employerId: "employer" }] }));
+  assert.deepEqual((await jobs.listJobs()).map(j=>j.id), ["published-slug"]);
 });

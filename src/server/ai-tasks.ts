@@ -25,6 +25,8 @@ export class AiTaskStore {
     return this.get(owner, id);
   }
   delete(owner: string, id: string) {
+    const task = this.get(owner, id);
+    if (task.plan.execution && ["queued", "running", "retrying"].includes(task.plan.execution.status)) throw new AppError("task_running", "Wait for live actions to finish before deleting this task", 409);
     const result = this.database.prepare("DELETE FROM ai_tasks WHERE owner_id = ? AND id = ?").run(owner, id);
     if (!result.changes) throw new AppError("task_not_found", "Task not found", 404);
   }

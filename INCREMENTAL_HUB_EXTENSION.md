@@ -1,3 +1,5 @@
+> Current repair and live/demo status: [LIVE_INTEGRATION_REPAIR.md](LIVE_INTEGRATION_REPAIR.md). The original mock executor remains; a separately approved Jobs submission and Store saved-product queue is now implemented behind server-side switches.
+
 # Incremental HUB knowledge and approved dashboard extension
 
 The Meta planner, SQLite task/delegation storage, approval endpoints, executor, recovery, independent verifier, proof receipts, and hackathon demonstration remain in place. No production writes or payments were added.

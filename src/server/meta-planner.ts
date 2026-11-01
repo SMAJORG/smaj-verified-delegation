@@ -1,3 +1,4 @@
+import { AppError } from "@/src/server/http";
 import type { CreateDelegationInput, JobRecommendation, JobsApiJob, JobsPlan } from "@/src/domain/types";
 
 import { extractMetaOutputText, metaResponse } from "@/src/server/meta-client";
@@ -15,8 +16,9 @@ const normalizeRecommendation = (value: any, allowedIds: Set<string>): JobRecomm
   if (!value || typeof value.jobId !== "string" || !allowedIds.has(value.jobId)) return null;
   const rawScore = Number(value.score) || 0;
   const score = Math.round(Math.max(0, Math.min(100, rawScore > 0 && rawScore <= 1 ? rawScore * 100 : rawScore)));
-  const rationale = String(value.rationale || "Strong alignment with the candidate profile.").slice(0, 600);
-  const coverNote = String(value.coverNote || "I am interested in this opportunity and would welcome a conversation.").slice(0, 1800);
+  if (typeof value.rationale !== "string" || !value.rationale.trim() || typeof value.coverNote !== "string" || !value.coverNote.trim()) return null;
+  const rationale = value.rationale.slice(0, 600);
+  const coverNote = value.coverNote.slice(0, 1800);
   return { jobId: value.jobId, score, rationale, coverNote };
 };
 
@@ -37,13 +39,16 @@ export class MetaJobsPlanner implements JobsPlanner {
     ].join("\n");
 
     const { payload, model } = await metaResponse(prompt, 2200, this.fetcher);
-    const parsed = parseJson(extractMetaOutputText(payload));
+    let parsed: ReturnType<typeof parseJson>;
+    try { parsed = parseJson(extractMetaOutputText(payload)); }
+    catch { throw new AppError("invalid_meta_plan", "Meta returned invalid Jobs plan JSON", 502); }
+    if (!parsed || typeof parsed.summary !== "string" || !parsed.summary.trim()) throw new AppError("invalid_meta_plan", "Meta returned no Jobs planning summary", 502);
     const allowedIds = new Set(jobs.map(job => job.id));
     const recommendations = (Array.isArray(parsed.recommendations) ? parsed.recommendations : [])
       .map(value => normalizeRecommendation(value, allowedIds))
       .filter((value): value is JobRecommendation => Boolean(value))
       .slice(0, maxApplications);
-    if (recommendations.length === 0) throw new Error("Meta did not return any valid job recommendations");
-    return { summary: String(parsed.summary || "Meta selected the strongest available matches.").slice(0, 800), recommendations, model };
+    if (recommendations.length === 0) throw new AppError("invalid_meta_plan", "Meta did not return any valid job recommendations with a rationale and application draft", 502);
+    return { summary: parsed.summary.slice(0, 800), recommendations, model };
   }
 }

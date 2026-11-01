@@ -1,3 +1,5 @@
+> Current repair and live/demo status: [LIVE_INTEGRATION_REPAIR.md](LIVE_INTEGRATION_REPAIR.md). The original mock executor remains; a separately approved Jobs submission and Store saved-product queue is now implemented behind server-side switches.
+
 # Public catalog integration
 
 Jobs, Store and Stream discovery now use real HUB public endpoints. They do not require Pi tokens or service API credentials. AI session authentication, per-owner connector consent, explicit discovery approval and same-origin POST checks protect the chat workflow. The discovery approval authorizes reading public metadata and sharing the minimal projected fields with Meta. No HUB credentials are forwarded and no private user records are read.

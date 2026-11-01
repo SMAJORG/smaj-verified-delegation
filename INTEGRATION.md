@@ -1,3 +1,5 @@
+> Current repair and live/demo status: [LIVE_INTEGRATION_REPAIR.md](LIVE_INTEGRATION_REPAIR.md). The original mock executor remains; a separately approved Jobs submission and Store saved-product queue is now implemented behind server-side switches.
+
 # SMAJ AI / SMAJ PI HUB integration proposal
 
 Status: preparation and architecture review. SSO, Store access, DNS and production deployment are not activated by this document. The Hub homepage shortcut is a separate change in the Hub repository.

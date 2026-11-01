@@ -25,10 +25,10 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
   const ready = !selected || status(selected.id) === "Connected";
 
   return <section className="homeView launcherHome">
-    <p className="eyebrow">YOUR WORKSPACE</p><h1>What will we create today?</h1><p className="workspaceIntro">Ask about SMAJ PI HUB, its White Paper, policies, or services. Informational answers need no task approval.</p>
+    <p className="eyebrow">YOUR WORKSPACE</p><h1>What will we create today?</h1><p className="workspaceIntro">Ask about SMAJ PI HUB, its White Paper, policies, or services. White Paper and policy answers need no task approval. Live catalog reads and real actions require separate approvals.</p>
     <form className="centralComposer compactComposer" onSubmit={routeTask} aria-label="Create an AI task" aria-busy={busy === "routing"}>
       <label className="visuallyHidden" htmlFor="ai-task">Your AI task</label>
-      <textarea ref={input} id="ai-task" value={task} onChange={event => setTask(event.target.value)} placeholder="Ask anything, create something." maxLength={1900} />
+      <textarea ref={input} id="ai-task" value={task} onChange={event => setTask(event.target.value)} placeholder="Find software engineering jobs, cars under $30,000, or content on SMAJ Stream…" maxLength={1900} />
       <div className="composerToolbar">
         <button type="button" className="roundButton" onClick={manageApps} aria-label="Manage connected apps">+</button>
         {selected ? <button type="button" className="contextChip" onClick={() => selectService(null)} aria-label={`Clear ${selected.shortName} context`}><ServiceIcon serviceId={selected.id}/><span>{selected.shortName}</span><span aria-hidden="true">×</span></button> : <button type="button" className="contextChip" onClick={manageApps}><span aria-hidden="true">▦</span> Apps</button>}

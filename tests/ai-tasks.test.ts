@@ -57,10 +57,13 @@ test("AI rejects missing credentials and blank models, uses the default model, a
       calls.push(String(url));
       if (String(url).endsWith("/models")) return Response.json({ data: [] });
       assert.equal(JSON.parse(String(init?.body)).model, "muse-spark-1.3");
-      return Response.json({ status: "completed", output: [] });
+      return Response.json({ id: "fixture-response", model: "muse-spark-1.3", status: "completed", output: [{ content: [{ type: "output_text", text: "Fixture hello" }] }] });
     }) as typeof fetch);
     assert.equal(result.model, "muse-spark-1.3");
     assert.equal(calls.length, 2);
+    assert.equal(result.provenance.responseId, "fixture-response");
+    await assert.rejects(() => metaResponse("Hi", 100, (async url => String(url).endsWith("/models") ? Response.json({data:[]}) : Response.json({status:"completed",output:[]})) as typeof fetch), (error: any) => error.code === "meta_empty_response");
+    await assert.rejects(() => metaResponse("Hi", 100, (async url => String(url).endsWith("/models") ? Response.json({data:[]}) : Response.json({status:"incomplete",output:[{content:[{type:"output_text",text:"Partial"}]}]})) as typeof fetch), (error: any) => error.code === "meta_incomplete");
     process.env.META_MODEL = "test-account-model";
     await assert.rejects(() => metaResponse("Hi", 100, (async url => String(url).endsWith("/models") ? Response.json({ data: [{ id: "test-account-model" }] }) : Response.json({ error: { code: "model_not_found", message: "private upstream details" } }, { status: 404 })) as typeof fetch), (error: any) => error.code === "meta_model_not_found" && !error.message.includes("private upstream details"));
     await assert.rejects(() => metaResponse("Hi", 100, (async () => { throw new Error("private network error"); }) as typeof fetch), /could not be reached/);

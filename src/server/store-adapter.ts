@@ -1,4 +1,5 @@
-import { catalogJson, catalogRows } from "@/src/server/catalog-http";
+import type { CatalogQuery } from "@/src/domain/services";
+import { catalogJson, catalogRows, catalogSearchUrl } from "@/src/server/catalog-http";
 import type { StoreApiProduct } from "@/src/domain/types";
 
 export const DEFAULT_STORE_URL = "https://smajpihub.onrender.com/marketplace/products";
@@ -24,14 +25,21 @@ export class SmajStoreReadAdapter {
     this.sourceUrl = sourceUrl;
   }
 
-  async listProducts(): Promise<StoreApiProduct[]> {
-    const rows = catalogRows(await catalogJson(this.sourceUrl, this.fetcher), "products");
+  async listProducts(query: CatalogQuery = {}): Promise<StoreApiProduct[]> {
+    const rows = catalogRows(await catalogJson(catalogSearchUrl(this.sourceUrl, query, "store"), this.fetcher), "products");
 
-    return rows.map(product => ({
+    return rows.filter(product => {
+      if (query.maxPrice === undefined || !query.currency) return true;
+      const value = product[query.currency === "USD" ? "priceUsdt" : "pricePi"];
+      return value !== undefined && value !== null && Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= query.maxPrice;
+    }).map(product => ({
       id: text(product._id, text(product.id, text(product.slug))),
       title: text(product.title, text(product.name, "Untitled product")),
       category: text(product.category, "Other"),
       price: price(product),
+      pricePi: Number.isFinite(Number(product.pricePi)) ? Number(product.pricePi) : undefined,
+      priceUsdt: Number.isFinite(Number(product.priceUsdt)) ? Number(product.priceUsdt) : undefined,
+      quantity: Number.isFinite(Number(product.quantity)) ? Number(product.quantity) : undefined,
       sellerName: text(product.sellerName, "SMAJ Store seller"),
       location: text(product.location, text(product.country, "Not specified")),
       summary: text(product.description, text(product.summary, "No description provided.")).slice(0, 500),

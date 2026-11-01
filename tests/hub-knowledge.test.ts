@@ -34,7 +34,7 @@ test("informational Meta answers include evidence and produce no approval or exe
       const prompt = JSON.parse(String(init?.body)).input;
       assert.match(prompt, /HUB KNOWLEDGE RULES/);
       assert.match(prompt, /not part of the current.*launch plan/i);
-      assert.match(prompt, /Ordinary informational questions need no task approval/);
+      assert.match(prompt, /Repository information questions need no task approval/);
       return Response.json({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ summary: 'SMAJ Token is deferred, outside the current launch plan.', services: [], steps: [], warnings: [] }) }] }] });
     };
     const plan = await new MetaServiceRouter(fetcher).plan('Is SMAJ Token deferred?', []);

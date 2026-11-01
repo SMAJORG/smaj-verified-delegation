@@ -18,6 +18,13 @@ const initialize = (database: AppDatabase) => {
       plan_json TEXT NOT NULL, created_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS ai_tasks_owner ON ai_tasks(owner_id, created_at DESC);
+    CREATE TABLE IF NOT EXISTS live_action_runs (
+      task_id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, uid TEXT NOT NULL,
+      state TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, next_at TEXT NOT NULL,
+      lease_until TEXT, lease_token TEXT, approved_at TEXT NOT NULL, expires_at TEXT NOT NULL, actions_json TEXT NOT NULL,
+      FOREIGN KEY (task_id) REFERENCES ai_tasks(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS live_action_runs_ready ON live_action_runs(state, next_at);
     CREATE TABLE IF NOT EXISTS delegations (
       id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, goal TEXT NOT NULL,
       candidate_name TEXT NOT NULL, skills_json TEXT NOT NULL, status TEXT NOT NULL,

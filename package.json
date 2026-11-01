@@ -5,24 +5,25 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node scripts/start-server.mjs",
     "demo": "tsx scripts/demo.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
-    "verify:live": "tsx --tsconfig tsconfig.json scripts/verify-live.ts"
+    "verify:live": "tsx --tsconfig tsconfig.json scripts/verify-live.ts",
+    "worker": "tsx --tsconfig tsconfig.json scripts/worker.ts"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
     "next": "16.4.3",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "tsx": "^4.23.15",
     "typescript": "^5.9.0"
   }
 }

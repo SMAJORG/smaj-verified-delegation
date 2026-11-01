@@ -9,7 +9,7 @@ test("Jobs adapter performs a GET and normalizes read-only data", async () => {
   let method = "";
   const fetcher = async (_input: string | URL | Request, init?: RequestInit) => {
     method = init?.method || "";
-    return new Response(JSON.stringify({ jobs: [{ id: "42", title: "Designer", skills: ["Figma"] }] }), { status: 200 });
+    return new Response(JSON.stringify({ jobs: [{ employerId: "employer-42", id: "42", title: "Designer", skills: ["Figma"] }] }), { status: 200 });
   };
   const adapter = new SmajJobsReadAdapter("https://smajpihub.onrender.com/jobs/jobs", fetcher as typeof fetch);
   const result = await adapter.listJobs();
@@ -51,6 +51,10 @@ test("Meta planner uses the account-confirmed configured model and rejects unkno
     assert.equal(requestBody.store, false);
     assert.deepEqual(result.recommendations.map(item => item.jobId), [jobs[0].id]);
     assert.equal(result.recommendations[0].score, 96);
+    const incomplete = (async input => String(input).endsWith("/models")
+      ? Response.json({ data: [{ id: "test-account-model" }] })
+      : Response.json({ status: "completed", output: [{ content: [{ type: "output_text", text: JSON.stringify({ summary: "Incomplete provider result", recommendations: [{ jobId: jobs[0].id, score: 90 }] }) }] }] })) as typeof fetch;
+    await assert.rejects(() => new MetaJobsPlanner(incomplete).plan({ candidateName: "Amina", skills: ["TypeScript"], goal: "Find engineering roles" }, jobs), /rationale and application draft/);
   } finally {
     if(previousModel===undefined)delete process.env.META_MODEL;else process.env.META_MODEL=previousModel;
     if (previousKey === undefined) delete process.env.META_API_KEY;
