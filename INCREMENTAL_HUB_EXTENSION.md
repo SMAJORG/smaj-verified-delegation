@@ -1,5 +1,3 @@
-> Current behavior and API limits: [HACKATHON_READINESS.md](HACKATHON_READINESS.md). Search approval, real result links, separate Task History and genuine execution receipts supersede the historical demo instructions below. Existing stored records are preserved.
-
 > Current repair and live/demo status: [LIVE_INTEGRATION_REPAIR.md](LIVE_INTEGRATION_REPAIR.md). The original mock executor remains; a separately approved Jobs submission and Store saved-product queue is now implemented behind server-side switches.
 
 # Incremental HUB knowledge and approved dashboard extension

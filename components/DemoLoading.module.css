@@ -1,0 +1,17 @@
+.loading { min-height: 100svh; overflow-anchor: none; }
+.header { display: flex; justify-content: space-between; }
+.shimmer { display: block; background: #efedf3; border-radius: 10px; position: relative; overflow: hidden; }
+.shimmer::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, #ffffffa6 50%, transparent 80%); transform: translateX(-100%); animation: shimmer 1.6s ease-in-out infinite; }
+.brand { width: 150px; height: 30px; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; }
+.notice { height: 48px; margin-bottom: 28px; }
+.title { width: 75%; max-width: 440px; height: 38px; margin: 18px auto 28px; }
+.composer { height: 166px; }
+.prompt { width: 65%; height: 18px; margin: 8px 0; }
+.toolbar { display: flex; justify-content: space-between; margin-top: 46px; }
+.chip { width: 100px; height: 34px; border-radius: 22px; }
+.connection { height: 70px; margin-top: 28px; }
+.services { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin: 32px auto; }
+.service { width: 56px; height: 56px; border-radius: 16px; margin: auto; }
+@keyframes shimmer { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .shimmer::after { animation: none; } }

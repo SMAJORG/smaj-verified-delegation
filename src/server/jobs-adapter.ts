@@ -1,4 +1,3 @@
-import { listingUrl, publicImage } from "@/src/domain/catalog-links";
 import type { CatalogQuery } from "@/src/domain/services";
 import { catalogJson, catalogRows, catalogSearchUrl } from "@/src/server/catalog-http";
 import type { JobsApiJob } from "@/src/domain/types";
@@ -23,8 +22,6 @@ export class SmajJobsReadAdapter {
 
     return rows.filter(job => typeof job.employerId === "string" && job.employerId.trim() && job.isDemo !== true).map(job => ({
       id: text(job.slug, text(job.id, text(job._id))),
-      url: listingUrl("jobs", text(job.slug, text(job.id, text(job._id)))),
-      imageUrl: publicImage(job.companyLogo || job.image),
       title: text(job.title, "Untitled opportunity"),
       company: text(job.company, "SMAJ Jobs employer"),
       location: text(job.location, "Not specified"),

@@ -1,6 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import type { CreateDelegationInput, JobsApiJob, JobsPlan } from "@/src/domain/types";
-import type { DelegationEvent, DelegationStatus, DelegationView, MockSubmission, ProofReceipt } from "./legacy-types";
+import type { CreateDelegationInput, DelegationEvent, DelegationStatus, DelegationView, JobsApiJob, JobsPlan, MockSubmission, ProofReceipt } from "@/src/domain/types";
 import { type AppDatabase, getDatabase } from "@/src/server/database";
 import { AppError } from "@/src/server/http";
 import { SmajJobsReadAdapter } from "@/src/server/jobs-adapter";

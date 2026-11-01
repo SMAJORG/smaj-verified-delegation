@@ -13,17 +13,17 @@ export type ServiceConnection = {
 export class ServiceConnectionStore {
   constructor(private readonly database: AppDatabase = getDatabase(), private readonly now: () => Date = () => new Date()) {}
 
-  private initialize(ownerId: string, authType: "demo" | "sso" = "sso") {
+  private initialize(ownerId: string, authType: "demo" | "sso" = "demo") {
     const count = this.database.prepare("SELECT COUNT(*) AS count FROM service_connections WHERE owner_id = ?").get(ownerId) as { count: number };
     if (count.count > 0) return;
     const insert = this.database.prepare("INSERT INTO service_connections (owner_id, service_id, connected, updated_at) VALUES (?, ?, ?, ?)");
     const timestamp = this.now().toISOString();
     this.database.transaction(() => {
-      for (const service of SMAJ_SERVICES) insert.run(ownerId, service.id, 0, timestamp);
+      for (const service of SMAJ_SERVICES) insert.run(ownerId, service.id, authType === "demo" && service.id === "jobs" ? 1 : 0, timestamp);
     })();
   }
 
-  list(ownerId: string, authType: "demo" | "sso" = "sso"): ServiceConnection[] {
+  list(ownerId: string, authType: "demo" | "sso" = "demo"): ServiceConnection[] {
     this.initialize(ownerId, authType);
     const rows = this.database.prepare("SELECT service_id, connected FROM service_connections WHERE owner_id = ?").all(ownerId) as Array<{ service_id: ServiceId; connected: number }>;
     const states = new Map(rows.map(row => [row.service_id, Boolean(row.connected)]));

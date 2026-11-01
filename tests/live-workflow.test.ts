@@ -11,7 +11,7 @@ import type { ServiceRoutePlan } from "@/src/domain/services";
 const session = { actorId: "owner", uid: "pi-owner", authType: "sso" as const };
 function setup() {
   const db = createDatabase(":memory:"); const store = new AiTaskStore(db); let now = new Date();
-  const plan: ServiceRoutePlan = { ai: {provider:"meta",model:"fixture",responseId:"fixture",receivedAt:new Date().toISOString()}, model: "fixture", summary: "Fixture, not a real Meta call", steps: [], services: ["jobs", "store"], warnings: [], summaryAi: { provider: "meta", model: "fixture", responseId: "fixture", receivedAt: now.toISOString() }, discovery: { approvedAt: now.toISOString(), completedAt: now.toISOString(), results: [], proofHash: "fixture" }, actionReviewHash: "fixture-review-hash", proposedActions: [{ id: "one", serviceId: "jobs", recordId: "real-job", kind: "apply", title: "Apply", coverNote: "Approved honest draft" }, { id: "two", serviceId: "store", recordId: "real-product", kind: "save_product", title: "Save product" }] };
+  const plan: ServiceRoutePlan = { model: "fixture", summary: "Fixture, not a real Meta call", steps: [], services: ["jobs", "store"], warnings: [], summaryAi: { provider: "meta", model: "fixture", responseId: "fixture", receivedAt: now.toISOString() }, discovery: { approvedAt: now.toISOString(), completedAt: now.toISOString(), results: [], proofHash: "fixture" }, actionReviewHash: "fixture-review-hash", proposedActions: [{ id: "one", serviceId: "jobs", recordId: "real-job", kind: "apply", title: "Apply", coverNote: "Approved honest draft" }, { id: "two", serviceId: "store", recordId: "real-product", kind: "save_product", title: "Save product" }] };
   const task = store.create(session.actorId, "Apply and save product", plan);
   const connections = new ServiceConnectionStore(db); connections.list(session.actorId, "sso"); connections.set(session.actorId, "jobs", true); connections.set(session.actorId, "store", true);
   return { db, store, task, connections, now: () => now, advance: (ms: number) => { now = new Date(now.getTime() + ms); } };
@@ -21,15 +21,14 @@ function enable() { process.env.SMAJ_PRODUCTION_WRITES_ENABLED = "true"; process
 test("live queue requires SSO, evidence, connected services, and an immutable explicit approval", () => {
   const old = { ...process.env }; enable(); const f = setup(); const workflow = new LiveWorkflow(f.db, undefined, f.now);
   try {
-    assert.throws(() => workflow.approve({ ...session, authType: "demo" }, f.task.id, ["one"], "fixture-review-hash", true), /authenticated SMAJ PI HUB/);
-    assert.throws(() => workflow.approve({ ...session, actorId: "other" }, f.task.id, ["one"], "fixture-review-hash", true), /Task not found/);
+    assert.throws(() => workflow.approve({ ...session, authType: "demo" }, f.task.id, ["one"], "fixture-review-hash"), /real Hub/);
+    assert.throws(() => workflow.approve({ ...session, actorId: "other" }, f.task.id, ["one"], "fixture-review-hash"), /Task not found/);
     assert.throws(() => workflow.approve(session, f.task.id, ["one"], "stale-hash"), /drafts changed/);
-    assert.throws(() => workflow.approve(session, f.task.id, ["invented"], "fixture-review-hash", true), /Select one/);
-    f.connections.set(session.actorId, "jobs", false); assert.throws(() => workflow.approve(session, f.task.id, ["one"], "fixture-review-hash", true), /Connect/); f.connections.set(session.actorId, "jobs", true);
-    assert.throws(() => workflow.approve(session, f.task.id, ["one"], "fixture-review-hash", false), /Explicitly confirm/);
-    assert.equal(workflow.approve(session, f.task.id, ["one"], "fixture-review-hash", true).plan.execution?.status, "queued");
-    assert.equal(workflow.approve(session, f.task.id, ["one"], "fixture-review-hash", true).plan.execution?.status, "queued");
-    assert.throws(() => workflow.approve(session, f.task.id, ["one", "two"], "fixture-review-hash", true), /cannot be changed/);
+    assert.throws(() => workflow.approve(session, f.task.id, ["invented"], "fixture-review-hash"), /Select one/);
+    f.connections.set(session.actorId, "jobs", false); assert.throws(() => workflow.approve(session, f.task.id, ["one"], "fixture-review-hash"), /Connect/); f.connections.set(session.actorId, "jobs", true);
+    assert.equal(workflow.approve(session, f.task.id, ["one"], "fixture-review-hash").plan.execution?.status, "queued");
+    assert.equal(workflow.approve(session, f.task.id, ["one"], "fixture-review-hash").plan.execution?.status, "queued");
+    assert.throws(() => workflow.approve(session, f.task.id, ["one", "two"], "fixture-review-hash"), /cannot be changed/);
     assert.throws(() => f.store.delete(session.actorId, f.task.id), /Wait/);
     assert.equal((f.db.prepare("SELECT COUNT(*) n FROM live_action_runs").get() as {n:number}).n, 1);
   } finally { f.db.close(); process.env = old; }
@@ -44,7 +43,7 @@ test("worker recovers a lost execute response, performs no duplicate write, and 
     return backend.get(action.id);
   } };
   try {
-    const worker = new LiveWorkflow(f.db, adapter, f.now); worker.approve(session, f.task.id, ["one", "two"], "fixture-review-hash", true);
+    const worker = new LiveWorkflow(f.db, adapter, f.now); worker.approve(session, f.task.id, ["one", "two"], "fixture-review-hash");
     await worker.tick(); assert.equal(f.store.get("owner", f.task.id).plan.execution?.status, "retrying");
     f.advance(6000); await new LiveWorkflow(f.db, adapter, f.now).tick();
     const result = f.store.get("owner", f.task.id).plan.execution!;
@@ -59,7 +58,7 @@ test("expired lease is reclaimed; disconnection, expiry, and verification failur
     for (const reason of ["disconnect", "expiry", "verification"]) {
       const f = setup(); let calls = 0;
       const adapter = { async perform() { calls++; throw new AppError("verification_mismatch", "Independent verification failed", 409); } };
-      const worker = new LiveWorkflow(f.db, adapter, f.now); worker.approve(session, f.task.id, ["one"], "fixture-review-hash", true);
+      const worker = new LiveWorkflow(f.db, adapter, f.now); worker.approve(session, f.task.id, ["one"], "fixture-review-hash");
       f.db.prepare("UPDATE live_action_runs SET state='running', lease_until=?").run(new Date(f.now().getTime() - 1).toISOString());
       if (reason === "disconnect") f.connections.set("owner", "jobs", false);
       if (reason === "expiry") f.advance(25 * 60 * 60_000);
@@ -89,7 +88,7 @@ test("approval survives closing and reopening the database before the worker sta
   try {
     const task = new AiTaskStore(db).create("owner", "Approved persisted application", f.task.plan);
     new ServiceConnectionStore(db).list("owner", "sso"); new ServiceConnectionStore(db).set("owner", "jobs", true);
-    new LiveWorkflow(db, adapter).approve(session, task.id, ["one"], "fixture-review-hash", true);
+    new LiveWorkflow(db, adapter).approve(session, task.id, ["one"], "fixture-review-hash");
     db.close(); db = createDatabase(file);
     await new LiveWorkflow(db, adapter).tick();
     assert.equal(new AiTaskStore(db).get("owner",task.id).plan.execution?.status, "verified"); assert.equal(writes,1);
