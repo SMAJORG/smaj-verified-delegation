@@ -13,10 +13,9 @@ type Props = {
   routeTask: (event: React.FormEvent) => void;
   busy: string | null;
   connectedIds: Set<ServiceId>;
-  manageApps: () => void;
 };
 
-export default function HomeWorkspace({ task, setTask, selectedService, selectService, routeTask, busy, connectedIds, manageApps }: Props) {
+export default function HomeWorkspace({ task, setTask, selectedService, selectService, routeTask, busy, connectedIds }: Props) {
   const input = useRef<HTMLTextAreaElement>(null);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   useEffect(() => {
@@ -42,18 +41,16 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
         {!task && <span className={styles.rotatingPlaceholder} aria-hidden="true"><span key={placeholderIndex}>{SMAJ_SERVICES[placeholderIndex].example}…</span></span>}
       </div>
       <div className={styles.toolbar}>
-        <button type="button" className={styles.tool} onClick={manageApps} aria-label="Manage connected apps">+</button>
-        {selected ? <button type="button" className={`${styles.tool} ${styles.apps}`} onClick={() => selectService(null)} aria-label={`Clear ${selected.shortName} context`}><ServiceIcon serviceId={selected.id}/><span>{selected.shortName}</span><span className={styles.clear} aria-hidden="true">×</span></button> : <button type="button" className={`${styles.tool} ${styles.apps}`} onClick={manageApps}><span aria-hidden="true">▦</span> Apps</button>}
+        {selected && <button type="button" className={`${styles.tool} ${styles.apps}`} onClick={() => selectService(null)} aria-label={`Clear ${selected.shortName} context`}><ServiceIcon serviceId={selected.id}/><span>{selected.shortName}</span><span className={styles.clear} aria-hidden="true">×</span></button>}
         <button type="submit" className={styles.submit} disabled={!task.trim() || busy === "routing"}>{busy === "routing" ? <><span className="spinner"/>Asking AI…</> : <>Ask SMAJ AI <span aria-hidden="true">↗</span></>}</button>
       </div>
     </form>
-    {selected && <div className="serviceContext" role="status"><span><strong>{selected.name}</strong> · {status(selected.id)}{status(selected.id) === "Planned" ? " — integration not available yet." : !ready ? " — connect this app to continue." : " — task context selected."}</span>{!ready && selected.adapterMode === "connected" && <button onClick={manageApps}>Connect app</button>}</div>}
+    {selected && <div className="serviceContext" role="status"><span><strong>{selected.name}</strong> · {status(selected.id)}{status(selected.id) === "Planned" ? " — integration not available yet." : !ready ? " — use Apps in the header to connect this app." : " — task context selected."}</span></div>}
     <div className={styles.suggestions} aria-label="Suggested requests">
       {[{ label: "Find jobs", prompt: "Find software engineering jobs" }, { label: "Shop cars", prompt: "Find cars under $30,000" }, { label: "Explore courses", prompt: "Show available online courses" }, { label: "Health services", prompt: "Find nearby health services" }].map(suggestion => <button key={suggestion.label} type="button" onClick={() => { selectService(null); setTask(suggestion.prompt); input.current?.focus({ preventScroll: true }); }}>{suggestion.label}</button>)}
     </div>
     <div className={styles.servicesHeading}>
       <div><h2>Connected services</h2><small>Explore SMAJ PI HUB · {connectedIds.size} connected</small></div>
-      <button type="button" className={styles.manage} onClick={manageApps}>Manage <span aria-hidden="true">↗</span></button>
     </div>
     <div className={`launcherLegend ${styles.legend}`} aria-label="Service status legend"><span><i className="statusDot connected"/>Connected</span><span><i className="statusDot disconnected"/>Not connected</span><span><i className="statusDot unavailable"/>Planned</span></div>
     <div className={styles.services} aria-label="Choose a service">
