@@ -58,6 +58,7 @@ export class SmajJobsReadAdapter {
     // fields locally so trailing words like "job" do not hide a title match.
     const pageUrl = new URL(this.sourceUrl);
     pageUrl.search = "";
+    pageUrl.searchParams.set("catalog_read", "true");
     pageUrl.searchParams.set("pageSize", String(PAGE_SIZE));
     const allRows: Record<string, unknown>[] = [];
     let pages = 1;
