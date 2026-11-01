@@ -1,0 +1,617 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "file": "By_smaj_pi_hub_white_paper_v2.md",
+      "sha256": "c120f81ca1425e0fe329d50789f259994677d7d14f9a7848ec244b679120c507"
+    },
+    {
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "sha256": "95d4a3072a4c4a44a3eac1d519cabe906743aa2676b1752c205d9ae24abbe83b"
+    }
+  ],
+  "documents": [
+    {
+      "id": "white-paper-0",
+      "title": "SMAJ PI HUB White Paper",
+      "file": "By_smaj_pi_hub_white_paper_v2.md",
+      "url": "https://smajpihub.com/white-paper",
+      "text": "# SMAJ PI HUB White Paper"
+    },
+    {
+      "id": "white-paper-1",
+      "title": "A Unified Digital Hub Connecting Services, Commerce, and Innovation on the Pi Network",
+      "file": "By_smaj_pi_hub_white_paper_v2.md",
+      "url": "https://smajpihub.com/white-paper",
+      "text": "## A Unified Digital Hub Connecting Services, Commerce, and Innovation on the Pi Network\n\n**Version:** 2.0 — Edited\n\n**Publication date:** April 16, 2026\n\n**Author:** SMAJ Core Team"
+    },
+    {
+      "id": "white-paper-2",
+      "title": "1. Executive Summary",
+      "file": "By_smaj_pi_hub_white_paper_v2.md",
+      "url": "https://smajpihub.com/white-paper",
+      "text": "## 1. Executive Summary\n\nSMAJ PI HUB aims to build a trusted economic utility layer for the Pi ecosystem. It will connect verified people and businesses to commerce, work, and real-world services through one Pi identity and one Pi wallet. By bringing discovery, trust, and Pi payments into a single experience, the hub is designed to support practical economic activity using Pi.\n\nThe initial focus is **SMAJ STORE** and **SMAJ PI JOBS**. These services will demonstrate the model through commerce and employment. As the model is validated, the hub plans to strengthen merchant participation, expand into additional countries, introduce APIs and partner integrations, and add services based on user demand and operational readiness.\n\nThe wider service portfolio is a long-term modular architecture. It is not a commitment to launch every service at once.\n\nThe hub is designed around verified participation, AI-assisted navigation, and fraud-prevention measures. Pi Network provides the underlying network and wallet infrastructure; SMAJ PI HUB aims to build the marketplace and service experience on top of it.\n\nA potential SMAJ token is deferred and is not part of the current launch plan. SMAJ PI HUB is a digital marketplace, not a financial institution. This paper describes its purpose, planned services, technical approach, and phased development path."
+    },
+    {
+      "id": "white-paper-3",
+      "title": "2. The Digital Fragmentation Problem",
+      "file": "By_smaj_pi_hub_white_paper_v2.md",
+      "url": "https://smajpihub.com/white-paper",
+      "text": "## 2. The Digital Fragmentation Problem\n\nPeople often rely on separate applications for shopping, work, payments, and everyday services. Each platform may serve a useful purpose, but moving between them creates recurring problems:\n\n- **Digital fatigue:** Managing numerous accounts, passwords, and email addresses makes everyday tasks more complicated.\n- **Repeated identity verification:** Users must create and verify profiles across multiple services.\n- **Payment friction:** Different payment systems and repeated entry of payment details can interrupt transactions.\n- **Disconnected services:** Completing daily tasks often requires switching between applications.\n- **Limited digital-currency utility:** Digital currencies need more practical opportunities for buying goods and services.\n- **Trust gaps:** Buyers, sellers, and service providers may lack consistent ways to verify one another.\n\nThese problems create barriers for users and small businesses. SMAJ PI HUB aims to reduce that friction through shared access, Pi payments, and a consistent approach to marketplace trust."
+    },
+    {
+      "id": "white-paper-4",
+      "title": "3. The Problems SMAJ PI HUB Aims to Solve",
+      "file": "By_smaj_pi_hub_white_paper_v2.md",
+      "url": "https://smajpihub.com/white-paper",
+      "text": "## 3. The Problems SMAJ PI HUB Aims to Solve\n\n| Problem | Planned response |\n| --- | --- |\n| Digital fragmentation | Connect services through one Pi identity and one Pi wallet, reducing the need for separate accounts within the hub. |\n| Fake accounts and scams | Use Pi identity verification alongside marketplace checks, seller verification, and fraud monitoring to help reduce abuse. |\n| Payment exclusion | Offer Pi payments as a route to digital commerce, including for participants with limited access to traditional banking. |\n| Limited real-world Pi utility | Create opportunities to use Pi for goods, work, and services. |\n| Lack of a shared, trusted hub | Bring commerce, employment, and services into a consistent marketplace experience. |\n\nIdentity verification provides a foundation for trust. It does not, by itself, guarantee seller quality, successful delivery, or protection from fraud."
+    },
+    {
+      "id": "white-paper-5",
+      "title": "4. Why Build on Pi Network?",
+      "file": "By_smaj_pi_hub_white_paper_v2.md",
+      "url": "https://smajpihub.com/white-paper",
+      "text": "## 4. Why Build on Pi Network?\n\nSMAJ PI HUB's choice of Pi Network is based on the following opportunities:\n\n1. **An established global community.** The source white paper cites more than 60 million Pioneers as a potential audience for practical Pi services.\n2. **Identity-verified participation.** It cites 18 million KYC-verified users, providing a foundation for identity-based trust.\n3. **Mainnet participation.** It cites more than 16 million Mainnet-migrated Pioneers as a potential base for Pi transactions.\n4. **Demand for real utility.** Commerce, work, and everyday services can create practical uses for Pi.\n5. **A shared wallet experience.** Pi wallet integration may reduce friction when users move between services within the hub.\n\n*The community figures above are retained from the supplied publication text. They are not presented as independently verified, current figures.*\n\nPi Network provides network, identity, and wallet infrastructure. SMAJ PI HUB must still build the marketplace operations, service delivery, participant support, and trust mechanisms needed for a reliable user experience."
+    },
+    {
+      "id": "white-paper-6",
+      "title": "5. Mission",
+      "file": "By_smaj_pi_hub_white_paper_v2.md",
+      "url": "https://smajpihub.com/white-paper",
+      "text": "## 5. Mission\n\nContribute to Pi's real utility economy by building a trusted platform where verified people and businesses can buy, sell, work, and access real-world services using Pi."
+    },
+    {
+      "id": "white-paper-7",
+      "title": "6. Vision",
+      "file": "By_smaj_pi_hub_white_paper_v2.md",
+      "url": "https://smajpihub.com/white-paper",
+      "text": "## 6. Vision\n\nBuild a global economic platform where verified people and businesses can use Pi for trusted commerce, work, and real-world services, connected through one Pi identity and one Pi wallet."
+    },
+    {
+      "id": "white-paper-8",
+      "title": "7. The Solution: Unified Access and Intelligent Assistance",
+      "file": "By_smaj_pi_hub_white_paper_v2.md",
+      "url": "https://smajpihub.com/white-paper",
+      "text": "## 7. The Solution: Unified Access and Intelligent Assistance\n\nSMAJ PI HUB plans to combine shared access, Pi payments, marketplace verification, and an AI assistant. The goal is to make available services easier to find and use through a consistent experience.\n\n### 7.1 One Login, One Wallet\n\nUsers will sign in with their Pi identity and use their Pi wallet across services as those services become available.\n\nThe initial focus is SMAJ STORE and SMAJ PI JOBS. Additional modules can use the same access layer as demand, trust, and operational readiness support expansion.\n\n### 7.2 The SMAJ AI Assistant\n\nThe planned SMAJ AI Assistant will help users:\n\n- **Find products, work, and services** available within the hub.\n- **Navigate the platform** and understand its features.\n- **Receive relevant recommendations** based on their preferences and activity.\n\nThe assistant's scope is platform-related assistance. It is not intended to provide general-purpose AI services or answer unrelated external queries.\n\n### 7.3 Pricing and Payments\n\nThe planned payment model uses Pi exclusively. Prices for goods and services will be displayed in Pi, and payments will use Pi Network's payment infrastructure.\n\nThis approach is intended to make pricing clear and support a native Pi economy within the hub.\n\n### 7.4 Verification and Trust\n\nSMAJ PI HUB plans a tiered verification model:\n\n| Participation level | Planned approach |\n| --- | --- |\n| Basic users | Access through a Pi Network account. |\n| Verified users | Additional verification and security checks for more sensitive transactions or services, with appropriate transaction limits. |\n| Trusted sellers and providers | Business or professional verification, including KYB checks where applicable, registration information, quality review, and performance history. |\n\nSeller and provider verification will be particularly relevant to SMAJ STORE, SMAJ PI JOBS, and any future SMAJ PI HEALTH service. The purpose is to improve accountability and reduce fraud across the marketplace.\n\n### 7.5 Security\n\nThe planned security approach includes:\n\n- **Wallet protection:** Use Pi wallet's transaction-signing and asset-management mechanisms.\n- **Fraud prevention:** Develop fraud detection and activity monitoring, including AI-assisted anomaly detection.\n- **Data protection:** Use encryption and appropriate privacy practices to protect user information.\n- **Ongoing improvement:** Update security controls as the platform grows and threats change.\n\nThese measures are development objectives, not a claim that every control is already deployed.\n\n### 7.6 Marketplace Role\n\nSMAJ PI HUB is designed as a digital marketplace connecting people with products, work, and services. It is not intended to provide banking services or hold user funds in a custodial manner.\n\nEscrow-related features described in this paper remain planned capabilities. Their implementation must be consistent with the platform's intended non-custodial model."
+    },
+    {
+      "id": "white-paper-9",
+      "title": "8. The Opportunity",
+      "file": "By_smaj_pi_hub_white_paper_v2.md",
+      "url": "https://smajpihub.com/white-paper",
+      "text": "## 8. The Opportunity\n\nSMAJ PI HUB's opportunity is to make Pi useful in everyday economic activity by connecting verified people and businesses through a shared marketplace experience.\n\nThe strategy is to:\n\n1. Demonstrate the model through SMAJ STORE and SMAJ PI JOBS.\n2. Strengthen merchant participation, verification, service quality, and support.\n3. Expand country by country as local readiness permits.\n4. Extend the platform through APIs and partnerships.\n5. Introduce additional services when demand and operating capacity justify them."
+    },
+    {
+      "id": "white-paper-10",
+      "title": "9. Long-Term Modular Service Architecture",
+      "file": "By_smaj_pi_hub_white_paper_v2.md",
+      "url": "https://smajpihub.com/white-paper",
+      "text": "## 9. Long-Term Modular Service Architecture\n\nThe following 15 concepts describe the long-term architecture. They are not a simultaneous launch plan. **SMAJ STORE and SMAJ PI JOBS are the initial priorities.**\n\n| Platform | Category | Planned purpose and capabilities |\n| --- | --- | --- |\n| **SMAJ STORE** | Commerce | A marketplace for buying and selling goods, with vendor verification, Pi payments, and planned escrow-related protections. |\n| **SMAJ FOOD DELIVERY** | Daily life | Connect customers with verified restaurants, with delivery tracking, loyalty rewards, logistics coordination, and Pi payments. |\n| **SMAJ PI JOBS** | Economy | Connect freelancers, professionals, and employers through verified profiles, Pi payments, and planned agreement support, including exploration of smart contracts. |\n| **SMAJ PI HEALTH** | Health | Provide access to verified healthcare providers, virtual consultations, and secure management of health records. |\n| **SMAJ PI EDU** | Education | Offer verified courses, certifications, and AI-guided learning paths. |\n| **SMAJ PI TRANSPORT** | Mobility | Coordinate transport and delivery through verified drivers, route optimization, and Pi payments; potential services include ride sharing, car rentals, and flight-booking integrations. |\n| **SMAJ PI AGRO** | Agriculture | Connect farmers with buyers and suppliers through transparent pricing and marketplace transactions. |\n| **SMAJ PI ENERGY** | Utilities | Simplify payments and billing for electricity, water, and gas, with usage tracking. |\n| **SMAJ PI CHARITY** | Social good | Support traceable donations to verified NGOs and provide impact reporting. |\n| **SMAJ PI HOUSING** | Real estate | Offer verified property listings for rentals and sales, with anti-fraud measures and planned escrow-related deposit protections. |\n| **SMAJ PI EVENTS** | Leisure | Support event discovery, organizer verification, and secure ticketing, with possible exploration of NFT-based tickets. |\n| **SMAJ PI SWAP** | Circular economy | Enable second-hand trading and peer-to-peer exchange to support sustainable consumption. |\n| **SMAJ PI STREAM** | Entertainment | Provide access to premium movies, series, and documentaries within the hub. |\n| **SMAJ PI SPORTS** | Sports | Offer sports broadcasts, live scores, news, and community engagement. |\n| **SMAJ TOKEN** | Deferred concept | Outside the current launch plan and core Pi utility model. Any future token requires a clear use case and a separate decision. |\n\nExpansion will depend on user demand, trusted merchant participation, country readiness, partnerships, and the ability to operate each service reliably."
+    },
+    {
+      "id": "white-paper-11",
+      "title": "10. Technical Architecture",
+      "file": "By_smaj_pi_hub_white_paper_v2.md",
+      "url": "https://smajpihub.com/white-paper",
+      "text": "## 10. Technical Architecture\n\nSMAJ PI HUB's planned architecture is modular, allowing services to be introduced and maintained independently while sharing core platform capabilities.\n\n### 10.1 Pi Network Integration\n\n- **Pi authentication:** A shared sign-in experience using Pi's identity layer, reducing separate logins across hub services.\n- **Pi payments:** Integration with Pi Network's payment infrastructure and SDK to support verifiable payment flows.\n\n### 10.2 Modular Service Layer\n\nEach service is planned as a separate component that can be updated, maintained, and scaled independently. Shared capabilities will support a consistent experience across modules.\n\n### 10.3 AI Integration Layer\n\nThe SMAJ AI Assistant is planned to provide navigation, recommendations, and user support across available services, using natural language processing and machine learning where appropriate.\n\n### 10.4 Future Blockchain Compatibility\n\nPi Network is the primary foundation. The architecture will consider potential interoperability with other blockchain networks and protocols as future needs and technical feasibility become clearer.\n\n### 10.5 Developer and API Layer\n\nPlanned APIs and developer tools will allow partners and third-party developers to connect useful services to the hub. This layer will support expansion after the initial marketplace model is established."
+    },
+    {
+      "id": "white-paper-12",
+      "title": "11. SMAJ Token: Deferred Consideration",
+      "file": "By_smaj_pi_hub_white_paper_v2.md",
+      "url": "https://smajpihub.com/white-paper",
+      "text": "## 11. SMAJ Token: Deferred Consideration\n\nA SMAJ token is not part of the current core strategy or launch plan. The priority is practical Pi utility through trusted commerce, work, and real-world services.\n\nA future token would be considered only if there is a clear user need, a credible purpose, suitable safeguards, and demonstrated feasibility. It would require a separate decision."
+    },
+    {
+      "id": "white-paper-13",
+      "title": "12. Roadmap: Phased Rollout",
+      "file": "By_smaj_pi_hub_white_paper_v2.md",
+      "url": "https://smajpihub.com/white-paper",
+      "text": "## 12. Roadmap: Phased Rollout\n\nThe dates below are the targets in the April 16, 2026 publication. They are subject to readiness and do not confirm that a phase has been completed.\n\n### Phase 1 — Q1–Q2 2026: Core Launch (MVP)\n\nEstablish the core infrastructure and introduce the SMAJ STORE minimum viable product, with the following planned capabilities:\n\n- Pi login integration.\n- User and seller profiles.\n- Product listings.\n- Buyer–seller chat.\n- Pi payment integration.\n- Escrow-related transaction logic.\n- Reviews and ratings.\n- Dispute support.\n- An initial version of the SMAJ AI Assistant.\n\n### Phase 2 — Q3 2026: Marketplace and Employment\n\n- Expand SMAJ STORE features and vendor onboarding.\n- Launch SMAJ PI JOBS to connect freelancers and employers within the Pi ecosystem.\n\n### Phase 3 — Q4 2026: Trust and Merchant Growth\n\nStrengthen merchant onboarding, verification, service quality, and support across the initial commerce and work experiences.\n\n### Phase 4 — Q1 2027: Country Expansion\n\nExpand into additional countries as user demand, merchant readiness, local requirements, and operating capacity support a trusted experience.\n\n### Phase 5 — Q2 2027: APIs and Partnerships\n\nDevelop APIs and partner integrations that connect useful third-party services and support ecosystem growth.\n\n### Phase 6 — Q3–Q4 2027: Additional Services and Scale\n\n- Introduce additional modules when validated demand, trust, and operating capability support them.\n- Continue localization and country expansion as readiness and partnerships allow."
+    },
+    {
+      "id": "white-paper-14",
+      "title": "13. Disclaimer",
+      "file": "By_smaj_pi_hub_white_paper_v2.md",
+      "url": "https://smajpihub.com/white-paper",
+      "text": "## 13. Disclaimer\n\nThis white paper is for informational purposes only. It does not constitute financial, investment, or legal advice.\n\nSMAJ PI HUB and its associated platforms are under development. The information, features, timelines, and functionality described here may change or be delayed without notice.\n\nParticipation involves risks. Users should conduct their own research and due diligence before engaging with the platform or using its services.\n\nSMAJ PI HUB is a digital marketplace, not a financial institution."
+    },
+    {
+      "id": "PrivacyPage-15",
+      "title": "Privacy: Introduction",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "Introduction\nThis Privacy Policy describes how SMAJ PI HUB (\"we,\" \"us,\" or \"our\"), operating the digital marketplace and service platform accessible at smajpihub.com, collects, uses, processes, and shares your information. We are committed to protecting your privacy and ensuring the security of your personal data. By accessing or using SMAJ PI HUB, you agree to the terms of this Privacy Policy.\nSMAJ PI HUB is building a trusted economic utility layer for the Pi ecosystem. Store and Jobs form the initial commerce and work foundation. Additional services are part of a long-term modular architecture, with availability determined by rollout readiness. A potential SMAJ token is deferred and is not part of the current launch plan.\nOur platform is designed to provide a seamless and secure experience, utilizing Pi cryptocurrency for payments and a single verified identity across all services. This policy outlines our practices regarding data collection, usage, and protection, in compliance with global data protection regulations such as the General Data Protection Regulation (GDPR) and the California Consumer Privacy Act (CCPA)."
+    },
+    {
+      "id": "PrivacyPage-16",
+      "title": "Privacy: Data Collection",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "Data Collection\nWe collect various types of information to provide and improve our services. This includes:"
+    },
+    {
+      "id": "PrivacyPage-17",
+      "title": "Privacy: Personal Information",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "Personal Information\nThis refers to data that can be used to identify you directly or indirectly. We collect personal information when you register for an account, complete your profile, or undergo identity verification (KYC).\nRegister for an account: This may include your name, email address, phone number, and other contact details.\nComplete your profile: Additional information such as your date of birth, gender, and location may be collected to enhance your user experience and service personalization.\nUndergo identity verification (KYC): As part of our commitment to security and regulatory compliance, we may collect government-issued identification details to verify your identity. This data is crucial for maintaining a trusted ecosystem within the Pi Network."
+    },
+    {
+      "id": "PrivacyPage-18",
+      "title": "Privacy: Pi Wallet Data",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "Pi Wallet Data\nGiven our integration with the Pi Network, we collect specific data related to your Pi wallet.\nPi Wallet Address: Your unique identifier on the Pi blockchain, necessary for transactions and identity verification within the SMAJ PI HUB ecosystem.\nTransaction History: Details of transactions conducted using Pi cryptocurrency on our platform, including amounts, dates, and parties involved. This data supports payment confirmation, marketplace records, and support; planned protections may require additional transaction records when introduced.\nPi Network Authentication Data: Information related to your login and authentication via your Pi wallet, which serves as your verified identity across all SMAJ PI HUB services."
+    },
+    {
+      "id": "PrivacyPage-19",
+      "title": "Privacy: Transaction Data",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "Transaction Data\nWhen you engage in transactions across available platform services, we collect data related to these activities.\nService-Specific Transaction Details: For example, marketplace purchases, food delivery orders, job applications, health consultations, educational course enrollments, transport bookings, agricultural product transactions, energy service usage, charity donations, housing rentals, event ticket purchases, swap agreements, streaming subscriptions, and sports-related transactions.\nPayment Information: While payments are primarily made with Pi cryptocurrency, we may collect information related to payment processing and confirmations.\nSupport and Planned Dispute Features: Communications and evidence provided for support. Additional records may be collected if escrow-related or dispute workflows become available."
+    },
+    {
+      "id": "PrivacyPage-20",
+      "title": "Privacy: Usage Data",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "Usage Data\nWe automatically collect information about your interaction with our platform.\nDevice Information: IP address, device type, operating system, browser type, and unique device identifiers.\nLog Data: Details of how you use our services, such as pages viewed, features accessed, search queries, and timestamps of your activities.\nLocation Data: Depending on your device settings and service requirements, such as food delivery or transport, we may collect precise or approximate location data.\nPlanned AI Assistance: If introduced, records of assistant interactions may be processed to improve platform navigation and support, subject to applicable privacy practices."
+    },
+    {
+      "id": "PrivacyPage-21",
+      "title": "Privacy: How Data is Used",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "How Data is Used\nService Provision: To operate and deliver available platform services, process transactions, and fulfill your requests.\nAccount Management: To create, maintain, and secure your account, and to authenticate your identity via your Pi wallet.\nPersonalization: To customize your experience, recommend relevant services, and provide tailored content based on your usage and preferences.\nCommunication: To send you service-related notifications, updates, security alerts, and promotional messages where permitted.\nSecurity and Fraud Prevention: To detect and prevent fraudulent activities, unauthorized access, and other illegal activities, including leveraging Pi Network's security features.\nSupport and Planned Transaction Protections: To provide transaction support and, if introduced, operate escrow-related and dispute workflows under their applicable terms.\nPlatform Improvement: To analyze usage patterns, conduct research, and develop new features and services.\nCompliance and Legal Obligations: To comply with applicable laws, regulations, legal processes, and governmental requests, including KYC requirements.\nAI Assistant Enhancement: To train and improve the performance and accuracy of our AI assistant."
+    },
+    {
+      "id": "PrivacyPage-22",
+      "title": "Privacy: Third-Party Sharing",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "Third-Party Sharing\nWe may share your information with third parties under specific circumstances and with appropriate safeguards.\nService Providers: We engage third-party vendors and service providers to assist us in operating our platform, such as hosting, analytics, payment processing for fiat gateways if introduced, and customer support. These providers are contractually obligated to protect your data and use it only for the purposes for which it was disclosed.\nPi Network Ecosystem: As an integral part of the Pi Network, certain data, particularly Pi wallet authentication and transaction data, may be shared within the broader Pi ecosystem to ensure interoperability and security. This is fundamental to the operation of SMAJ PI HUB.\nBusiness Transfers: In the event of a merger, acquisition, or asset sale, your information may be transferred to the acquiring entity.\nLegal Requirements: We may disclose your information if required by law, court order, or governmental regulation, or if we believe such disclosure is necessary to protect our rights, property, or safety, or the rights, property, or safety of others.\nWith Your Consent: We may share your information with third parties when we have your explicit consent to do so.\nAggregated or Anonymized Data: We may share aggregated or anonymized data that cannot reasonably be used to identify you with third parties for research, marketing, analytics, or other purposes."
+    },
+    {
+      "id": "PrivacyPage-23",
+      "title": "Privacy: Pi Network Integration and Wallet Data",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "Pi Network Integration and Wallet Data\nSMAJ PI HUB's core functionality relies on its deep integration with the Pi Network. Your Pi wallet serves as your primary authentication method and payment instrument.\nUnified Identity: Your Pi account supports shared access across available SMAJ PI HUB services. Sign-in alone does not guarantee seller or provider reliability.\nSecure Transactions: All cryptocurrency payments are processed via the Pi blockchain, leveraging its inherent security features.\nData Interoperability: Certain wallet-related data is necessary for the seamless operation of services and may be shared with the Pi Network infrastructure as required for authentication, transaction validation, and ecosystem integrity. We adhere to the Pi Network's privacy standards in handling such data."
+    },
+    {
+      "id": "PrivacyPage-24",
+      "title": "Privacy: Cookies and Tracking Technologies",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "Cookies and Tracking Technologies\nWe use cookies and similar tracking technologies, like web beacons and pixels, to collect and use personal information about you, including to serve interest-based advertising.\nFor more information about the types of cookies we use, why, and how you can control them, please refer to our separate Cookie Policy."
+    },
+    {
+      "id": "PrivacyPage-25",
+      "title": "Privacy: User Rights (GDPR and CCPA Compliance)",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "User Rights (GDPR and CCPA Compliance)\nWe respect your data protection rights and provide you with mechanisms to exercise them.\nDepending on your location, particularly for users in the European Economic Area (EEA) and California, these rights may include right to access, right to rectification, right to erasure, right to restrict processing, right to object to processing, right to data portability, and right to opt-out of sale or sharing under CCPA.\nTo exercise any of these rights, please contact us using the details provided in the Contact Information section. We will respond to your request in accordance with applicable data protection laws."
+    },
+    {
+      "id": "PrivacyPage-26",
+      "title": "Privacy: Data Security",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "Data Security\nWe implement robust technical and organizational measures to protect your personal data from unauthorized access, alteration, disclosure, or destruction.\nEncryption: Data is encrypted both in transit and at rest where appropriate.\nAccess Controls: Strict access controls are in place to limit who can access your personal data.\nRegular Security Audits: We conduct regular security assessments and penetration testing to identify and address vulnerabilities.\nEmployee Training: Our staff receives regular training on data protection and security best practices.\nPi Network Security: We leverage the inherent security features of the Pi Network for wallet authentication and transaction security.\nHowever, no method of transmission over the Internet or method of electronic storage is 100% secure. While we strive to use commercially acceptable means to protect your personal data, we cannot guarantee its absolute security."
+    },
+    {
+      "id": "PrivacyPage-27",
+      "title": "Privacy: Children's Privacy",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "Children's Privacy\nSMAJ PI HUB is not intended for use by individuals under the age of 16. We do not knowingly collect personal data from children under 16.\nIf we become aware that we have collected personal data from a child under 16 without parental consent, we will take steps to delete that information promptly. If you believe that we might have any information from or about a child under 16, please contact us."
+    },
+    {
+      "id": "PrivacyPage-28",
+      "title": "Privacy: International Data Transfers",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "International Data Transfers\nAs a global platform, your information may be stored and processed in any country where we have facilities or where we engage service providers. By using SMAJ PI HUB, you understand that your information may be transferred to countries outside of your country of residence, which may have different data protection laws than those in your country.\nWe ensure that such transfers comply with applicable data protection laws, for example, by implementing standard contractual clauses approved by the European Commission or other appropriate safeguards."
+    },
+    {
+      "id": "PrivacyPage-29",
+      "title": "Privacy: Data Retention",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "Data Retention\nWe retain your personal data only for as long as necessary to fulfill the purposes for which it was collected, including for the purposes of satisfying any legal, accounting, or reporting requirements.\nThe retention period is determined by the type of data, the purpose of processing, and legal or regulatory obligations. When your personal data is no longer required, we will securely delete or anonymize it."
+    },
+    {
+      "id": "PrivacyPage-30",
+      "title": "Privacy: Changes to This Privacy Policy",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "Changes to This Privacy Policy\nWe may update this Privacy Policy from time to time to reflect changes in our practices or for other operational, legal, or regulatory reasons.\nWe will notify you of any material changes by posting the new Privacy Policy on smajpihub.com and updating the Effective Date at the top of this policy. We encourage you to review this Privacy Policy periodically for any changes."
+    },
+    {
+      "id": "PrivacyPage-31",
+      "title": "Privacy: Contact Information",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/privacy",
+      "text": "Contact Information\nIf you have any questions or concerns about this Privacy Policy or our data practices, please contact us at:\nSMAJ PI HUB\nWebsite: smajpihub.com\nAddress: Online-only operation"
+    },
+    {
+      "id": "TermsPage-32",
+      "title": "Terms: Acceptance of Terms",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "Acceptance of Terms\nThese Terms & Conditions (\"Terms\") govern your access to and use of the SMAJ PI HUB digital marketplace and service platform (\"Platform\"), located at smajpihub.com, operated by SMAJ PI HUB (\"we,\" \"us,\" or \"our\"). By accessing, browsing, or using the Platform, you signify your agreement to be bound by these Terms, our Privacy Policy, Cookie Policy, and Report Abuse Policy.\nIf you do not agree to these Terms, you may not access or use the Platform.\nBy creating an account, authenticating with your Pi wallet, or otherwise using any part of the SMAJ PI HUB Platform, you acknowledge that you have read, understood, and agree to be bound by these Terms, as well as any additional terms and conditions that are referenced herein or that may apply to specific services or features.\nThese Terms constitute a legally binding agreement between you and SMAJ PI HUB."
+    },
+    {
+      "id": "TermsPage-33",
+      "title": "Terms: User Eligibility and Account Registration",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "User Eligibility and Account Registration\nEligibility: To use SMAJ PI HUB, you must be at least 18 years old and have the legal capacity to enter into a binding contract. By using the Platform, you represent and warrant that you meet these eligibility requirements.\nAccount Registration: Access to most services on SMAJ PI HUB requires account registration. You agree to provide accurate, current, and complete information during the registration process and to update such information to keep it accurate, current, and complete.\nYou are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account."
+    },
+    {
+      "id": "TermsPage-34",
+      "title": "Terms: Pi Wallet Authentication",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "Pi Wallet Authentication\nSMAJ PI HUB leverages the Pi Network for user authentication. Your Pi wallet serves as your primary login credential and verified identity across available platform services.\nBy authenticating with your Pi wallet, you authorize SMAJ PI HUB to access necessary information from your Pi Network profile for identity verification and service provision.\nYou agree that your Pi wallet will be used for all cryptocurrency transactions within the Platform.\nYou acknowledge that the security of your Pi wallet is your sole responsibility, and SMAJ PI HUB is not liable for any loss or damage arising from unauthorized access to your Pi wallet."
+    },
+    {
+      "id": "TermsPage-35",
+      "title": "Terms: Platform Services Description",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "Platform Services Description\nSMAJ PI HUB is a digital marketplace and service platform connecting commerce, work, and real-world services through Pi. Its wider service portfolio is a long-term architecture, not a commitment to simultaneous availability.\nMarketplace: For buying and selling goods and services.\nFood Delivery: For ordering and delivering meals.\nJobs: For job seekers and employers.\nHealth: For health-related services and information.\nEducation: For learning resources and educational programs.\nTransport: For ride-sharing, logistics, and transportation services.\nAgriculture: For agricultural products and services.\nEnergy: For energy-related services and solutions.\nCharity: For charitable donations and initiatives.\nHousing: For real estate listings and rental services.\nEvents: For event discovery, ticketing, and management.\nSwap: For exchanging goods and services.\nStreaming: For digital content streaming.\nSports: For sports-related activities, news, and services.\nDeferred Token Concept: A potential SMAJ token is outside the current core strategy and launch plan. Any future token requires a separate decision and specific terms.\nEach service may have specific guidelines or supplementary terms, which you agree to abide by when using that particular service."
+    },
+    {
+      "id": "TermsPage-36",
+      "title": "Terms: User Responsibilities and Conduct",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "User Responsibilities and Conduct\nComply with all applicable laws, regulations, and these Terms.\nUse the Platform and its services only for lawful purposes.\nProvide accurate and truthful information in all interactions.\nRespect the intellectual property rights of others.\nMaintain a respectful and professional demeanor in all communications.\nReport any suspicious activity or abuse as outlined in our Report Abuse Policy."
+    },
+    {
+      "id": "TermsPage-37",
+      "title": "Terms: Seller/Provider Obligations",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "Seller/Provider Obligations\nIf you offer goods or services on SMAJ PI HUB, such as as a seller in the marketplace, a food vendor, a job poster, or a service provider, you agree to provide accurate descriptions of your offerings.\nDeliver goods and services as advertised.\nComply with all relevant laws and regulations pertaining to your offerings.\nHonor all commitments made to buyers/users.\nAdhere to the Platform's policies regarding quality, safety, and customer service."
+    },
+    {
+      "id": "TermsPage-38",
+      "title": "Terms: Pi Cryptocurrency Payments",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "Pi Cryptocurrency Payments\nAll payments within SMAJ PI HUB are primarily conducted using Pi cryptocurrency.\nAll transactions are subject to the terms and conditions of the Pi Network blockchain.\nSMAJ PI HUB facilitates these transactions but is not a financial institution and does not hold or control your Pi cryptocurrency directly.\nThe value of Pi cryptocurrency can be volatile, and SMAJ PI HUB is not responsible for any fluctuations in its value.\nYou are solely responsible for the accuracy of your Pi wallet address for transactions."
+    },
+    {
+      "id": "TermsPage-39",
+      "title": "Terms: Escrow and Dispute Resolution",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "Escrow and Dispute Resolution\nEscrow-related protections and enhanced in-platform dispute workflows are planned capabilities. They are not represented as currently available guarantees. Any escrow implementation must be consistent with the intended non-custodial marketplace model.\nPlanned Escrow Protections: Any future escrow-related feature will require a defined implementation and service-specific terms before availability. SMAJ PI HUB does not currently promise custodial holding of user funds.\nPlanned Dispute Resolution: Enhanced in-platform workflows are under development. Current support is available through the contact channels. Any future resolution mechanism will have service-specific terms describing participation and outcomes."
+    },
+    {
+      "id": "TermsPage-40",
+      "title": "Terms: Intellectual Property",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "Intellectual Property\nAll content, trademarks, service marks, logos, and intellectual property displayed on the SMAJ PI HUB Platform are the property of SMAJ PI HUB or its licensors. You may not use, reproduce, distribute, or create derivative works from any content on the Platform without explicit written permission from SMAJ PI HUB.\nUsers retain ownership of the content they create and upload to the Platform, but grant SMAJ PI HUB a worldwide, non-exclusive, royalty-free license to use, reproduce, modify, adapt, publish, translate, distribute, and display such content in connection with the operation and promotion of the Platform."
+    },
+    {
+      "id": "TermsPage-41",
+      "title": "Terms: AI Assistant Usage",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "AI Assistant Usage\nPlatform-focused AI assistance is a planned capability intended to improve navigation and user support within SMAJ PI HUB.\nThe AI assistant provides information and assistance based on available data and algorithms. Its responses are for informational purposes only and should not be considered professional advice, including medical, legal, or financial advice.\nSMAJ PI HUB is not responsible for any decisions made or actions taken based on the AI assistant's output.\nYou will not use the AI assistant to generate or disseminate harmful, unlawful, or inappropriate content.\nInteractions with the AI assistant may be logged and analyzed to improve its performance and our services, in accordance with our Privacy Policy."
+    },
+    {
+      "id": "TermsPage-42",
+      "title": "Terms: Deferred SMAJ Token Concept",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "Deferred SMAJ Token Concept\nA potential SMAJ token is deferred and is not part of the current core strategy or launch plan. Any future token requires a clear user need, credible purpose, safeguards, feasibility, and a separate decision. If introduced, specific terms will be provided separately.\nThese terms will govern the acquisition, holding, transfer, and utility of the SMAJ Token within the ecosystem. Users are advised to review these terms carefully before engaging with the SMAJ Token."
+    },
+    {
+      "id": "TermsPage-43",
+      "title": "Terms: Prohibited Activities",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "Prohibited Activities\nViolating any laws or regulations.\nInfringing on the rights of others, including intellectual property rights.\nPosting or transmitting any unlawful, harmful, threatening, abusive, harassing, defamatory, vulgar, obscene, or otherwise objectionable content.\nEngaging in fraudulent activities, scams, or misrepresentation.\nCreating fake accounts or impersonating others.\nDistributing viruses, malware, or other harmful computer code.\nInterfering with the proper functioning of the Platform.\nCollecting or harvesting personal data of other users without their consent.\nCircumventing any security measures or access restrictions of the Platform."
+    },
+    {
+      "id": "TermsPage-44",
+      "title": "Terms: Limitation of Liability",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "Limitation of Liability\nTo the maximum extent permitted by applicable law, SMAJ PI HUB, its affiliates, officers, directors, employees, agents, and licensors shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly, or any loss of data, use, goodwill, or other intangible losses.\nThis applies to losses resulting from your access to or use of or inability to access or use the Platform; any conduct or content of any third party on the Platform; any content obtained from the Platform; and unauthorized access, use, or alteration of your transmissions or content, whether based on warranty, contract, tort, negligence, or any other legal theory."
+    },
+    {
+      "id": "TermsPage-45",
+      "title": "Terms: Termination",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "Termination\nWe may terminate or suspend your account and access to the Platform immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach these Terms.\nUpon termination, your right to use the Platform will immediately cease. If you wish to terminate your account, you may simply discontinue using the Platform or contact us to request account deletion."
+    },
+    {
+      "id": "TermsPage-46",
+      "title": "Terms: Governing Law",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "Governing Law\nThese Terms shall be governed and construed in accordance with the laws of the jurisdiction of SMAJ PI HUB's incorporation or operation, without regard to its conflict of law provisions.\nYou agree to submit to the personal jurisdiction of the courts located within the applicable jurisdiction for the purpose of litigating all such claims or disputes."
+    },
+    {
+      "id": "TermsPage-47",
+      "title": "Terms: Changes to Terms",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "Changes to Terms\nWe reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material, we will provide at least 30 days' notice prior to any new terms taking effect.\nWhat constitutes a material change will be determined at our sole discretion. By continuing to access or use our Platform after those revisions become effective, you agree to be bound by the revised terms. If you do not agree to the new terms, please stop using the Platform."
+    },
+    {
+      "id": "TermsPage-48",
+      "title": "Terms: Contact Information",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/terms",
+      "text": "Contact Information\nIf you have any questions about these Terms, please contact us at:\nSMAJ PI HUB\nWebsite: smajpihub.com\nAddress: Online-only operation"
+    },
+    {
+      "id": "CookiesPage-49",
+      "title": "Cookies: What Cookies Are",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/cookies",
+      "text": "What Cookies Are\nThis Cookie Policy explains how SMAJ PI HUB (\"we,\" \"us,\" or \"our\"), operating the digital marketplace and service platform accessible at smajpihub.com, uses cookies and similar technologies to recognize you when you visit our website.\nIt explains what these technologies are and why we use them, as well as your rights to control our use of them.\nCookies are small data files that are placed on your computer or mobile device when you visit a website. Cookies are widely used by website owners to make their websites work, or to work more efficiently, as well as to provide reporting information.\nThey allow the website to remember your actions and preferences, such as login, language, font size, and other display preferences, over a period of time, so you do not have to keep re-entering them whenever you come back to the site or browse from one page to another.\nCookies set by the website owner, in this case SMAJ PI HUB, are called first-party cookies. Cookies set by parties other than the website owner are called third-party cookies.\nThird-party cookies enable third-party features or functionality to be provided on or through the website, such as advertising, interactive content, and analytics. The parties that set these third-party cookies can recognize your computer both when it visits this website and when it visits certain other websites."
+    },
+    {
+      "id": "CookiesPage-50",
+      "title": "Cookies: Types of Cookies Used",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/cookies",
+      "text": "Types of Cookies Used\nWe use both first-party and third-party cookies for several reasons.\nEssential Cookies: These cookies are strictly necessary to provide you with services available through our website and to use some of its features, such as access to secure areas. Without these cookies, services like secure login, shopping carts, and e-billing cannot be provided.\nAnalytics and Customization Cookies: These cookies collect information that is used either in aggregate form to help us understand how our website is being used or how effective our marketing campaigns are, or to help us customize our website for you.\nFunctional Cookies: These cookies allow our website to remember choices you make when you use our website, such as remembering your login details or language preferences. The purpose of these cookies is to provide you with a more personal experience and avoid requiring you to re-enter preferences every time you visit.\nMarketing Cookies: These cookies are used to make advertising messages more relevant to you and your interests. They may help prevent the same advertisement from continuously reappearing, ensure ads are properly displayed for advertisers, and in some cases select advertisements based on your interests."
+    },
+    {
+      "id": "CookiesPage-51",
+      "title": "Cookies: Third-Party Cookies",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/cookies",
+      "text": "Third-Party Cookies\nIn addition to our own cookies, we may also use various third-party cookies to report usage statistics of the Service, deliver advertisements on and through the Service, and so on.\nThese third-party cookies are set by entities other than SMAJ PI HUB. For example, we may use Google Analytics to help us understand how our customers arrive at our site, browse or use our site, and highlight areas where we can improve.\nWe may also use social media plugins that set cookies to track your interaction with their platforms."
+    },
+    {
+      "id": "CookiesPage-52",
+      "title": "Cookies: Pi Browser Compatibility",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/cookies",
+      "text": "Pi Browser Compatibility\nSMAJ PI HUB is designed to be fully compatible with the Pi Browser, which is the primary gateway for many Pi Network users.\nOur cookie implementation is optimized to function seamlessly within the Pi Browser environment, ensuring that your user experience, authentication, and transaction processes are consistent and secure.\nWe adhere to the Pi Browser's technical specifications and privacy considerations regarding cookie handling."
+    },
+    {
+      "id": "CookiesPage-53",
+      "title": "Cookies: How to Manage Cookies",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/cookies",
+      "text": "How to Manage Cookies\nYou have the right to decide whether to accept or reject cookies. You can exercise your cookie preferences by clicking on the appropriate opt-out links provided in the cookie consent banner or by setting your preferences within your browser controls.\nMost web browsers allow some control of most cookies through browser settings. To find out more about cookies, including how to see what cookies have been set and how to manage and delete them, visit www.allaboutcookies.org or www.youronlinechoices.eu.\nPlease note that if you choose to reject cookies, you may still use our website, though your access to some functionality and areas of our website may be restricted."
+    },
+    {
+      "id": "CookiesPage-54",
+      "title": "Cookies: Cookie Consent",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/cookies",
+      "text": "Cookie Consent\nUpon your first visit to smajpihub.com, you will be presented with a cookie consent banner that informs you about our use of cookies and requests your consent.\nBy continuing to browse our website or by clicking Accept on the banner, you consent to our use of cookies as described in this policy. You can change your cookie preferences at any time through your browser settings or by revisiting our cookie consent tool."
+    },
+    {
+      "id": "CookiesPage-55",
+      "title": "Cookies: Changes to This Cookie Policy",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/cookies",
+      "text": "Changes to This Cookie Policy\nWe may update this Cookie Policy from time to time to reflect changes to the cookies we use or for other operational, legal, or regulatory reasons.\nWe encourage you to review this Cookie Policy periodically to stay informed about our use of cookies."
+    },
+    {
+      "id": "CookiesPage-56",
+      "title": "Cookies: Contact Information",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/cookies",
+      "text": "Contact Information\nIf you have any questions about our use of cookies or other technologies, please email us at:\nSMAJ PI HUB\nWebsite: smajpihub.com"
+    },
+    {
+      "id": "SellerAgreementPage-57",
+      "title": "SellerAgreement: Introduction",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Introduction\nThis Agreement sets forth the rights and obligations of Sellers utilizing the SMAJ PI HUB platform. It is a legally binding document that Sellers must read, understand, and accept prior to engaging in any selling activities on the Platform.\nThe purpose of this Agreement is to ensure a consistent and high-quality experience for both Sellers and Buyers within the SMAJ PI HUB ecosystem."
+    },
+    {
+      "id": "SellerAgreementPage-58",
+      "title": "SellerAgreement: Seller Eligibility",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Seller Eligibility\nTo be eligible to sell on SMAJ PI HUB, prospective Sellers must meet specific criteria as determined by the Platform. This includes, but is not limited to, compliance with all applicable laws and regulations, and adherence to the Platform's community guidelines and standards.\nSMAJ PI HUB reserves the right to approve or reject any Seller application at its sole discretion."
+    },
+    {
+      "id": "SellerAgreementPage-59",
+      "title": "SellerAgreement: Seller Responsibilities",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Seller Responsibilities\nListing Authenticity: Sellers must list only genuine products or services. Sellers are responsible for the authenticity of their listings.\nAccurate Descriptions: Sellers must provide accurate descriptions and images that truthfully represent the products or services offered.\nCompliance: Sellers must adhere to all Platform policies, guidelines, and applicable laws.\nCustomer Service: Sellers must provide timely and professional customer support to Buyers.\nOrder Fulfillment: Sellers must ensure efficient and accurate processing, shipping, and delivery of orders."
+    },
+    {
+      "id": "SellerAgreementPage-60",
+      "title": "SellerAgreement: Product and Service Listing Rules",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Product and Service Listing Rules\nListings must be for genuine products or services.\nDescriptions and images must be accurate, clear, and not misleading.\nAll necessary information, including specifications, condition, and availability, must be provided.\nFraudulent, misleading, counterfeit, or illegal listings are strictly prohibited."
+    },
+    {
+      "id": "SellerAgreementPage-61",
+      "title": "SellerAgreement: Pricing Policy",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Pricing Policy\nSellers are required to use honest market pricing for all products and services listed on SMAJ PI HUB. The Platform aims to promote fair competition and value for Buyers.\nPrice manipulation or deceptive pricing practices are strictly forbidden."
+    },
+    {
+      "id": "SellerAgreementPage-62",
+      "title": "SellerAgreement: Pi Utility and Price Conversion Policy",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Pi Utility and Price Conversion Policy\nSellers voluntarily agree to this pricing model when publishing listings.\nBuyers voluntarily choose whether to purchase under this pricing model.\nSMAJ PI HUB does not guarantee external exchange values for Pi."
+    },
+    {
+      "id": "SellerAgreementPage-63",
+      "title": "SellerAgreement: Prohibited Products and Services",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Prohibited Products and Services\nIllegal items or services.\nCounterfeit goods or unauthorized replicas.\nItems that promote hate, violence, discrimination, or illegal activities.\nAdult content or sexually explicit materials.\nHazardous materials or dangerous goods.\nAny other items deemed inappropriate or harmful by SMAJ PI HUB.\nViolations may result in listing removal, account suspension, or permanent account termination."
+    },
+    {
+      "id": "SellerAgreementPage-64",
+      "title": "SellerAgreement: Intellectual Property",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Intellectual Property\nSellers must respect intellectual property rights. Listing products or services that infringe upon copyrights, trademarks, patents, or other proprietary rights of third parties is strictly prohibited.\nSellers are solely responsible for ensuring that their listings do not violate any intellectual property laws."
+    },
+    {
+      "id": "SellerAgreementPage-65",
+      "title": "SellerAgreement: Orders, Shipping, and Delivery",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Orders, Shipping, and Delivery\nProcessing orders promptly.\nPackaging items securely.\nArranging for shipping and delivery to the Buyer.\nProviding accurate tracking information where applicable.\nAdhering to stated shipping times."
+    },
+    {
+      "id": "SellerAgreementPage-66",
+      "title": "SellerAgreement: Returns, Refunds, and Disputes",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Returns, Refunds, and Disputes\nSellers must establish clear and fair return and refund policies that comply with Platform guidelines and applicable consumer protection laws.\nIn the event of a dispute between a Seller and a Buyer, SMAJ PI HUB may mediate to facilitate a resolution, but the ultimate responsibility for resolving disputes lies with the Seller."
+    },
+    {
+      "id": "SellerAgreementPage-67",
+      "title": "SellerAgreement: Buyer Protection",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Buyer Protection\nSMAJ PI HUB is committed to providing a safe and secure environment for Buyers. The Platform implements various measures to protect Buyers, including dispute resolution mechanisms and policies against fraudulent activities.\nBuyers are encouraged to report any issues or concerns to SMAJ PI HUB."
+    },
+    {
+      "id": "SellerAgreementPage-68",
+      "title": "SellerAgreement: Marketplace Trust and Safety",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Marketplace Trust and Safety\nOperating with honesty and integrity.\nCommunicating respectfully with Buyers and the Platform.\nReporting any suspicious activities or violations of this Agreement."
+    },
+    {
+      "id": "SellerAgreementPage-69",
+      "title": "SellerAgreement: Fraud, Abuse, and Misconduct",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Fraud, Abuse, and Misconduct\nAny form of fraudulent activity, abuse, or misconduct on the Platform is strictly prohibited. This includes, but is not limited to, misrepresentation, phishing, spamming, or any actions intended to harm other users or the Platform.\nViolations may result in listing removal, account suspension, or permanent account termination."
+    },
+    {
+      "id": "SellerAgreementPage-70",
+      "title": "SellerAgreement: Account Suspension and Termination",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Account Suspension and Termination\nSMAJ PI HUB reserves the right to suspend or terminate a Seller's account, or remove listings, at its sole discretion, for violations of this Agreement, Platform policies, or any applicable laws.\nReasons for suspension or termination may include, but are not limited to, fraudulent activities, repeated policy violations, or engaging in prohibited conduct."
+    },
+    {
+      "id": "SellerAgreementPage-71",
+      "title": "SellerAgreement: Privacy and Data Protection",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Privacy and Data Protection\nSellers must comply with all applicable privacy and data protection laws regarding the collection, use, storage, and processing of Buyer information.\nSellers are prohibited from using Buyer data for any purpose other than fulfilling orders and providing customer service, unless explicit consent is obtained from the Buyer."
+    },
+    {
+      "id": "SellerAgreementPage-72",
+      "title": "SellerAgreement: Limitation of Liability",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Limitation of Liability\nSMAJ PI HUB shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly, or any loss of data, use, goodwill, or other intangible losses.\nThis limitation applies to losses resulting from access to or use of, or inability to access or use, the Platform; any conduct or content of any third party on the Platform; or unauthorized access, use, or alteration of transmissions or content."
+    },
+    {
+      "id": "SellerAgreementPage-73",
+      "title": "SellerAgreement: Changes to this Agreement",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Changes to this Agreement\nSMAJ PI HUB reserves the right to modify or update this Agreement at any time. Sellers will be notified of any significant changes, and continued use of the Platform after such modifications constitutes acceptance of the revised Agreement.\nIt is the Seller's responsibility to regularly review this Agreement for updates."
+    },
+    {
+      "id": "SellerAgreementPage-74",
+      "title": "SellerAgreement: Governing Law",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Governing Law\nThis Agreement shall be governed by and construed in accordance with the laws of the jurisdiction to be specified by SMAJ PI HUB.\nAny disputes arising under or in connection with this Agreement shall be subject to the exclusive jurisdiction of the courts located in the jurisdiction to be specified by SMAJ PI HUB."
+    },
+    {
+      "id": "SellerAgreementPage-75",
+      "title": "SellerAgreement: Contact Information",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Contact Information"
+    },
+    {
+      "id": "SellerAgreementPage-76",
+      "title": "SellerAgreement: Seller Declaration",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Seller Declaration\nI confirm that I have carefully read, understood, and agree to comply with the SMAJ PI HUB Seller Agreement. I understand that my seller account and listings are subject to these rules and that failure to comply may result in suspension or permanent removal from the SMAJ PI HUB marketplace."
+    },
+    {
+      "id": "SellerAgreementPage-77",
+      "title": "SellerAgreement: Acceptance",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/seller-agreement",
+      "text": "Acceptance\nSeller Name:\nSeller ID:\nDate:\nSignature:\nI have read and agree to the SMAJ PI HUB Seller Agreement."
+    },
+    {
+      "id": "ReportAbusePage-78",
+      "title": "ReportAbuse: How to Report Abuse",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/report-abuse",
+      "text": "How to Report Abuse\nUse a report button or link within the user interface when it appears on profiles, listings, messages, or content.\nUse the dedicated report-abuse page form to provide guided report details."
+    },
+    {
+      "id": "ReportAbusePage-79",
+      "title": "ReportAbuse: Information to Include",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/report-abuse",
+      "text": "Information to Include\nYour username and the username, seller name, listing title, order reference, or page link for the reported party or content.\nThe specific service where the abuse occurred, such as Marketplace, Food Delivery, Chat, or another SMAJ PI HUB service.\nDate and time of the incident.\nScreenshots, links, messages, payment context, or other evidence supporting the report.\nA clear, accurate, and factual description of the abusive behavior or content."
+    },
+    {
+      "id": "ReportAbusePage-80",
+      "title": "ReportAbuse: What Happens After Submission",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/report-abuse",
+      "text": "What Happens After Submission\nAfter a report is submitted, users may receive an automated confirmation of receipt. The moderation team reviews submitted reports, and while individual updates may not always be available, reports are taken seriously.\nPlease provide accurate and factual information. Intentionally false or malicious reports can result in platform consequences."
+    },
+    {
+      "id": "ReportAbusePage-81",
+      "title": "ReportAbuse: Investigation Process",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/report-abuse",
+      "text": "Investigation Process\nReview of Report: The team assesses the submitted report, including all provided evidence.\nGathering Additional Information: We may access relevant platform data, such as user activity logs, transaction records, and communications, to corroborate the report.\nContent/Behavior Assessment: The reported content or behavior is evaluated against our Terms & Conditions, Privacy Policy, and community guidelines.\nUser Communication: In some cases, we may contact the reporting party for more details or the reported party to gather their perspective.\nDecision: Based on the evidence and policy review, a decision is made regarding the validity of the report and the appropriate action to take."
+    },
+    {
+      "id": "ReportAbusePage-82",
+      "title": "ReportAbuse: Actions Taken",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/report-abuse",
+      "text": "Actions Taken\nWarning: For minor infractions, a formal warning may be issued to the offending user.\nContent Removal: Abusive or inappropriate content may be removed from the platform.\nTemporary Suspension: The user's account may be temporarily suspended, restricting access to some or all services for a specified period.\nPermanent Ban: For severe or repeated violations, the user's account may be permanently banned from SMAJ PI HUB, resulting in loss of access to all services.\nEscalation to Law Enforcement: In cases involving illegal activities, we may report the incident to relevant law enforcement authorities."
+    },
+    {
+      "id": "ReportAbusePage-83",
+      "title": "ReportAbuse: Appeal Process",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/report-abuse",
+      "text": "Appeal Process\nIf your account or content has been subject to an enforcement action that you believe was made in error, you may have the right to appeal the decision.\nDetails on how to appeal will be provided in the notification of the enforcement action. Appeals typically require you to submit a clear explanation of why you believe the decision should be reversed, along with any supporting evidence."
+    },
+    {
+      "id": "ReportAbusePage-84",
+      "title": "ReportAbuse: False Reporting Consequences",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/report-abuse",
+      "text": "False Reporting Consequences\nSubmitting intentionally false or malicious reports of abuse can harm other users and disrupt the integrity of our reporting system.\nUsers found to be engaging in false reporting may face consequences, including warnings, temporary suspension, or permanent banning from the platform."
+    },
+    {
+      "id": "ReportAbusePage-85",
+      "title": "ReportAbuse: Contact Information",
+      "file": "frontend/src/pages/LegalPages.tsx",
+      "url": "https://smajpihub.com/report-abuse",
+      "text": "Contact Information\nFor general inquiries or to report abuse, please use the following contact information:\nSMAJ PI HUB\nWebsite: smaj.org"
+    }
+  ]
+}

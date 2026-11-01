@@ -28,8 +28,8 @@ export const SMAJ_SERVICES: readonly SmajService[] = [
   { id: "charity", name: "SMAJ Charity", shortName: "Charity", description: "Donations and verified causes", platformStatus: "in_progress", adapterMode: "planning_only", capabilities: ["cause discovery", "donation planning"], example: "Help me assess causes before donating", accent: "#e11d48" },
   { id: "housing", name: "SMAJ Housing", shortName: "Housing", description: "Properties and rentals", platformStatus: "in_progress", adapterMode: "planning_only", capabilities: ["property discovery", "rental checklists"], example: "Prepare a safe rental search", accent: "#4f46e5" },
   { id: "events", name: "SMAJ Events", shortName: "Events", description: "Events and tickets", platformStatus: "in_progress", adapterMode: "planning_only", capabilities: ["event discovery", "attendance planning"], example: "Plan events for my weekend", accent: "#9333ea" },
-  { id: "swap", name: "SMAJ Swap", shortName: "Swap", description: "Token swap planning", platformStatus: "in_progress", adapterMode: "planning_only", capabilities: ["swap education", "risk review"], example: "Explain a swap without executing it", accent: "#0d9488" },
-  { id: "token", name: "SMAJ Token", shortName: "Token", description: "Rewards and loyalty utility", platformStatus: "in_progress", adapterMode: "planning_only", capabilities: ["reward discovery", "loyalty planning"], example: "Explain available reward pathways", accent: "#d97706" },
+  { id: "swap", name: "SMAJ Swap", shortName: "Swap", description: "Planned second-hand trading and peer-to-peer exchange", platformStatus: "in_progress", adapterMode: "planning_only", capabilities: ["exchange education", "risk review"], example: "Explain the White Paper’s peer-to-peer exchange vision", accent: "#0d9488" },
+  { id: "token", name: "SMAJ Token", shortName: "Token", description: "Deferred concept outside the current launch plan", platformStatus: "in_progress", adapterMode: "planning_only", capabilities: ["reward discovery", "loyalty planning"], example: "Explain available reward pathways", accent: "#d97706" },
 ] as const;
 
 export const SERVICE_IDS = new Set<ServiceId>(SMAJ_SERVICES.map(service => service.id));
@@ -46,6 +46,7 @@ export type ServicePlanStep = {
 };
 
 export type ServiceRoutePlan = {
+  sources?: Array<{ id: string; title: string; url: string; file: string }>;
   discovery?: { approvedAt: string; completedAt: string; results: Array<{ serviceId: string; source: string; status: "read" | "unavailable"; records: unknown[]; error?: string }>; proofHash: string };
   summary: string;
   model: string;

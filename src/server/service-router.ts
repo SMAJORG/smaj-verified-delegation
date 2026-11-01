@@ -1,6 +1,7 @@
 import type { ServiceId, ServicePlanStep, ServiceRoutePlan } from "@/src/domain/services";
 import { SERVICE_IDS, SMAJ_SERVICES } from "@/src/domain/services";
 import { AppError } from "@/src/server/http";
+import { hubKnowledgeContext } from "@/src/server/hub-knowledge";
 import { metaResponse } from "@/src/server/meta-client";
 
 const extractOutputText = (payload: any) => {
@@ -33,11 +34,13 @@ export class MetaServiceRouter {
       capabilities: service.capabilities,
     }));
 
+    const knowledge = hubKnowledgeContext(request);
     const prompt = [
       "You are SMAJ AI. Answer the user helpfully in summary and route actionable tasks across SMAJ PI HUB services. Return strict JSON only. For greetings, questions, or tasks needing no service, return the actual answer in summary with empty services and steps. Never invent service results.",
       "Never claim an action completed. Never plan a payment, token swap, donation, purchase, booking, production submission, or medical decision as executable.",
       "Use only service IDs and capabilities from the catalog. Multi-service plans are allowed.",
       "Schema: {summary:string, services:string[], steps:[{id:string,serviceId:string,title:string,description:string,capability:string,approvalRequired:boolean}], warnings:string[]}",
+      knowledge.prompt,
       `Catalog: ${JSON.stringify(catalog)}`,
       `User task: ${request}`,
     ].join("\n");
@@ -78,10 +81,10 @@ export class MetaServiceRouter {
     const services: ServiceId[] = Array.from(new Set<ServiceId>(steps.map((step: ServicePlanStep) => step.serviceId)));
     const warnings = Array.from(new Set([
       ...(Array.isArray(parsed.warnings) ? parsed.warnings.map((value: unknown) => clean(value, "", 240)).filter(Boolean) : []),
-      "No Pi payment, purchase, booking, donation, swap, or production submission will be executed.",
+      ...(steps.length ? ["No Pi payment, purchase, booking, donation, swap, or production submission will be executed."] : []),
       ...(steps.some((step: ServicePlanStep) => step.status === "unavailable") ? ["Planning-only steps are clearly blocked from execution."] : []),
     ])).slice(0, 6);
 
-    return { summary: clean(parsed.summary, "SMAJ AI prepared a bounded, reviewable service plan.", 800), model, services, steps, warnings };
+    return { summary: clean(parsed.summary, "SMAJ AI prepared a bounded, reviewable service plan.", 4000), model, services, steps, warnings, sources: knowledge.sources };
   }
 }
