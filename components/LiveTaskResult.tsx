@@ -1,24 +1,24 @@
 "use client";
 import { useState } from "react";
-import { TypedResponse } from "@/components/TaskResponse";
+
 import type { AiTask } from "@/src/server/ai-tasks";
 
 export default function LiveTaskResult({ task, busy, sandbox, discover, approve }: { task: AiTask; busy: boolean; sandbox: boolean; discover: () => void; approve: (ids: string[]) => void }) {
   const plan = task.plan;
+  const [dismissed, setDismissed] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const download = (value: unknown, name: string) => {
     const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }));
     const a = document.createElement("a"); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
   };
   const available = plan.services.some(id => ["jobs", "store", "stream"].includes(id));
-  return <section className="routePlan liveTaskResults" aria-label="Live data and execution">
-    {available && !plan.execution && <><p>Allow SMAJ AI to read the selected live catalogs and share listing details with Meta for analysis. No applications or purchases will be made.</p><button className="primaryButton" disabled={busy || sandbox} onClick={discover}>{busy ? "Please wait…" : "Approve search"}</button></>}
+  return <section className="liveTaskResults" aria-label="Live data and execution">
+    {available && !plan.discovery && !plan.execution && !dismissed && <div className="resultsApproval"><strong>Ready to continue?</strong><p>Search live listings and share listing details with Meta for analysis. No purchase or application will be made.</p><div className="resultsActions"><button className="primaryButton" disabled={busy || sandbox} onClick={discover}>{busy ? "Searching…" : "Approve search"}</button><button className="secondaryButton" disabled={busy} onClick={() => setDismissed(true)}>Not now</button></div>{sandbox&&<p>Live search requires signing in with SMAJ PI HUB.</p>}</div>}
+    {dismissed&&!plan.discovery&&<button className="taskViewLink" onClick={()=>setDismissed(false)}>Review search approval</button>}
     {plan.discovery && <>
-      <TypedResponse text={plan.discovery.results.some(result => result.status === "read") ? "Here's what I found based on your request." : "The live catalogs are currently unavailable. Please try again."}/>
-      <details className="taskEvidence"><summary>Catalog evidence</summary><p>Retrieved {plan.discovery.completedAt}. Availability can change.</p><button className="secondaryButton" onClick={() => download(plan.discovery, `catalog-${task.id}.json`)}>Download JSON</button></details>
-      {plan.summaryError && <p role="alert">{plan.summaryError.message} ({plan.summaryError.code}). No Meta analysis was received for these results.</p>}
+      {plan.summaryError && <p role="alert">AI analysis is unavailable. You can still review the listings below.</p>}
       {plan.discovery.results.map(result => <section key={result.serviceId}>
-        <h3>{result.serviceId} · {result.status === "read" ? "Live API data" : "Unavailable"}</h3>
+        <h3>{result.serviceId} · {result.status === "read" ? "Results" : "Unavailable"}</h3>
         {result.error && <p role="alert">{result.error}</p>}
         {result.status === "read" && !result.records.length && <p>No published listings were returned for this search.</p>}
         <div className="taskResultCards">{result.records.map((value, index) => {
@@ -38,7 +38,7 @@ export default function LiveTaskResult({ task, busy, sandbox, discover, approve 
         })}</div>
       </section>)}
     </>}
-    {!plan.execution && !!plan.proposedActions?.length && <div className="approvalBar"><div><h3>Review live actions</h3><p>These actions change your real Jobs applications or Store saved products. Review each draft, then approve. Purchases and payments are unavailable.</p>{plan.proposedActions.map(action => <label className="liveAction" key={action.id}><input type="checkbox" checked={selected.includes(action.id)} onChange={e => setSelected(ids => e.target.checked ? [...ids, action.id] : ids.filter(id => id !== action.id))}/><span><strong>{action.title} · {action.kind}</strong><small>{action.recordId}</small>{action.coverNote && <p>{action.coverNote}</p>}</span></label>)}</div><button className="primaryButton" disabled={busy || sandbox || !selected.length} onClick={() => approve(selected)}>Approve {selected.length} live actions</button></div>}
-    {plan.execution && <section aria-live="polite"><h3>Live execution · {plan.execution.status}</h3><details className="taskEvidence"><summary>Execution activity</summary><p>Approved {plan.execution.approvedAt} · Attempt {plan.execution.attempts}</p>{plan.execution.events?.map((event,index)=><p key={index}><small>{event.at}</small> · {event.message}</p>)}</details>{plan.execution.error && <p role="alert">{plan.execution.error}</p>}{plan.execution.receipt && <><p>Verified against Hub backend records · {plan.execution.receipt.verifiedAt}</p><code>{plan.execution.receipt.proofHash}</code><button className="secondaryButton" onClick={() => download({ taskId: task.id, request: task.task, approval: plan.execution, ai: plan.ai, analysis: plan.summaryAi }, `live-proof-${task.id}.json`)}>Download live proof receipt</button></>}</section>}
+    {!plan.execution && !!plan.proposedActions?.length && <div className="approvalBar"><div><h3>Ready to continue?</h3><p>Review the selected applications or saved products before approving. No purchase or payment will be made.</p>{plan.proposedActions.map(action => <label className="liveAction" key={action.id}><input type="checkbox" checked={selected.includes(action.id)} onChange={e => setSelected(ids => e.target.checked ? [...ids, action.id] : ids.filter(id => id !== action.id))}/><span><strong>{action.title}</strong><small>{action.recordId}</small>{action.coverNote && <p>{action.coverNote}</p>}</span></label>)}</div><button className="primaryButton" disabled={busy || sandbox || !selected.length} onClick={() => approve(selected)}>Approve {selected.length} live actions</button></div>}
+    {plan.execution && <section aria-live="polite"><h3>Live execution · {plan.execution.status}</h3><details className="taskEvidence"><summary>Execution activity</summary><p>Approved {plan.execution.approvedAt} · Attempt {plan.execution.attempts}</p>{plan.execution.events?.map((event,index)=><p key={index}><small>{event.at}</small> · {event.message}</p>)}</details>{plan.execution.error && <p role="alert">{plan.execution.error}</p>}{plan.execution.receipt && <><p>Verified against Hub backend records · {plan.execution.receipt.verifiedAt}</p><button className="secondaryButton" onClick={() => download({ taskId: task.id, request: task.task, approval: plan.execution, ai: plan.ai, analysis: plan.summaryAi }, `live-proof-${task.id}.json`)}>Download live proof receipt</button></>}</section>}
   </section>;
 }

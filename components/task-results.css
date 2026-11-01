@@ -36,3 +36,21 @@
 @keyframes taskBounce{50%{opacity:.25;transform:translateY(-4px)}}@keyframes taskBlink{50%{opacity:0}}
 @media(max-width:370px){.tasksView .taskThumb{width:66px;height:66px}.workspace .tasksView>h1{font-size:24px}.tasksView .taskResultCard{gap:9px}}
 @media(prefers-reduced-motion:reduce){.tasksView .taskDots i,.tasksView .taskCursor:after{animation:none}}
+/* Unique root and higher specificity keep the approved layout independent of legacy page rules. */
+.workspace .workspaceBody .compactResults{max-width:426px;margin:0 auto;min-width:0;color:#20192f;overflow-wrap:anywhere}
+.workspace .compactResults .resultsEyebrow{font-size:11px;letter-spacing:1.6px;font-weight:750;color:#8a75b5;margin:0 0 7px}
+.workspace .workspaceBody .compactResults>h1{font-size:27px;line-height:1.15;letter-spacing:-1px;margin:0 0 18px}
+.compactResults .resultsResponse{display:flex;align-items:flex-start;gap:10px;margin-top:22px}
+.compactResults .resultsAvatar{flex:none;width:33px;height:33px;background:linear-gradient(135deg,#8657e5,#49349c);border-radius:12px;color:white;display:grid;place-items:center;font-size:12px;font-weight:800}
+.compactResults .resultsContent{min-width:0;flex:1}
+.compactResults .resultsWho{font-size:12px;font-weight:800;margin:0 0 8px}
+.compactResults .liveTaskResults{margin:0;padding:0;border:0;box-shadow:none;background:none}
+.compactResults .resultsApproval,.workspace .compactResults .approvalBar{background:#f7f3ff;border:1px solid #e9ddff;border-radius:17px;padding:14px;margin-top:15px}
+.compactResults .resultsApproval strong,.workspace .compactResults .approvalBar h3{font-size:13px;margin:0}
+.compactResults .resultsApproval p{font-size:12px;color:#665d74;line-height:1.5;margin:7px 0 13px}
+.compactResults .resultsActions{display:flex;flex-wrap:wrap;gap:8px}
+.compactResults .resultsHistory{margin-top:25px;padding-top:15px;border-top:1px solid #efedf4;color:#827a90;font-size:12px}
+.compactResults .resultsHistory h2{font-size:14px}
+.compactResults .taskAnalyzing{display:block;margin:0}.compactResults .taskAnalyzing>span:last-child{display:block;margin-top:6px}
+.workspace .compactResults .taskDetail{padding:14px;border-radius:17px;box-shadow:none}.compactResults .taskDetail .detailHead>small{display:none}
+@media(max-width:370px){.workspace .workspaceBody .compactResults>h1{font-size:24px}.compactResults .taskThumb{width:66px;height:66px}.compactResults .taskResultCard{gap:9px}}
