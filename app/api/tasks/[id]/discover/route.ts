@@ -75,6 +75,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const current = store.get(session.actorId, task.id);
     if (current.plan.execution) throw new AppError("execution_exists", "An action approval was recorded during discovery; its contract was preserved", 409);
     return finish(NextResponse.json({ task: store.savePlan(session.actorId, task.id, plan), plan }, { headers: { "Cache-Control": "no-store" } }));
-  } catch (error) { const response=finish(apiError(error));if(response.status===429)response.headers.set("Retry-After","60");return response; }
+  } catch (error) { const response=finish(apiError(error));if(response.status===429&&!response.headers.has("Retry-After"))response.headers.set("Retry-After","60");return response; }
   finally { release(); }
 }

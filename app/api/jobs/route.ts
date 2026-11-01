@@ -22,6 +22,6 @@ export async function GET(request: Request) {
     const jobs = await adapter.listJobs();
     return NextResponse.json({ jobs, source: adapter.sourceUrl, mode: "read_only" });
   } catch (error) {
-    const response=apiError(error);if(response.status===429)response.headers.set("Retry-After","60");return response;
+    const response=apiError(error);if(response.status===429&&!response.headers.has("Retry-After"))response.headers.set("Retry-After","60");return response;
   } finally {release();}
 }

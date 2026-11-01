@@ -12,5 +12,5 @@ export async function POST(request:NextRequest){
   const response=NextResponse.json({authenticated:false,publicAccess:true,authType:"public",sandbox:false,expiresAt:visitor.expiresAt,ssoEnabled:ssoConfigured(),sampleTasksEnabled:false},{headers:{"Cache-Control":"no-store"}});
   response.cookies.set(SESSION_COOKIE,visitor.value,{httpOnly:true,sameSite:"lax",secure:request.nextUrl.protocol==="https:"||request.headers.get("x-forwarded-proto")?.split(",")[0].trim()==="https",path:"/",maxAge:visitor.maxAge});
   return response;
- }catch(error){const response=apiError(error);if(response.status===429)response.headers.set("Retry-After","60");return response;}
+ }catch(error){const response=apiError(error);if(response.status===429&&!response.headers.has("Retry-After"))response.headers.set("Retry-After","60");return response;}
 }

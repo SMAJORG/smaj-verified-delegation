@@ -15,7 +15,7 @@ function limit(db: AppDatabase, key: string, count: number, windowMs: number, no
  const start = Math.floor(now/windowMs)*windowMs;
  const bucket = `${key}:${start}`;
  const row = db.prepare("SELECT hits FROM public_limits WHERE bucket = ?").get(bucket) as {hits:number}|undefined;
- if ((row?.hits || 0) >= count) throw new AppError("public_rate_limit", "Public AI is busy. Please wait a minute before trying again.", 429);
+ if ((row?.hits || 0) >= count) throw new AppError("public_rate_limit", "Public AI request limit reached. Please try again later.", 429, Math.max(1, Math.ceil((start+windowMs-now)/1000)));
  db.prepare("INSERT INTO public_limits VALUES (?, 1, ?) ON CONFLICT(bucket) DO UPDATE SET hits = hits + 1").run(bucket,start+windowMs);
 }
 export function issuePublicSession(request: Request, db = getDatabase(), now = Date.now()) {

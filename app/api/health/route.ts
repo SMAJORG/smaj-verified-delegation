@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     status: "ok",
     service: "smaj-ai",
+    revision: process.env.RENDER_GIT_COMMIT || null,
     publicUrl: process.env.SMAJ_AI_PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || request.nextUrl.origin,
     ssoEnabled: ssoConfigured(),
     readOnlyServices: ["jobs", "store", "stream"],

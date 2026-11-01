@@ -34,6 +34,6 @@ export async function POST(request: NextRequest) {
     const plan = await new MetaServiceRouter().plan(String(body.task || ""), connectedServiceIds);
     const task = tasks.create(actorId, body.task.trim(), plan);
     return NextResponse.json({ plan, task }, { status: 201, headers: { "Cache-Control": "no-store" } });
-  } catch (error) { const response=apiError(error);if(response.status===429)response.headers.set("Retry-After","60");return response; }
+  } catch (error) { const response=apiError(error);if(response.status===429&&!response.headers.has("Retry-After"))response.headers.set("Retry-After","60");return response; }
   finally { release(); }
 }

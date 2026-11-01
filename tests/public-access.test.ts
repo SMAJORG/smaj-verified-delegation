@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { apiError } from "@/src/server/http";
 import { NextRequest } from "next/server";
 import { POST as open } from "@/app/api/public/session/route";
 import { GET as sessionInfo, DELETE as logout } from "@/app/api/auth/session/route";
@@ -75,7 +76,7 @@ test("public car, software Jobs, services and Hub questions use Meta without SSO
 test("public limits persist, concurrent provider calls are bounded, and expiring visitor cookies cannot grant identity",()=>{
  const db=createDatabase(":memory:");const now=Date.now();const request=new Request("https://public.example",{headers:{"x-forwarded-for":"198.51.100.17"}});const visitor=issuePublicSession(request,db,now);const session=readPublicSession(visitor.value,db,now);
  const release=beginPublicWork(request,session,db,now);assert.throws(()=>beginPublicWork(request,session,db,now),(e:any)=>e.status===429);release();
- for(let i=0;i<9;i++)beginPublicWork(request,session,db,now)();assert.throws(()=>beginPublicWork(request,session,db,now),(e:any)=>e.status===429);
+ for(let i=0;i<9;i++)beginPublicWork(request,session,db,now)();assert.throws(()=>beginPublicWork(request,session,db,now),(e:any)=>{assert.equal(e.status,429);const response=apiError(e);assert.ok(Number(response.headers.get("Retry-After"))>0);assert.equal(response.headers.get("Cache-Control"),"no-store");return true;});
  assert.throws(()=>readPublicSession(visitor.value+"tampered",db,now));assert.throws(()=>readPublicSession(visitor.value,db,now+PUBLIC_SESSION_TTL*1000));
  const future=now+60001;const leases:Array<()=>void>=[];
  for(let i=0;i<8;i++){const r=new Request("https://public.example",{headers:{"x-forwarded-for":`198.51.100.${i+30}`}});const next=issuePublicSession(r,db,future);leases.push(beginPublicWork(r,readPublicSession(next.value,db,future),db,future));}
