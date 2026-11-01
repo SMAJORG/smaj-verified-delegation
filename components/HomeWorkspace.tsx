@@ -26,6 +26,7 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
     return () => window.clearInterval(timer);
   }, [task.length]);
   const selected = SMAJ_SERVICES.find(service => service.id === selectedService);
+  const connectedServices = SMAJ_SERVICES.filter(service => service.adapterMode === "connected" && connectedIds.has(service.id));
   const status = (id: ServiceId) => {
     const service = SMAJ_SERVICES.find(item => item.id === id)!;
     return service.adapterMode === "planning_only" ? "Planned" : connectedIds.has(id) ? "Connected" : "Not connected";
@@ -50,7 +51,12 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
       {[{ label: "Find jobs", prompt: "Find software engineering jobs" }, { label: "Shop cars", prompt: "Find cars under $30,000" }, { label: "Explore courses", prompt: "Show available online courses" }, { label: "Health services", prompt: "Find nearby health services" }].map(suggestion => <button key={suggestion.label} type="button" onClick={() => { selectService(null); setTask(suggestion.prompt); input.current?.focus({ preventScroll: true }); }}>{suggestion.label}</button>)}
     </div>
     <div className={styles.servicesHeading}>
-      <div><h2>Connected services</h2><small>Explore SMAJ PI HUB · {connectedIds.size} connected</small></div>
+      <div className={styles.servicesHeadingContent}>
+        <h2>Connected services</h2>
+        {!!connectedServices.length && <div className={styles.connectedIcons} aria-label="Connected apps">
+          {connectedServices.map(service => <span key={service.id} title={service.name}><ServiceIcon serviceId={service.id}/></span>)}
+        </div>}
+      </div>
     </div>
     <div className={`launcherLegend ${styles.legend}`} aria-label="Service status legend"><span><i className="statusDot connected"/>Connected</span><span><i className="statusDot disconnected"/>Not connected</span><span><i className="statusDot unavailable"/>Planned</span></div>
     <div className={styles.services} aria-label="Choose a service">
