@@ -12,7 +12,7 @@ export default function LiveTaskResult({ task, busy, sandbox, discover, approve,
     {available && (!plan.discovery || plan.discovery.results.some(result=>result.status === "unavailable")) && !plan.execution && !dismissed && <div className="resultsApproval"><strong>Ready to continue?</strong><p>Search live listings and share listing details with Meta for analysis. No purchase or application will be made.</p><div className="resultsActions"><button className="primaryButton" disabled={busy} onClick={discover}>{busy ? "Searching…" : "Approve search"}</button><button className="secondaryButton" disabled={busy} onClick={() => setDismissed(true)}>Not now</button></div>{sandbox&&<p>Approve to sign in to SMAJ PI HUB and continue this search.</p>}</div>}
     {dismissed&&!plan.discovery&&<button className="taskViewLink" onClick={()=>setDismissed(false)}>Review search approval</button>}
     {plan.discovery && <>
-      {plan.summaryError && <p role="alert">AI analysis is unavailable. You can still review the listings below.</p>}
+      {plan.summaryError && <p role="alert">{plan.summaryError.message}</p>}
       {plan.discovery.results.map(result => {
         const records = plan.summaryAi && result.serviceId !== "jobs" ? result.records.filter(value => plan.matches?.some(match => match.serviceId === result.serviceId && match.id === String((value as {id?:unknown}).id))) : result.records;
         const employerBacked = result.serviceId === "jobs" ? records.filter(value => (value as { listingProvenance?: string }).listingProvenance === "employer_backed") : [];
@@ -28,6 +28,7 @@ export default function LiveTaskResult({ task, busy, sandbox, discover, approve,
             {record.price != null && <p className="taskPrice">{String(record.price)}</p>}
             {record.salary != null && <p className="taskPrice">{String(record.salary)}</p>}
             <p className="taskResultMeta">{String(record.company || record.creatorName || record.sellerName || "SMAJ PI HUB")}</p>
+            {result.serviceId === "jobs" && !sample && <p className="taskResultMeta"><strong>{record.employerVerified === true ? "Verified employer" : "Employer not verified — applications unavailable"}</strong></p>}
             {sample && <p className="taskResultMeta"><strong>Sample Listing — Not Verified</strong><br />Applications are disabled for sample listings.</p>}
             {url && <a className="taskViewLink" href={url} target="_blank" rel="noreferrer">View {result.serviceId === "store" ? "product" : result.serviceId === "jobs" ? "job" : "content"} ↗</a>}
             </div>
@@ -43,7 +44,21 @@ export default function LiveTaskResult({ task, busy, sandbox, discover, approve,
         </> : renderCards(records)}
       </section>;})}
     </>}
-    {!plan.execution && !!plan.proposedActions?.length && <div className="approvalBar"><div><h3>Ready to continue?</h3><p>Review the selected applications or saved products before approving. No purchase or payment will be made.</p>{plan.proposedActions.map(action => <label className="liveAction" key={action.id}><input type="checkbox" checked={selected.includes(action.id)} onChange={e => setSelected(ids => e.target.checked ? [...ids, action.id] : ids.filter(id => id !== action.id))}/><span><strong>{action.title}</strong><small>{action.recordId}</small>{action.coverNote && <p>{action.coverNote}</p>}</span></label>)}</div><button className="primaryButton" disabled={busy || sandbox || !selected.length} onClick={() => approve(selected)}>Approve {selected.length} live actions</button></div>}
+    {!plan.execution && !!plan.proposedActions?.length && <div className="approvalBar"><div><h3>Review before submission</h3><p>Nothing is submitted until you approve the exact details below.</p>{plan.proposedActions.map(action => {
+      const preview = action.applicationPreview;
+      return <label className="liveAction" key={action.id}><input type="checkbox" checked={selected.includes(action.id)} onChange={e => setSelected(ids => e.target.checked ? [...ids, action.id] : ids.filter(id => id !== action.id))}/><span><strong>{action.title}</strong><small>{action.recordId}</small>{action.coverNote && <p><strong>Application note</strong><br />{action.coverNote}</p>}
+        {action.kind === "apply" && (preview ? <div className="taskEvidence">
+          <strong>Exact application details</strong>
+          <p>Job: {preview.job.title} · {preview.job.company}</p>
+          <p>Location: {preview.job.location} · {preview.job.type} · {preview.job.mode}</p>
+          <p>Salary: {preview.job.salary} · Category: {preview.job.category}</p>
+          <p>Profile: {preview.profile.title} · {preview.profile.skills.join(", ") || "No listed skills"}</p>
+          <p>Profile location: {preview.profile.location || "Not specified"} · Photo: {preview.profile.profilePhoto || "not included"}</p>
+          <p>Profile summary: {preview.profile.summary || "None"} · Portfolio: {preview.profile.portfolio || "None"}</p>
+          <p>CV: {preview.cv.attached ? `Attached — ${preview.cv.name || "CV"} (${preview.cv.size || 0} bytes; ${preview.cv.visibility})` : `Not attached${preview.cv.visibility ? ` — visibility is ${preview.cv.visibility}` : ""}`}</p>
+        </div> : <p>Sign in to SMAJ PI HUB to load your profile and CV sharing details before approval. No application has been submitted.</p>)}
+      </span></label>;
+    })}</div><button className="primaryButton" disabled={busy || sandbox || !selected.length} onClick={() => approve(selected)}>Approve {selected.length} live actions</button></div>}
     {plan.execution && <section aria-live="polite"><h3>Live execution · {plan.execution.status}</h3><details className="taskEvidence"><summary>Execution activity</summary><p>Approved {plan.execution.approvedAt} · Attempt {plan.execution.attempts}</p>{plan.execution.events?.map((event,index)=><p key={index}><small>{event.at}</small> · {event.message}</p>)}</details>{plan.execution.error && <p role="alert">{plan.execution.error}</p>}{plan.execution.status === "failed" && plan.execution.retryable && <button className="secondaryButton" disabled={busy} onClick={retry}>Retry safely</button>}{plan.execution.receipt && <><p>Verified against Hub backend records · {plan.execution.receipt.verifiedAt}</p><a className="secondaryButton" href={`/api/tasks/${task.id}/receipt`} download>Download JSON receipt</a> <a className="secondaryButton" href={`/api/tasks/${task.id}/receipt/pdf`} download>Download PDF receipt</a></>}</section>}
   </section>;
 }

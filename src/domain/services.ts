@@ -36,7 +36,13 @@ export const SERVICE_IDS = new Set<ServiceId>(SMAJ_SERVICES.map(service => servi
 
 export type CatalogQuery = { search?: string; category?: string; maxPrice?: number; currency?: "USD" | "PI" };
 export type ModelEvidence = { provider: "meta"; model: string; responseId: string | null; receivedAt: string };
-export type LiveAction = { id: string; serviceId: "jobs" | "store"; recordId: string; kind: "apply" | "save_product"; title: string; coverNote?: string };
+export type JobApplicationPreview = {
+  detailsHash: string;
+  job: { recordId: string; title: string; company: string; location: string; type: string; mode: string; salary: string; category: string };
+  profile: { title: string; skills: string[]; location: string; portfolio: string; summary: string; profilePhoto: string };
+  cv: { attached: boolean; name?: string; size?: number; visibility?: string };
+};
+export type LiveAction = { id: string; serviceId: "jobs" | "store"; recordId: string; kind: "apply" | "save_product"; title: string; coverNote?: string; applicationPreview?: JobApplicationPreview };
 export type LiveExecution = { status: "queued" | "running" | "retrying" | "verified" | "failed"; approvedAt: string; expiresAt: string; actions: LiveAction[]; attempts: number; error?: string; retryable?: boolean; evidence?: unknown[]; events?: Array<{ at: string; type: string; message: string }>; receipt?: { mode: "live"; verifiedAt: string; evidence: unknown[]; proofHash: string; proof: unknown } };
 
 export type ServicePlanStep = {

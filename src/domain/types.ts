@@ -18,6 +18,7 @@ export type JobsApiJob = {
   category: string;
   summary: string;
   skills: string[];
+  employerVerified?: boolean;
   /** Set by the server adapter. Sample entries are browse-only and never actionable. */
   listingProvenance?: "employer_backed" | "sample_unverified";
 };

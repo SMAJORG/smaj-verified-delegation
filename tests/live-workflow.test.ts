@@ -11,7 +11,7 @@ import type { ServiceRoutePlan } from "@/src/domain/services";
 const session = { actorId: "owner", uid: "pi-owner", authType: "sso" as const };
 function setup() {
   const db = createDatabase(":memory:"); const store = new AiTaskStore(db); let now = new Date();
-  const plan: ServiceRoutePlan = { model: "fixture", summary: "Fixture, not a real Meta call", steps: [], services: ["jobs", "store"], warnings: [], summaryAi: { provider: "meta", model: "fixture", responseId: "fixture", receivedAt: now.toISOString() }, discovery: { approvedAt: now.toISOString(), completedAt: now.toISOString(), results: [{ serviceId: "jobs", source: "fixture", status: "read", records: [{ id: "real-job", listingProvenance: "employer_backed" }] }], proofHash: "fixture" }, actionReviewHash: "fixture-review-hash", proposedActions: [{ id: "one", serviceId: "jobs", recordId: "real-job", kind: "apply", title: "Apply", coverNote: "Approved honest draft" }, { id: "two", serviceId: "store", recordId: "real-product", kind: "save_product", title: "Save product" }] };
+  const plan: ServiceRoutePlan = { model: "fixture", summary: "Fixture, not a real Meta call", steps: [], services: ["jobs", "store"], warnings: [], summaryAi: { provider: "meta", model: "fixture", responseId: "fixture", receivedAt: now.toISOString() }, discovery: { approvedAt: now.toISOString(), completedAt: now.toISOString(), results: [{ serviceId: "jobs", source: "fixture", status: "read", records: [{ id: "real-job", listingProvenance: "employer_backed", employerVerified: true }] }], proofHash: "fixture" }, actionReviewHash: "fixture-review-hash", proposedActions: [{ id: "one", serviceId: "jobs", recordId: "real-job", kind: "apply", title: "Apply", coverNote: "Approved honest draft", applicationPreview: { detailsHash: "fixture-application-hash", job: { recordId: "real-job", title: "Engineer", company: "Verified Employer", location: "Remote", type: "Full time", mode: "Remote", salary: "100 Pi", category: "Engineering" }, profile: { title: "Engineer", skills: ["TypeScript"], location: "Lagos", portfolio: "", summary: "Backend developer", profilePhoto: "" }, cv: { attached: false } } }, { id: "two", serviceId: "store", recordId: "real-product", kind: "save_product", title: "Save product" }] };
   const task = store.create(session.actorId, "Apply and save product", plan);
   const connections = new ServiceConnectionStore(db); connections.list(session.actorId, "sso"); connections.set(session.actorId, "jobs", true); connections.set(session.actorId, "store", true);
   return { db, store, task, connections, now: () => now, advance: (ms: number) => { now = new Date(now.getTime() + ms); } };
@@ -31,6 +31,19 @@ test("live queue requires SSO, evidence, connected services, and an immutable ex
     assert.throws(() => workflow.approve(session, f.task.id, ["one", "two"], "fixture-review-hash"), /cannot be changed/);
     assert.throws(() => f.store.delete(session.actorId, f.task.id), /Wait/);
     assert.equal((f.db.prepare("SELECT COUNT(*) n FROM live_action_runs").get() as {n:number}).n, 1);
+  } finally { f.db.close(); process.env = old; }
+});
+
+test("employer-backed but unverified jobs cannot enter the real application queue", () => {
+  const old = { ...process.env }; enable(); const f = setup();
+  try {
+    const plan = f.task.plan;
+    f.store.savePlan(session.actorId, f.task.id, {
+      ...plan,
+      discovery: { ...plan.discovery!, results: [{ serviceId: "jobs", source: "fixture", status: "read", records: [{ id: "real-job", listingProvenance: "employer_backed", employerVerified: false }] }] },
+    });
+    assert.throws(() => new LiveWorkflow(f.db, undefined, f.now).approve(session, f.task.id, ["one"], "fixture-review-hash"), /Sample or unverified job listings/);
+    assert.equal((f.db.prepare("SELECT COUNT(*) n FROM live_action_runs").get() as { n: number }).n, 0);
   } finally { f.db.close(); process.env = old; }
 });
 
@@ -101,7 +114,9 @@ test("expired lease is reclaimed; disconnection, expiry, and verification failur
       if (reason === "disconnect") f.connections.set("owner", "jobs", false);
       if (reason === "expiry") f.advance(25 * 60 * 60_000);
       await worker.tick(); const result = f.store.get("owner", f.task.id).plan.execution!;
-      assert.equal(result.status, "failed"); assert.equal(result.receipt, undefined); assert.equal(calls, reason === "verification" ? 1 : 0); f.db.close();
+      assert.equal(result.status, "failed"); assert.equal(result.receipt, undefined); assert.equal(calls, reason === "verification" ? 1 : 0);
+      if (reason === "verification") assert.equal(result.error, "Independent verification failed");
+      f.db.close();
     }
   } finally { process.env = old; }
 });

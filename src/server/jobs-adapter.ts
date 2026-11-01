@@ -98,6 +98,7 @@ export class SmajJobsReadAdapter {
       category: text(job.category, "Other"),
       summary: text(job.summary, "No description provided."),
       skills: Array.isArray(job.skills) ? job.skills.slice(0, 30).map(skill => text(skill)).filter(Boolean) : [],
+      employerVerified: job.employerVerified === true,
       listingProvenance: typeof job.employerId === "string" && job.employerId.trim() && job.isDemo !== true ? "employer_backed" as const : "sample_unverified" as const,
       }));
   }

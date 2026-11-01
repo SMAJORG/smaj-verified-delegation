@@ -45,9 +45,10 @@ export class LiveWorkflow {
       const actions = selected as LiveAction[];
       const employerBackedJobs = new Set((task.plan.discovery.results.find(result => result.serviceId === "jobs")?.records || [])
         .filter((record): record is Record<string, unknown> => Boolean(record) && typeof record === "object")
-        .filter(record => record.listingProvenance === "employer_backed")
+        .filter(record => record.listingProvenance === "employer_backed" && record.employerVerified === true)
         .map(record => String(record.id || "")));
       if (actions.some(action => action.serviceId === "jobs" && action.kind === "apply" && !employerBackedJobs.has(action.recordId))) throw new AppError("sample_listing_not_actionable", "Sample or unverified job listings cannot be submitted as applications", 409);
+      if (actions.some(action => action.serviceId === "jobs" && action.kind === "apply" && (!action.applicationPreview || action.applicationPreview.job.recordId !== action.recordId || !action.applicationPreview.detailsHash))) throw new AppError("application_review_required", "Prepare and review the exact Hub profile, CV sharing, and job details before approving an application", 409);
       const connected = new ServiceConnectionStore(this.db).list(session.actorId, "sso");
       if (actions.some(a => !connected.some(c => c.serviceId === a.serviceId && c.connected))) throw new AppError("service_disconnected", "Connect each selected service before approving", 409);
       const approvedAt = this.now().toISOString(); const expiresAt = new Date(this.now().getTime() + 24 * 60 * 60_000).toISOString();

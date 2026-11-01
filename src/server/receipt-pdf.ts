@@ -21,23 +21,48 @@ export function verifiedReceiptPdf(taskId: string, task: string, execution: Live
     "Verified actions:",
     ...execution.actions.map((action, index) => {
       const record = evidence[index] || {};
+      if (action.serviceId === "jobs" && action.kind === "apply") {
+        const job = action.applicationPreview?.job;
+        return [
+          `${index + 1}. VERIFIED JOB APPLICATION`,
+          `Application ID: ${String(record.backendId || "Unavailable")}`,
+          `Job: ${String(job?.title || record.jobTitle || action.title)}`,
+          `Company: ${String(job?.company || record.company || "Unavailable")}`,
+          `Job ID: ${action.recordId}`,
+          `Location: ${String(job?.location || "Unavailable")}`,
+          `Submitted at: ${String(record.createdAt || "Unavailable")}`,
+          `Backend application status: ${String(record.status || "Unavailable")}`,
+          `Verification evidence: Hub application record ${String(record.backendId || "Unavailable")} matched the approved owner, task, job, and application details.`,
+          `Idempotency key: ${String(record.idempotencyKey || "Unavailable")}`,
+          `Approved details hash: ${String(record.applicationDetailsHash || "Unavailable")}`,
+          `CV attached: ${record.cvAttached === true ? "Yes" : "No"}`,
+        ].join("\n");
+      }
       return `${index + 1}. ${action.kind} ${action.recordId} - backend record ${String(record.backendId || "")}, status ${String(record.status || "")}`;
     }),
     "",
     "This receipt records only actions independently verified against Hub records.",
-  ].flatMap(line => {
+  ].flatMap(block => block.split("\n").flatMap(line => {
     const clean = pdfText(line);
     const chunks: string[] = [];
     for (let i = 0; i < clean.length; i += 88) chunks.push(clean.slice(i, i + 88));
     return chunks.length ? chunks : [""];
-  }).slice(0, 42);
-  const stream = `BT\n/F1 10 Tf\n50 790 Td\n14 TL\n${lines.map(line => `(${line}) Tj\nT*`).join("\n")}\nET`;
+  }));
+  const pageLines = Array.from({ length: Math.ceil(lines.length / 50) }, (_, index) => lines.slice(index * 50, (index + 1) * 50));
+  const fontObject = 3 + pageLines.length * 2;
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    `<< /Type /Pages /Kids [${pageLines.map((_, index) => `${3 + index * 2} 0 R`).join(" ")}] /Count ${pageLines.length} >>`,
+    ...pageLines.flatMap((page, index) => {
+      const pageObject = 3 + index * 2;
+      const contentObject = pageObject + 1;
+      const stream = `BT\n/F1 10 Tf\n50 790 Td\n14 TL\n${page.map(line => `(${line}) Tj\nT*`).join("\n")}\nET`;
+      return [
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Resources << /Font << /F1 ${fontObject} 0 R >> >> /Contents ${contentObject} 0 R >>`,
+        `<< /Length ${Buffer.byteLength(stream, "ascii")} >>\nstream\n${stream}\nendstream`,
+      ];
+    }),
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    `<< /Length ${Buffer.byteLength(stream, "ascii")} >>\nstream\n${stream}\nendstream`,
   ];
   let pdf = "%PDF-1.4\n%SMJ\n";
   const offsets = [0];
