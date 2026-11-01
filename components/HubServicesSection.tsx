@@ -18,7 +18,7 @@ export default function HubServicesSection() {
         <div className="hubServicesCopy">
           <h2 id="hub-services-heading">Works Across <span>SMAJ PI HUB</span></h2>
           <p className="hubServicesSubtitle">One AI. Multiple Services.</p>
-          <p className="hubServicesAvailability" id="hub-services-availability">Jobs, Store and Stream support authorized catalog discovery. Reviewed Jobs applications and Store saved products require live execution configuration. Education, Health and Transport integrations are unavailable.</p>
+          <p className="hubServicesAvailability" id="hub-services-availability">Store and Jobs support authorized read-only access. Stream, Education, Health, and Transport are planning only; integrations are not yet available.</p>
         </div>
         <div className="hubServicesIllustration" aria-describedby="hub-services-availability">
           <div className="hubServicesDiagram">

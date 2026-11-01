@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { createDatabase } from "@/src/server/database";
 import { AppError } from "@/src/server/http";
-import { DelegationWorkflow } from "@/tests/support/legacy-workflow";
+import { DelegationWorkflow } from "@/src/server/workflow";
 import { jobs, plan } from "./fixtures";
 
 const owner = "actor-primary";

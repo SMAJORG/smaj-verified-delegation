@@ -1,5 +1,3 @@
-> Current production behavior: [LIVE_ONLY.md](LIVE_ONLY.md). Demonstration login, simulated execution and fake histories have been removed. Earlier demo instructions and mock-workflow descriptions below are historical and no longer apply. Existing stored records are preserved.
-
 # SMAJ AI integration repair — 2026-11-01
 
 The hackathon mission and strategy document are unchanged. The original mock Jobs executor, isolated demo sessions, recovery demonstration, verifier, and PDF/JSON exports remain available. Live operations use a separate persisted action queue, never the mock-submission table.

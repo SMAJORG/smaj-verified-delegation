@@ -5,7 +5,7 @@ import { POST as create } from "@/app/api/tasks/route";
 import { POST as discover } from "@/app/api/tasks/[id]/discover/route";
 import { POST as approve } from "@/app/api/tasks/[id]/approve/route";
 import { createUserSession, SESSION_COOKIE } from "@/src/server/auth";
-import { workspaceDatabase } from "@/src/server/workspace";
+import { workspaceDatabase } from "@/src/server/demo-workspace";
 import { ServiceConnectionStore } from "@/src/server/service-connections";
 import { LiveWorkflow } from "@/src/server/live-workflow";
 import { AiTaskStore } from "@/src/server/ai-tasks";

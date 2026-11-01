@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     service: "smaj-ai",
     publicUrl: process.env.SMAJ_AI_PUBLIC_URL || request.nextUrl.origin,
     ssoEnabled: ssoConfigured(),
-    readOnlyServices: ["jobs", "store", "stream"],
+    readOnlyServices: ["jobs", "store"],
     plannerConfigured: Boolean((process.env.META_API_KEY || process.env.MODEL_API_KEY)?.trim() && process.env.META_MODEL?.trim()),
     productionWrites: productionWritesEnabled(),
     realPiPayments: realPiPaymentsEnabled(),

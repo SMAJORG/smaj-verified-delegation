@@ -1,5 +1,3 @@
-> Current production behavior: [LIVE_ONLY.md](LIVE_ONLY.md). Demonstration login, simulated execution and fake histories have been removed. Earlier demo instructions and mock-workflow descriptions below are historical and no longer apply. Existing stored records are preserved.
-
 # Reproducible Hackathon Demo
 
 ## Judge walkthrough (no credentials required)

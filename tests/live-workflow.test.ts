@@ -11,7 +11,7 @@ import type { ServiceRoutePlan } from "@/src/domain/services";
 const session = { actorId: "owner", uid: "pi-owner", authType: "sso" as const };
 function setup() {
   const db = createDatabase(":memory:"); const store = new AiTaskStore(db); let now = new Date();
-  const plan: ServiceRoutePlan = { ai: {provider:"meta",model:"fixture",responseId:"fixture",receivedAt:new Date().toISOString()}, model: "fixture", summary: "Fixture, not a real Meta call", steps: [], services: ["jobs", "store"], warnings: [], summaryAi: { provider: "meta", model: "fixture", responseId: "fixture", receivedAt: now.toISOString() }, discovery: { approvedAt: now.toISOString(), completedAt: now.toISOString(), results: [], proofHash: "fixture" }, actionReviewHash: "fixture-review-hash", proposedActions: [{ id: "one", serviceId: "jobs", recordId: "real-job", kind: "apply", title: "Apply", coverNote: "Approved honest draft" }, { id: "two", serviceId: "store", recordId: "real-product", kind: "save_product", title: "Save product" }] };
+  const plan: ServiceRoutePlan = { model: "fixture", summary: "Fixture, not a real Meta call", steps: [], services: ["jobs", "store"], warnings: [], summaryAi: { provider: "meta", model: "fixture", responseId: "fixture", receivedAt: now.toISOString() }, discovery: { approvedAt: now.toISOString(), completedAt: now.toISOString(), results: [], proofHash: "fixture" }, actionReviewHash: "fixture-review-hash", proposedActions: [{ id: "one", serviceId: "jobs", recordId: "real-job", kind: "apply", title: "Apply", coverNote: "Approved honest draft" }, { id: "two", serviceId: "store", recordId: "real-product", kind: "save_product", title: "Save product" }] };
   const task = store.create(session.actorId, "Apply and save product", plan);
   const connections = new ServiceConnectionStore(db); connections.list(session.actorId, "sso"); connections.set(session.actorId, "jobs", true); connections.set(session.actorId, "store", true);
   return { db, store, task, connections, now: () => now, advance: (ms: number) => { now = new Date(now.getTime() + ms); } };
@@ -21,7 +21,7 @@ function enable() { process.env.SMAJ_PRODUCTION_WRITES_ENABLED = "true"; process
 test("live queue requires SSO, evidence, connected services, and an immutable explicit approval", () => {
   const old = { ...process.env }; enable(); const f = setup(); const workflow = new LiveWorkflow(f.db, undefined, f.now);
   try {
-    assert.throws(() => workflow.approve({ ...session, authType: "demo" }, f.task.id, ["one"], "fixture-review-hash"), /authenticated SMAJ PI HUB/);
+    assert.throws(() => workflow.approve({ ...session, authType: "demo" }, f.task.id, ["one"], "fixture-review-hash"), /real Hub/);
     assert.throws(() => workflow.approve({ ...session, actorId: "other" }, f.task.id, ["one"], "fixture-review-hash"), /Task not found/);
     assert.throws(() => workflow.approve(session, f.task.id, ["one"], "stale-hash"), /drafts changed/);
     assert.throws(() => workflow.approve(session, f.task.id, ["invented"], "fixture-review-hash"), /Select one/);
