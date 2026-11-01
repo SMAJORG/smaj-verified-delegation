@@ -22,7 +22,8 @@
 .root.root .submit:hover:not(:disabled) { background: #6840b6; box-shadow: 0 3px 12px #7951c725; }
 .root.root .submit:disabled { opacity: .5; cursor: not-allowed; }
 .root.root button:focus-visible { outline: 3px solid #a98ce4; outline-offset: 3px; }
-.suggestions { display: flex; gap: 8px; overflow-x: auto; padding: 17px 3px 5px; scrollbar-width: thin; }
+.suggestions { display: flex; gap: 8px; min-width: 0; max-width: 100%; box-sizing: border-box; overflow-x: auto; padding: 17px 3px 5px; scrollbar-width: none; -ms-overflow-style: none; }
+.suggestions::-webkit-scrollbar { display: none; }
 .suggestions button { flex: none; white-space: nowrap; border: 1px solid #ece6f4; border-radius: 100px; background: #fff; min-height: 44px; padding: 10px 13px; color: #625970; font-size: 13px; }
 .servicesHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 30px 0 18px; }
 .servicesHeading h2 { margin: 0 0 5px; font-size: 17px; letter-spacing: -.3px; }
