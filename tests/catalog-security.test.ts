@@ -79,12 +79,14 @@ test("discovery HTTP requires approval and task ownership, persists receipts des
   }
 });
 
-test("search preserves dollar budgets and filters unbacked Jobs seeds", async () => {
+test("search preserves dollar budgets and labels sample Jobs separately from employer-backed listings", async () => {
   const { catalogSearchUrl } = await import("@/src/server/catalog-http");
   const url = new URL(catalogSearchUrl("https://smajpihub.onrender.com/marketplace/products", { search: "car", maxPrice: 30000, currency: "USD" }, "store"));
   assert.equal(url.searchParams.get("currency"), "USD"); assert.equal(url.searchParams.get("maxPrice"), "30000");
   const store = new SmajStoreReadAdapter(undefined, async () => Response.json({ products: [{ id: "cheap", title: "Car A", pricePi: 2, priceUsdt: 25000 }, { id: "expensive", title: "Car B", pricePi: 1, priceUsdt: 50000 }] }));
   assert.deepEqual((await store.listProducts({maxPrice:30000,currency:"USD"})).map(p=>p.id), ["cheap"]);
   const jobs = new SmajJobsReadAdapter(undefined, async () => Response.json({ jobs: [{ id: "seed", title: "Fictional seed" }, { id: "demo", title: "Demo employer", employerId: "employer", isDemo: true }, { id: "published", slug: "published-slug", title: "Published employer job", employerId: "employer" }] }));
-  assert.deepEqual((await jobs.listJobs()).map(j=>j.id), ["published-slug"]);
+  const rows = await jobs.listJobs();
+  assert.deepEqual(rows.map(j=>j.id), ["seed", "published-slug"]);
+  assert.deepEqual(rows.map(j=>j.listingProvenance), ["sample_unverified", "employer_backed"]);
 });

@@ -43,6 +43,11 @@ export class LiveWorkflow {
       const selected = [...new Set(actionIds)].map(actionId => proposals.find(a => a.id === actionId));
       if (!selected.length || selected.length > 3 || selected.some(a => !a)) throw new AppError("invalid_actions", "Select one to three proposed actions", 400);
       const actions = selected as LiveAction[];
+      const employerBackedJobs = new Set((task.plan.discovery.results.find(result => result.serviceId === "jobs")?.records || [])
+        .filter((record): record is Record<string, unknown> => Boolean(record) && typeof record === "object")
+        .filter(record => record.listingProvenance === "employer_backed")
+        .map(record => String(record.id || "")));
+      if (actions.some(action => action.serviceId === "jobs" && action.kind === "apply" && !employerBackedJobs.has(action.recordId))) throw new AppError("sample_listing_not_actionable", "Sample or unverified job listings cannot be submitted as applications", 409);
       const connected = new ServiceConnectionStore(this.db).list(session.actorId, "sso");
       if (actions.some(a => !connected.some(c => c.serviceId === a.serviceId && c.connected))) throw new AppError("service_disconnected", "Connect each selected service before approving", 409);
       const approvedAt = this.now().toISOString(); const expiresAt = new Date(this.now().getTime() + 24 * 60 * 60_000).toISOString();

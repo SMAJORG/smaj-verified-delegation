@@ -5,15 +5,15 @@ import { SmajStoreReadAdapter } from "@/src/server/store-adapter";
 import { MetaJobsPlanner } from "@/src/server/meta-planner";
 import { jobs } from "./fixtures";
 
-test("Jobs adapter performs a GET and normalizes read-only data", async () => {
+test("Jobs adapter reads Hub's public listings endpoint and marks unbacked entries as samples", async () => {
   let method = "";
   const fetcher = async (_input: string | URL | Request, init?: RequestInit) => {
     method = init?.method || "";
     const url = new URL(String(_input));
-    assert.equal(url.searchParams.get("catalog_read"), "true");
+    assert.equal(url.searchParams.has("catalog_read"), false);
     assert.equal(url.searchParams.get("pageSize"), "50");
     assert.equal(url.searchParams.has("search"), false);
-    return new Response(JSON.stringify({ jobs: [{ employerId: "employer-42", id: "42", title: "Designer", skills: ["Figma"] }] }), { status: 200 });
+    return new Response(JSON.stringify({ jobs: [{ employerId: "employer-42", id: "42", title: "Designer", skills: ["Figma"] }, { id: "react-engineer", title: "React Frontend Engineer", company: "Orbit Commerce", skills: ["React", "TypeScript"] }] }), { status: 200 });
   };
   const adapter = new SmajJobsReadAdapter("https://smajpihub.onrender.com/jobs/jobs", fetcher as typeof fetch);
   const result = await adapter.listJobs();
@@ -22,27 +22,31 @@ test("Jobs adapter performs a GET and normalizes read-only data", async () => {
   assert.equal(result[0].id, "42");
   assert.equal(result[0].title, "Designer");
   assert.deepEqual(result[0].skills, ["Figma"]);
+  assert.equal(result[0].listingProvenance, "employer_backed");
+  assert.equal(result[1].listingProvenance, "sample_unverified");
 });
 
 test("Jobs search token-matches real listing fields and reads later catalog pages", async () => {
   const requests: URL[] = [];
   const reactJob = { employerId: "employer-1", slug: "react-engineer", title: "React Frontend Engineer", company: "Orbit Labs", location: "Lagos", mode: "Hybrid", category: "Engineering", summary: "Build customer applications", skills: ["React", "TypeScript"] };
+  const reactSample = { slug: "react-sample", title: "React Frontend Engineer", company: "Orbit Commerce", location: "Lagos, Nigeria", mode: "Hybrid", category: "Engineering", summary: "Build commerce tools", skills: ["React", "TypeScript"] };
   const remoteDeveloper = { employerId: "employer-2", slug: "remote-developer", title: "Software Developer", company: "Nova Systems", location: "Remote", mode: "Remote", category: "Engineering", summary: "Develop API services", skills: ["Python", "Node.js"] };
   const fetcher = async (input: string | URL | Request) => {
     const url = new URL(String(input)); requests.push(url);
     assert.equal(url.searchParams.has("search"), false, "full phrase must not be sent to literal Hub regex search");
-    assert.equal(url.searchParams.get("catalog_read"), "true");
+    assert.equal(url.searchParams.has("catalog_read"), false);
     return url.searchParams.get("page") === "2"
       ? Response.json({ jobs: [remoteDeveloper], pagination: { page: 2, pageSize: 50, total: 51, pages: 2 } })
-      : Response.json({ jobs: [reactJob, { slug: "unbacked", title: "React seed without an employer" }, { ...reactJob, slug: "demo", employerId: "employer-demo", isDemo: true }], pagination: { page: 1, pageSize: 50, total: 51, pages: 2 } });
+      : Response.json({ jobs: [reactJob, reactSample, { ...reactJob, slug: "demo", title: "Demo designer", employerId: "employer-demo", isDemo: true }], pagination: { page: 1, pageSize: 50, total: 51, pages: 2 } });
   };
   const adapter = new SmajJobsReadAdapter("https://smajpihub.onrender.com/jobs/jobs", fetcher as typeof fetch);
   const react = await adapter.listJobs({ search: "React Frontend Engineer job" });
-  assert.deepEqual(react.map(job => job.id), ["react-engineer"]);
+  assert.deepEqual(react.map(job => job.id), ["react-engineer", "react-sample"]);
+  assert.deepEqual(react.map(job => job.listingProvenance), ["employer_backed", "sample_unverified"]);
   assert.equal(react[0].company, "Orbit Labs"); assert.equal(react[0].location, "Lagos");
   assert.equal(requests.length, 2); assert.deepEqual(requests.map(url => url.searchParams.get("page")), ["1", "2"]);
-  assert.deepEqual((await adapter.listJobs({ search: "Software Engineer" })).map(job => job.id), ["react-engineer", "remote-developer"]);
-  assert.deepEqual((await adapter.listJobs({ search: "Developer" })).map(job => job.id), ["react-engineer", "remote-developer"]);
+  assert.deepEqual((await adapter.listJobs({ search: "Software Engineer" })).map(job => job.id), ["react-engineer", "react-sample", "remote-developer"]);
+  assert.deepEqual((await adapter.listJobs({ search: "Developer" })).map(job => job.id), ["react-engineer", "react-sample", "remote-developer"]);
   assert.deepEqual((await adapter.listJobs({ search: "Remote Jobs" })).map(job => job.id), ["remote-developer"]);
 });
 

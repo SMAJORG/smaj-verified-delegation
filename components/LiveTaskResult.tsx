@@ -15,11 +15,9 @@ export default function LiveTaskResult({ task, busy, sandbox, discover, approve,
       {plan.summaryError && <p role="alert">AI analysis is unavailable. You can still review the listings below.</p>}
       {plan.discovery.results.map(result => {
         const records = plan.summaryAi && result.serviceId !== "jobs" ? result.records.filter(value => plan.matches?.some(match => match.serviceId === result.serviceId && match.id === String((value as {id?:unknown}).id))) : result.records;
-        return <section key={result.serviceId}>
-        <h3>{result.serviceId} · {result.status === "read" ? "Results" : "Unavailable"}</h3>
-        {result.error && <p role="alert">{result.error}</p>}
-        {result.status === "read" && !records.length && <p>No matching listings were found. Try another search or a higher budget.</p>}
-        <div className="taskResultCards">{records.map((value, index) => {
+        const employerBacked = result.serviceId === "jobs" ? records.filter(value => (value as { listingProvenance?: string }).listingProvenance === "employer_backed") : [];
+        const sampleJobs = result.serviceId === "jobs" ? records.filter(value => (value as { listingProvenance?: string }).listingProvenance !== "employer_backed") : [];
+        const renderCards = (items: unknown[], sample = false) => <div className="taskResultCards">{items.map((value, index) => {
           const record = value as Record<string, unknown>;
           const id = typeof record.id === "string" ? record.id : "";
           const url = result.serviceId === "store" && id ? `https://smajpihub.com/product/${encodeURIComponent(id)}` : result.serviceId === "jobs" && id ? `https://smajpihub.com/services/jobs/job/${encodeURIComponent(id)}` : typeof record.url === "string" && /^https:\/\/smajpihub\.com\/app\/services\/stream\/watch\/[a-zA-Z0-9_-]+$/.test(record.url) ? record.url : undefined;
@@ -30,10 +28,19 @@ export default function LiveTaskResult({ task, busy, sandbox, discover, approve,
             {record.price != null && <p className="taskPrice">{String(record.price)}</p>}
             {record.salary != null && <p className="taskPrice">{String(record.salary)}</p>}
             <p className="taskResultMeta">{String(record.company || record.creatorName || record.sellerName || "SMAJ PI HUB")}</p>
+            {sample && <p className="taskResultMeta"><strong>Sample Listing — Not Verified</strong><br />Applications are disabled for sample listings.</p>}
             {url && <a className="taskViewLink" href={url} target="_blank" rel="noreferrer">View {result.serviceId === "store" ? "product" : result.serviceId === "jobs" ? "job" : "content"} ↗</a>}
             </div>
           </article>;
-        })}</div>
+        })}</div>;
+        return <section key={result.serviceId}>
+        <h3>{result.serviceId} · {result.status === "read" ? "Results" : "Unavailable"}</h3>
+        {result.error && <p role="alert">{result.error}</p>}
+        {result.status === "read" && !records.length && <p>No matching listings were found. Try another search or a higher budget.</p>}
+        {result.serviceId === "jobs" ? <>
+          {!!employerBacked.length && <><h4>Employer-backed Listings</h4>{renderCards(employerBacked)}</>}
+          {!!sampleJobs.length && <><h4>Sample Listings — Not Verified</h4><p>These listings are examples from the Hub catalog and cannot be used for applications.</p>{renderCards(sampleJobs, true)}</>}
+        </> : renderCards(records)}
       </section>;})}
     </>}
     {!plan.execution && !!plan.proposedActions?.length && <div className="approvalBar"><div><h3>Ready to continue?</h3><p>Review the selected applications or saved products before approving. No purchase or payment will be made.</p>{plan.proposedActions.map(action => <label className="liveAction" key={action.id}><input type="checkbox" checked={selected.includes(action.id)} onChange={e => setSelected(ids => e.target.checked ? [...ids, action.id] : ids.filter(id => id !== action.id))}/><span><strong>{action.title}</strong><small>{action.recordId}</small>{action.coverNote && <p>{action.coverNote}</p>}</span></label>)}</div><button className="primaryButton" disabled={busy || sandbox || !selected.length} onClick={() => approve(selected)}>Approve {selected.length} live actions</button></div>}

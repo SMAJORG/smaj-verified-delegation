@@ -63,7 +63,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       plan.summary = answer.summary.slice(0, 6000);
       plan.summaryAi = provenance;
       plan.matches = (Array.isArray(answer.matches) ? answer.matches : []).filter((m: any) => records.has(m.serviceId + ":" + m.id)).slice(0, 20).map((m: any) => ({ serviceId: m.serviceId, id: m.id, reason: String(m.reason || "").slice(0, 600) }));
-      plan.proposedActions = (Array.isArray(answer.actions) ? answer.actions : []).filter((a: any) => records.has(a.serviceId + ":" + a.recordId) && ((a.serviceId === "jobs" && a.kind === "apply" && typeof a.coverNote === "string" && a.coverNote.trim()) || (a.serviceId === "store" && a.kind === "save_product"))).slice(0, 3).map((a: any, index: number) => ({ id: `action-${index + 1}`, serviceId: a.serviceId, recordId: a.recordId, kind: a.kind, title: String(a.title || a.kind).slice(0, 180), ...(a.kind === "apply" ? { coverNote: a.coverNote.slice(0, 2000) } : {}) }));
+      plan.proposedActions = (Array.isArray(answer.actions) ? answer.actions : []).filter((a: any) => {
+        const record = records.get(a.serviceId + ":" + a.recordId) as Record<string, unknown> | undefined;
+        if (!record) return false;
+        if (a.serviceId === "jobs" && (a.kind !== "apply" || record.listingProvenance !== "employer_backed" || typeof a.coverNote !== "string" || !a.coverNote.trim())) return false;
+        return (a.serviceId === "jobs" && a.kind === "apply") || (a.serviceId === "store" && a.kind === "save_product");
+      }).slice(0, 3).map((a: any, index: number) => ({ id: `action-${index + 1}`, serviceId: a.serviceId, recordId: a.recordId, kind: a.kind, title: String(a.title || a.kind).slice(0, 180), ...(a.kind === "apply" ? { coverNote: a.coverNote.slice(0, 2000) } : {}) }));
     } catch (error) {
       const failure = error instanceof AppError ? error : new AppError("meta_analysis_failed", "Meta catalog analysis failed", 502);
       plan.summaryError = { code: failure.code, message: failure.message };

@@ -3,7 +3,7 @@ import { catalogJson, catalogRows } from "@/src/server/catalog-http";
 import { AppError } from "@/src/server/http";
 import type { JobsApiJob } from "@/src/domain/types";
 
-export const DEFAULT_JOBS_URL = "https://smajpihub.onrender.com/jobs/jobs";
+export const DEFAULT_JOBS_URL = "https://smajpihub.com/services/jobs/search";
 
 const text = (value: unknown, fallback = "") => (typeof value === "string" ? value.slice(0, 600) : fallback);
 const PAGE_SIZE = 50;
@@ -48,7 +48,7 @@ export class SmajJobsReadAdapter {
     sourceUrl = process.env.SMAJ_JOBS_API_URL || DEFAULT_JOBS_URL,
     private readonly fetcher: typeof fetch = fetch,
   ) {
-    const url = new URL(sourceUrl); url.searchParams.set("catalog_read", "true"); url.searchParams.set("pageSize", String(PAGE_SIZE));
+    const url = new URL(sourceUrl); url.searchParams.delete("catalog_read"); url.searchParams.set("pageSize", String(PAGE_SIZE));
     this.sourceUrl = url.toString();
   }
 
@@ -58,7 +58,6 @@ export class SmajJobsReadAdapter {
     // fields locally so trailing words like "job" do not hide a title match.
     const pageUrl = new URL(this.sourceUrl);
     pageUrl.search = "";
-    pageUrl.searchParams.set("catalog_read", "true");
     pageUrl.searchParams.set("pageSize", String(PAGE_SIZE));
     const allRows: Record<string, unknown>[] = [];
     let pages = 1;
@@ -83,7 +82,7 @@ export class SmajJobsReadAdapter {
       if (id && !uniqueRows.has(id)) uniqueRows.set(id, job);
     }
 
-    return [...uniqueRows.values()].filter(job => typeof job.employerId === "string" && job.employerId.trim() && job.isDemo !== true)
+    return [...uniqueRows.values()].filter(job => job.isDemo !== true)
       .map(job => ({ job, score: relevance(job, query) }))
       .filter(item => item.score > 0)
       .sort((a, b) => b.score - a.score)
@@ -99,6 +98,7 @@ export class SmajJobsReadAdapter {
       category: text(job.category, "Other"),
       summary: text(job.summary, "No description provided."),
       skills: Array.isArray(job.skills) ? job.skills.slice(0, 30).map(skill => text(skill)).filter(Boolean) : [],
+      listingProvenance: typeof job.employerId === "string" && job.employerId.trim() && job.isDemo !== true ? "employer_backed" as const : "sample_unverified" as const,
       }));
   }
 }

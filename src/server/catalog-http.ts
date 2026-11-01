@@ -3,9 +3,9 @@ import { AppError } from "@/src/server/http";
 // Only the operator can choose the backend; never follow model/user supplied URLs.
 export async function catalogJson(source: string, fetcher: typeof fetch = fetch): Promise<Record<string, unknown>> {
   const url = new URL(source);
-  const origin = new URL(process.env.SMAJ_HUB_API_ORIGIN || "https://smajpihub.onrender.com").origin;
-  if (url.origin !== origin || url.protocol !== "https:" || url.username || url.password || url.hash) throw new AppError("invalid_catalog_url", "Catalog URL must use the configured HTTPS HUB origin", 503);
-  if (!["/jobs/jobs", "/marketplace/products", "/stream/creator-content"].includes(url.pathname)) throw new AppError("invalid_catalog_url", "Catalog path is not allowlisted", 503);
+  const allowedOrigins = new Set([process.env.SMAJ_HUB_API_ORIGIN ? new URL(process.env.SMAJ_HUB_API_ORIGIN).origin : null, "https://smajpihub.com", "https://smajpihub.onrender.com"].filter(Boolean));
+  if (!allowedOrigins.has(url.origin) || url.protocol !== "https:" || url.username || url.password || url.hash) throw new AppError("invalid_catalog_url", "Catalog URL must use the configured HTTPS HUB origin", 503);
+  if (!["/services/jobs/search", "/jobs/jobs", "/marketplace/products", "/stream/creator-content"].includes(url.pathname)) throw new AppError("invalid_catalog_url", "Catalog path is not allowlisted", 503);
   const response = await fetcher(url.toString(), { method: "GET", headers: { Accept: "application/json" }, redirect: "error", cache: "no-store", signal: AbortSignal.timeout(20_000) });
   if (!response.ok) throw new AppError("catalog_unavailable", `HUB catalog returned HTTP ${response.status}`, 502);
   const reader = response.body?.getReader();
