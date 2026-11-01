@@ -402,15 +402,6 @@
   background: #eee;
   color: #333
 }
-.referenceLanding .cta .demoDisclaimer {
-  font-size: 13px;
-  opacity: .9;
-  margin-top: 20px
-}
-.referenceLanding .cta .demoStatus,.referenceLanding .cta .demoError {
-  font-size: 15px;
-  margin-top: 18px
-}
 .referenceLanding .textButton {
   border: 0;
   background: none;

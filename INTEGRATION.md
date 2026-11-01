@@ -1,3 +1,5 @@
+> Current production behavior: [LIVE_ONLY.md](LIVE_ONLY.md). Demonstration login, simulated execution and fake histories have been removed. Earlier demo instructions and mock-workflow descriptions below are historical and no longer apply. Existing stored records are preserved.
+
 > Current repair and live/demo status: [LIVE_INTEGRATION_REPAIR.md](LIVE_INTEGRATION_REPAIR.md). The original mock executor remains; a separately approved Jobs submission and Store saved-product queue is now implemented behind server-side switches.
 
 # SMAJ AI / SMAJ PI HUB integration proposal

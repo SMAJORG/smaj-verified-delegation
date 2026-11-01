@@ -46,7 +46,7 @@ test("discovery HTTP requires approval and task ownership, persists receipts des
   const { POST } = await import("@/app/api/tasks/[id]/discover/route");
   const { NextRequest } = await import("next/server");
   const { createUserSession, SESSION_COOKIE } = await import("@/src/server/auth");
-  const { workspaceDatabase } = await import("@/src/server/demo-workspace");
+  const { workspaceDatabase } = await import("@/src/server/workspace");
   const { AiTaskStore } = await import("@/src/server/ai-tasks");
   const { ServiceConnectionStore } = await import("@/src/server/service-connections");
   const previous = { ...process.env }, original = globalThis.fetch;
@@ -57,7 +57,7 @@ test("discovery HTTP requires approval and task ownership, persists receipts des
   const request = (value: string, approved: boolean) => new NextRequest("https://test.example/api/tasks/t/discover", { method: "POST", headers: { cookie: `${SESSION_COOKIE}=${value}`, origin: "https://test.example", "Content-Type": "application/json" }, body: JSON.stringify({ approved }) });
   try {
     const db = workspaceDatabase(request(alice.value, true)), tasks = new AiTaskStore(db);
-    const task = tasks.create("catalog-alice", "Find available products", { summary: "Plan", model: "fixture", services: ["store"], steps: [], warnings: [] });
+    const task = tasks.create("catalog-alice", "Find available products", { ai: {provider:"meta",model:"fixture",responseId:"fixture",receivedAt:new Date().toISOString()}, summary: "Plan", model: "fixture", services: ["store"], steps: [], warnings: [] });
     new ServiceConnectionStore(db).set("catalog-alice", "store", true);
     const context = { params: Promise.resolve({ id: task.id }) };
     assert.equal((await POST(request(bob.value, true), context)).status, 404);

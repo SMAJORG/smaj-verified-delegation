@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireActorSession } from "@/src/server/auth";
-import { workspaceDatabase } from "@/src/server/demo-workspace";
+import { workspaceDatabase } from "@/src/server/workspace";
 import { LiveWorkflow } from "@/src/server/live-workflow";
 import { apiError, AppError, requireSameOrigin } from "@/src/server/http";
 export const runtime = "nodejs";

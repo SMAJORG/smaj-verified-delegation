@@ -1,17 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireActor } from "@/src/server/auth";
-import { apiError, requireIdempotencyKey } from "@/src/server/http";
-import { workspaceWorkflow } from "@/src/server/demo-workspace";
-
+import { NextResponse } from "next/server";
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  try {
-    const actorId = requireActor(request);
-    const requestKey = requireIdempotencyKey(request);
-    const { id } = await context.params;
-    const body = await request.json().catch(() => ({})) as { selectedJobIds?: string[] };
-    return NextResponse.json({ delegation: workspaceWorkflow(request).approve(actorId, id, body.selectedJobIds, requestKey) });
-  } catch (error) { return apiError(error); }
-}
+const retired = () => NextResponse.json({ error: "endpoint_retired", message: "This endpoint has been retired. Sign in through SMAJ PI HUB and use /api/tasks for live requests." }, { status: 410, headers: { "Cache-Control": "no-store" } });
+export const POST = retired;

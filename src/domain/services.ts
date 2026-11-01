@@ -17,7 +17,7 @@ export type SmajService = {
 export const SMAJ_SERVICES: readonly SmajService[] = [
   { id: "store", name: "SMAJ Store", shortName: "Store", description: "Products and verified stores", platformStatus: "live", adapterMode: "connected", capabilities: ["product discovery", "price comparison"], example: "Compare products that fit my budget", accent: "#7c3aed" },
   { id: "stream", name: "SMAJ Stream", shortName: "Stream", description: "Published public creator content", platformStatus: "live", adapterMode: "connected", capabilities: ["content discovery", "watch planning"], example: "Build a weekend watchlist", accent: "#db2777" },
-  { id: "jobs", name: "SMAJ Jobs", shortName: "Jobs", description: "Jobs and freelance opportunities", platformStatus: "live", adapterMode: "connected", capabilities: ["read opportunities", "match roles", "application drafts", "mock applications"], example: "Find matching jobs and prepare applications", accent: "#6d28d9" },
+  { id: "jobs", name: "SMAJ Jobs", shortName: "Jobs", description: "Jobs and freelance opportunities", platformStatus: "live", adapterMode: "connected", capabilities: ["read opportunities", "match roles", "application drafts"], example: "Find matching jobs and prepare applications", accent: "#6d28d9" },
   { id: "education", name: "SMAJ Education", shortName: "Education", description: "Courses and practical skills", platformStatus: "coming_soon", adapterMode: "planning_only", capabilities: ["learning plans", "course discovery"], example: "Create a learning path for product design", accent: "#2563eb" },
   { id: "sports", name: "SMAJ Sports", shortName: "Sports", description: "Sports, fixtures, and scores", platformStatus: "in_progress", adapterMode: "planning_only", capabilities: ["fixture planning", "sports summaries"], example: "Plan which matches to follow this week", accent: "#ea580c" },
   { id: "food", name: "SMAJ Food", shortName: "Food", description: "Restaurants and food delivery", platformStatus: "in_progress", adapterMode: "planning_only", capabilities: ["meal planning", "restaurant discovery"], example: "Plan affordable meals near me", accent: "#dc2626" },
@@ -37,7 +37,7 @@ export const SERVICE_IDS = new Set<ServiceId>(SMAJ_SERVICES.map(service => servi
 export type CatalogQuery = { search?: string; category?: string; maxPrice?: number; currency?: "USD" | "PI" };
 export type ModelEvidence = { provider: "meta"; model: string; responseId: string | null; receivedAt: string };
 export type LiveAction = { id: string; serviceId: "jobs" | "store"; recordId: string; kind: "apply" | "save_product"; title: string; coverNote?: string };
-export type LiveExecution = { status: "queued" | "running" | "retrying" | "verified" | "failed"; approvedAt: string; expiresAt: string; actions: LiveAction[]; attempts: number; error?: string; evidence?: unknown[]; events?: Array<{ at: string; type: string; message: string }>; receipt?: { mode: "live"; verifiedAt: string; evidence: unknown[]; proofHash: string; proof: unknown } };
+export type LiveExecution = { status: "queued" | "running" | "verifying" | "retrying" | "verified" | "failed"; approvedAt: string; expiresAt: string; actions: LiveAction[]; attempts: number; error?: string; evidence?: unknown[]; events?: Array<{ at: string; type: string; message: string }>; receipt?: { mode: "live"; verifiedAt: string; evidence: unknown[]; proofHash: string; proof: unknown } };
 
 export type ServicePlanStep = {
   query?: CatalogQuery;
@@ -52,6 +52,7 @@ export type ServicePlanStep = {
 };
 
 export type ServiceRoutePlan = {
+  activity?: Array<{ at: string; phase: string; message: string }>;
   ai?: ModelEvidence;
   summaryAi?: ModelEvidence;
   summaryError?: { code: string; message: string };

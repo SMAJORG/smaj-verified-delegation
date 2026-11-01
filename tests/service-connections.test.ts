@@ -4,12 +4,12 @@ import { createDatabase } from "@/src/server/database";
 import { AppError } from "@/src/server/http";
 import { ServiceConnectionStore } from "@/src/server/service-connections";
 
-test("initializes Jobs as the only connected authorized service", () => {
+test("initializes services disconnected until explicit user consent", () => {
   const database = createDatabase(":memory:");
   try {
     const connections = new ServiceConnectionStore(database).list("actor-one");
     assert.equal(connections.length, 15);
-    assert.deepEqual(connections.filter(item => item.connected).map(item => item.serviceId), ["jobs"]);
+    assert.deepEqual(connections.filter(item => item.connected).map(item => item.serviceId), []);
   } finally { database.close(); }
 });
 
@@ -17,6 +17,7 @@ test("persists disconnects independently for each actor", () => {
   const database = createDatabase(":memory:");
   try {
     const store = new ServiceConnectionStore(database);
+    store.set("actor-two", "jobs", true);
     store.set("actor-one", "jobs", false);
     assert.equal(store.list("actor-one").find(item => item.serviceId === "jobs")?.connected, false);
     assert.equal(store.list("actor-two").find(item => item.serviceId === "jobs")?.connected, true);
