@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireProtectedActor } from "@/src/server/auth";
+import { requireSandboxSession } from "@/src/server/auth";
 import { apiError } from "@/src/server/http";
 import { workspaceWorkflow } from "@/src/server/demo-workspace";
 
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const actorId = requireProtectedActor(request);
+    const actorId = requireSandboxSession(request).actorId;
     const { id } = await context.params;
     const workflow = workspaceWorkflow(request);
     workflow.get(id, actorId);
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       start(controller) {
         const publish = () => {
           try {
-            requireProtectedActor(request);
+            requireSandboxSession(request);
             const delegation = workflow.get(id, actorId);
             const newest = delegation.events.at(-1)?.id || 0;
             if (newest !== lastEventId) {

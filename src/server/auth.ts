@@ -104,6 +104,11 @@ export const requireAuthenticatedSession = (request: Request) => {
   if (session.authType === "public") throw new AppError("authentication_required", "Sign in to SMAJ PI HUB before accessing account data or performing protected actions.", 401);
   return session;
 };
+export const requireSandboxSession = (request: Request) => {
+  const session = requireAuthenticatedSession(request);
+  if (session.authType !== "demo" || session.sandbox !== true) throw new AppError("sandbox_only", "The simulated delegation workflow is available only in the isolated sandbox. Use SMAJ AI Tasks for live Hub actions.", 410);
+  return session;
+};
 export const requireProtectedActor = (request: Request) => requireAuthenticatedSession(request).actorId;
 
 export const requireActor = (request: Request) => requireActorSession(request).actorId;

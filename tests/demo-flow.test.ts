@@ -97,6 +97,7 @@ test("complete restricted demo login, approval, execution, isolation, expiry and
     assert.equal((await store(request("/api/store", cookie))).status, 200);
     const regular = createUserSession({ sub: "production-user" });
     const regularRequest = request("/", `${SESSION_COOKIE}=${regular.value}`);
+    assert.equal((await create(request("/api/delegations", `${SESSION_COOKIE}=${regular.value}`, "POST", { goal: "This legacy simulation must not run for a real account", candidateName: "Real Account", skills: ["React"] }))).status, 410);
     assert.notEqual(workspaceDatabase(regularRequest), workspaceDatabase(request("/", cookie)));
     const productionWorkflow = new DelegationWorkflow({ database: workspaceDatabase(regularRequest), jobsAdapter: { sourceUrl: "test://production", listJobs: async () => fixtureJobs }, planner: { plan: async () => fixturePlan } });
     const productionTask = await productionWorkflow.create("production-user", { goal: "Private production task must stay inaccessible", candidateName: "Real Account", skills: ["React"] }, "production-create");
