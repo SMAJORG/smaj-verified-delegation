@@ -37,6 +37,7 @@ export class SmajStoreReadAdapter {
       title: text(product.title, text(product.name, "Untitled product")),
       category: text(product.category, "Other"),
       price: price(product),
+      imageUrl: typeof product.imageUrl === "string" ? product.imageUrl : Array.isArray(product.images) && typeof product.images[0] === "string" ? product.images[0] : undefined,
       pricePi: Number.isFinite(Number(product.pricePi)) ? Number(product.pricePi) : undefined,
       priceUsdt: Number.isFinite(Number(product.priceUsdt)) ? Number(product.priceUsdt) : undefined,
       quantity: Number.isFinite(Number(product.quantity)) ? Number(product.quantity) : undefined,
