@@ -22,6 +22,7 @@ import type { ServiceConnection } from "@/src/server/service-connections";
 
 type View = "home" | "tasks" | "task-detail" | "services" | "approvals" | "receipts" | "profile";
 type ApiResponse = { tasks?: AiTask[]; task?: AiTask; delegation?: DelegationView; delegations?: DelegationView[]; plan?: ServiceRoutePlan; connections?: ServiceConnection[]; message?: string; storageScope?: string };
+type PendingMessage = { id: string; text: string; conversationId: string; persistedConversation: boolean; status: "sending" | "failed"; error?: string };
 const statusLabels: Record<string, string> = { awaiting_approval: "Awaiting approval", approved: "Approved", executing: "Executing", retrying: "Recovering", verifying: "Verifying", verified: "Verified", failed: "Needs attention" };
 const time = (value: string) => new Intl.DateTimeFormat("en", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 
@@ -37,6 +38,7 @@ export default function Dashboard() {
   const [route,setRoute]=useState<DashboardRoute>({view:"home"});
   const [aiTasks,setAiTasks]=useState<AiTask[]>([]); const [selectedService,setSelectedService]=useState<ServiceId|null>(null); const [task,setTask]=useState(""); const [routePlan,setRoutePlan]=useState<ServiceRoutePlan|null>(null); const [connections,setConnections]=useState<ServiceConnection[]>([]); const [history,setHistory]=useState<DelegationView[]>([]); const [delegation,setDelegation]=useState<DelegationView|null>(null);
   const [threadTaskIds,setThreadTaskIds]=useState<string[]>([]); const [threadConversationId,setThreadConversationId]=useState<string|null>(null); const loadedConversations=useRef(new Set<string>());
+  const [pendingMessage,setPendingMessage]=useState<PendingMessage|null>(null);
   const [candidateName,setCandidateName]=useState(""); const [skills,setSkills]=useState(""); const [selectedJobs,setSelectedJobs]=useState<string[]>([]); const [injectFailure,setInjectFailure]=useState(true); const [busy,setBusy]=useState<string|null>(null); const [error,setError]=useState(""); const [storageScope,setStorageScope]=useState<string|null>(null);
   const notifyError=(failure:unknown,fallback:string)=>{console.error("[SMAJ AI] Request failed:",failure);const detail=failure instanceof Error?failure.message:typeof failure==="string"?failure:"";setError(detail&&detail!=="Failed to fetch"?detail:detail==="Failed to fetch"?`${fallback} Check your connection and try again.`:fallback);};
   useEffect(()=>{if(!error)return;const timer=setTimeout(()=>setError(""),5000);return()=>clearTimeout(timer);},[error]);
@@ -91,24 +93,36 @@ export default function Dashboard() {
   const logout=async()=>{setError("");try{const response=await fetch("/api/auth/session",{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok)throw new Error("Sign-out failed. Please try again.");streamRef.current?.close();setAuthenticated(false);setStorageScope(null);setHistory([]);setAiTasks([]);setTask("");setSelectedService(null);setConnections([]);setDelegation(null);setRoutePlan(null);setSandbox(false);setExpiresAt(null);viewHistory.current=[];updateRoute({view:"home"},true);setMenuOpen(false);}catch(failure){notifyError(failure,"Sign-out failed. Please try again.");}};
   const navigate=(next:View,selection?:Pick<DashboardRoute,"taskId"|"delegationId">)=>{if(viewRef.current!==next)viewHistory.current.push(viewRef.current);updateRoute({view:next,...selection});setMenuOpen(false);window.scrollTo({top:0,behavior:"smooth"});};
   const goBack=()=>{if(window.history.state?.smajDashboard){window.history.back();return;}const previous=viewHistory.current.pop()||"home";updateRoute({view:previous},true);setMenuOpen(false);window.scrollTo({top:0,behavior:"smooth"});};
-  const submitTask=async(message:string,conversationId?:string):Promise<boolean>=>{
+  const submitTask=async(message:string,conversationId?:string,retryPending?:PendingMessage):Promise<boolean>=>{
     if(!message.trim()){setError("Enter a message or task.");return false;}
-    const service=conversationId?undefined:SMAJ_SERVICES.find(item=>item.id===selectedService);
-    const requestTask=service?`${service.name}: ${message.trim()}`:message.trim();
+    if(busy==="routing")return false;
+    const service=conversationId||retryPending?undefined:SMAJ_SERVICES.find(item=>item.id===selectedService);
+    const requestTask=retryPending?retryPending.text:service?`${service.name}: ${message.trim()}`:message.trim();
+    const optimistic=retryPending||{id:`pending-${crypto.randomUUID()}`,text:requestTask,conversationId:conversationId||crypto.randomUUID(),persistedConversation:Boolean(conversationId),status:"sending" as const};
     let discoveryTask:AiTask|undefined;
-    setTask(message.trim());setBusy("routing");setError("");
+    setPendingMessage({...optimistic,status:"sending",error:undefined});
+    setTask(requestTask);setBusy("routing");setError("");
+    if(!conversationId){setDelegation(null);setRoutePlan(null);if(viewRef.current!=="task-detail")navigate("task-detail");}
     try{
       const response=await fetch("/api/tasks",{signal:AbortSignal.timeout(135000),method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({task:requestTask,...(conversationId?{conversationId}:{})})});
-      const payload=await response.json() as ApiResponse;
-      if(!response.ok||!payload.plan)throw new Error((payload.message||"Meta could not route this task")+(response.status===429&&response.headers.get("Retry-After")?` Try again in ${response.headers.get("Retry-After")} seconds.`:""));
-      if(payload.task){setAiTasks(items=>[payload.task!,...items.filter(item=>item.id!==payload.task!.id)]);const id=payload.task.conversationId||payload.task.id;setThreadTaskIds(current=>conversationId&&threadConversationId===conversationId?[...current,payload.task!.id]:[payload.task!.id]);setThreadConversationId(id);loadedConversations.current.add(id);}
-      setDelegation(null);setRoutePlan(payload.plan);navigate("task-detail",payload.task?{taskId:payload.task.id}:undefined);
+      const payload=await response.json().catch(()=>({})) as ApiResponse;
+      if(!response.ok||!payload.plan||!payload.task)throw new Error((payload.message||"SMAJ AI could not answer. Please try again.")+(response.status===429&&response.headers.get("Retry-After")?` Try again in ${response.headers.get("Retry-After")} seconds.`:""));
+      setAiTasks(items=>[payload.task!,...items.filter(item=>item.id!==payload.task!.id)]);
+      const id=payload.task.conversationId||payload.task.id;
+      setThreadTaskIds(current=>conversationId&&threadConversationId===conversationId?[...current,payload.task!.id]:[payload.task!.id]);
+      setThreadConversationId(id);loadedConversations.current.add(id);setPendingMessage(null);
+      setDelegation(null);setRoutePlan(payload.plan);updateRoute({view:"task-detail",taskId:payload.task.id},true);
       if(!sandbox&&payload.task&&payload.plan.steps.some(step=>["store","jobs","stream"].includes(step.serviceId)))discoveryTask=payload.task;
       return true;
-    }catch(routeError){notifyError(routeError,"Task routing stopped safely");}
+    }catch(routeError){
+      const message=routeError instanceof Error?routeError.message:"SMAJ AI could not answer. Please try again.";
+      setPendingMessage(current=>current?.id===optimistic.id?{...current,status:"failed",error:message}:current);
+      notifyError(routeError,"SMAJ AI could not answer. Please retry.");
+    }
     finally{setBusy(null);if(discoveryTask)void runDiscovery(discoveryTask);}
     return false;
   };
+  const retryPendingMessage=()=>{if(!pendingMessage)return;void submitTask(pendingMessage.text,pendingMessage.persistedConversation?pendingMessage.conversationId:undefined,pendingMessage);};
   const routeTask=async(event:React.FormEvent)=>{event.preventDefault();await submitTask(task);};
   const runDiscovery = async (saved: AiTask, resume = false) => {
     setBusy("discovery"); setError("");
@@ -278,7 +292,7 @@ export default function Dashboard() {
       {view==="home"&&<HomeWorkspace task={task} setTask={setTask} selectedService={selectedService} selectService={setSelectedService} routeTask={routeTask} busy={busy} connectedIds={connectedIds}/>}
       {view==="services"&&<Services connections={connections} setConnection={setConnection} busy={busy}/>}
       {view==="tasks"&&<TaskHistory tasks={aiTasks} delegations={sampleTasksEnabled?history:[]} busy={busy} openAiTask={saved=>{setDelegation(null);setTask(saved.task);setRoutePlan(saved.plan);navigate("task-detail",{taskId:saved.id});}} deleteAiTask={deleteAiTask} openDelegation={openTask} deleteDelegation={deleteDelegation}/>}
-      {view==="task-detail"&&<Tasks messages={conversationTasks} routePlan={routePlan} task={task} busy={busy} conversationId={activeTask?.conversationId} onFollowUp={(message:string,id:string)=>submitTask(message,id)} discover={discover} approveLive={approveLive} retryLive={retryLive} refreshActionUpdates={refreshActionUpdates} sandbox={sandbox} reportError={(message:string)=>notifyError(message,"The task reported an error.")} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
+      {view==="task-detail"&&<Tasks messages={conversationTasks} pendingMessage={pendingMessage&&(!pendingMessage.persistedConversation?!route.taskId:activeTask?.conversationId===pendingMessage.conversationId)?pendingMessage:null} retryPendingMessage={retryPendingMessage} routePlan={routePlan} task={task} busy={busy} conversationId={activeTask?.conversationId} onFollowUp={(message:string,id:string)=>submitTask(message,id)} discover={discover} approveLive={approveLive} retryLive={retryLive} refreshActionUpdates={refreshActionUpdates} sandbox={sandbox} reportError={(message:string)=>notifyError(message,"The task reported an error.")} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
       {view==="approvals"&&aiTasks.filter(t=>t.plan.proposedActions?.length&&!t.plan.execution).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Review live actions: {t.task}</button>)}
       {view==="approvals"&&<Approvals items={pending} openTask={openTask}/>}
       {view==="receipts"&&aiTasks.filter(t=>t.plan.execution?.receipt).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Live verified receipt: {t.task}</button>)}
@@ -295,27 +309,34 @@ function DrawerItem({icon,label,badge,active,onClick}:{icon:string;label:string;
 
 export function Tasks(props:any){
   const lastTurn=useRef<HTMLDivElement|null>(null);
-  const messageKey=(props.messages as AiTask[]).map(item=>item.id).join(",");
+  const messageKey=[...(props.messages as AiTask[]).map(item=>item.id),props.pendingMessage?.id||""].join(",");
   useEffect(()=>{
     const frame=requestAnimationFrame(()=>lastTurn.current?.scrollIntoView({behavior:"smooth",block:"end"}));
     return()=>cancelAnimationFrame(frame);
   },[messageKey]);
-  return <section className={`tasksView compactResults${props.conversationId?" hasChatComposer":""}`} data-results-design="approved-compact-v2">
+  return <section className={`tasksView compactResults${props.conversationId||props.pendingMessage?" hasChatComposer":""}`} data-results-design="approved-compact-v2">
     <p className="resultsEyebrow">AI TASK RESULTS</p>
-    {props.messages?.length>0&&<div className="chatThread" aria-label="Conversation messages">
-      {props.messages.map((message:AiTask,index:number)=><article className="chatTurn" key={message.id}>
+    {(props.messages?.length>0||props.pendingMessage)&&<div className="chatThread" aria-label="Conversation messages">
+      {(props.messages||[]).map((message:AiTask,index:number)=><article className="chatTurn" key={message.id}>
         <div className="chatUserMessage">{message.task}</div>
-        <section className="chatAssistantMessage"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><p className="resultsWho">SMAJ AI</p><p className="taskAnswer">{message.plan.summary}</p>
+        <section className="chatAssistantMessage"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><p className="taskAnswer">{message.plan.summary}</p>
           <LiveTaskResult key={message.id} task={message} busy={Boolean(props.busy)} sandbox={props.sandbox} discover={props.discover} approve={props.approveLive} retry={props.retryLive} refreshActionUpdates={props.refreshActionUpdates} reportError={props.reportError}/>
         </div></section>
         {index===props.messages.length-1&&<div ref={lastTurn} aria-hidden="true"/>}
       </article>)}
+      {props.pendingMessage&&<article className="chatTurn" key={props.pendingMessage.id}>
+        <div className="chatUserMessage">{props.pendingMessage.text}</div>
+        {props.pendingMessage.status==="sending"
+          ? <section className="chatAssistantMessage chatTyping" role="status" aria-label="SMAJ AI is responding"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><span className="taskDots" aria-hidden="true"><i/><i/><i/></span></section>
+          : <div className="chatFailure" role="alert"><span>{props.pendingMessage.error||"SMAJ AI could not answer. Please try again."}</span><button type="button" disabled={Boolean(props.busy)} onClick={props.retryPendingMessage}>Retry</button></div>}
+        <div ref={lastTurn} aria-hidden="true"/>
+      </article>}
     </div>}
-    {!props.messages?.length&&props.task&&props.routePlan&&<div className="taskRequest">{props.task}</div>}
-    {!props.messages?.length&&(props.routePlan||props.busy)&&<section className="resultsResponse"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><p className="resultsWho">SMAJ AI</p>
-      {props.busy?<Analyzing/>:props.routePlan&&<TypedResponse text={props.routePlan.summary}/>}
+    {!props.messages?.length&&!props.pendingMessage&&props.task&&props.routePlan&&<div className="taskRequest">{props.task}</div>}
+    {!props.messages?.length&&!props.pendingMessage&&(props.routePlan||props.busy)&&<section className="resultsResponse"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent">
+      {props.busy?<span className="taskDots" role="status" aria-label="SMAJ AI is responding"><i/><i/><i/></span>:props.routePlan&&<TypedResponse text={props.routePlan.summary}/>}
     </div></section>}
-    {props.routePlan&&props.conversationId&&<ChatComposer key={props.conversationId} busy={Boolean(props.busy)} onSubmit={(message:string)=>props.onFollowUp(message,props.conversationId)}/>}
+    {props.routePlan&&props.conversationId&&<ChatComposer key={props.conversationId} busy={Boolean(props.busy)||Boolean(props.pendingMessage)} onSubmit={(message:string)=>props.onFollowUp(message,props.conversationId)}/>}
     {props.delegation&&<DelegationDetail {...props}/>}
   </section>;
 }

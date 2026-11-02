@@ -8,6 +8,12 @@
 .chatAssistantMessage{display:flex;align-items:flex-start;gap:10px;min-width:0;margin-top:18px}
 .chatAssistantMessage .resultsContent{min-width:0;flex:1}
 .chatAssistantMessage .taskAnswer{margin:0 0 10px}
+.chatAssistantMessage.chatTyping{align-items:center;min-height:36px;margin-top:16px}
+.chatAssistantMessage.chatTyping .taskDots{gap:4px;padding:0;background:transparent}
+.chatAssistantMessage.chatTyping .taskDots i{width:6px;height:6px}
+.chatFailure{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0 0 43px;padding:10px 12px;border:1px solid #f0c5cc;border-radius:12px;background:#fff2f4;color:#9d3348;font-size:12px;line-height:1.45}
+.chatFailure button{flex:none;padding:7px 12px;border:0;border-radius:9px;background:#7547d5;color:#fff;font-size:11px;font-weight:700}
+.chatFailure button:disabled{opacity:.6}
 .chatComposer{position:fixed;z-index:19;right:0;bottom:0;left:0;display:flex;align-items:flex-end;gap:8px;width:min(680px,100%);margin:0 auto;padding:12px 14px calc(12px + env(safe-area-inset-bottom));border-top:1px solid #ece7f3;background:#ffffffed;backdrop-filter:blur(14px)}
 .chatComposer textarea{flex:1;width:100%;min-width:0;max-height:120px;min-height:44px;resize:vertical;border:1px solid #e6e1eb;border-radius:14px;padding:12px;background:#fff;color:#20192f;font:inherit;font-size:14px;line-height:1.4}
 .chatComposer textarea:focus{outline:2px solid #8657d866;border-color:#8657d8}
