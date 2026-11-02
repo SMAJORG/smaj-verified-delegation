@@ -62,6 +62,7 @@ export default function TaskHistory({
 }) {
   const [query, setQuery] = useState("");
   const [service, setService] = useState<ServiceId | "all">("all");
+  const [filterOpen, setFilterOpen] = useState(false);
   const groups = useMemo(() => {
     const entries: HistoryEntry[] = [
       ...tasks.map(task => ({
@@ -98,19 +99,26 @@ export default function TaskHistory({
 
   return <section className="taskHistoryPage">
     <div className="taskHistoryFilters">
-      <label className="taskHistorySearch">
-        <span className="taskHistorySrOnly">Search saved tasks</span>
-        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-        <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search conversations and tasks" />
-      </label>
-      <div className="taskHistoryServiceFilters" role="group" aria-label="Filter tasks by service">
-        <button type="button" className={service === "all" ? "selected" : ""} aria-pressed={service === "all"} onClick={() => setService("all")}>All</button>
-        {SMAJ_SERVICES.map(item => <button type="button" key={item.id} className={service === item.id ? "selected" : ""} aria-pressed={service === item.id} onClick={() => setService(item.id)}>{item.shortName}</button>)}
+      <div className="taskHistoryToolbar">
+        <div className="taskHistorySearchRow">
+          <label className="taskHistorySearch">
+            <span className="taskHistorySrOnly">Search saved tasks</span>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+            <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search conversations and tasks" />
+          </label>
+          <button type="button" className={`taskHistoryFilterButton${service !== "all" ? " active" : ""}`} aria-label="Filter by service" aria-expanded={filterOpen} aria-controls="task-history-service-filter" onClick={() => setFilterOpen(open => !open)}>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h16l-6.2 7.1v5.2l-3.6 1.8v-7z"/></svg>
+          </button>
+        </div>
+        {filterOpen && <div className="taskHistoryServiceMenu" id="task-history-service-filter" role="group" aria-label="Filter saved conversations by service">
+          {SMAJ_SERVICES.map(item => <button type="button" key={item.id} className={service === item.id ? "selected" : ""} aria-pressed={service === item.id} onClick={() => { setService(item.id); setFilterOpen(false); }}>{item.shortName}</button>)}
+          <button type="button" className="taskHistoryClearFilter" onClick={() => { setService("all"); setFilterOpen(false); }}>Clear filter</button>
+        </div>}
       </div>
     </div>
     <p className="taskHistoryIntro">Open a saved request to review its conversation, results, approvals, and status.</p>
     {!tasks.length && !delegations.length ? <p className="taskHistoryEmpty">Your saved tasks will appear here.</p> : <div className="taskHistoryGroups">
-      {!groups.length ? <p className="taskHistoryEmpty">No tasks match your search and filters.</p> : groups.map(([label, entries]) => <section className="taskHistoryGroup" key={label} aria-label={label}>
+      {!groups.length ? <p className="taskHistoryEmpty">No tasks match your search{service !== "all" ? " and service filter" : ""}.</p> : groups.map(([label, entries]) => <section className="taskHistoryGroup" key={label} aria-label={label}>
         <h2>{label}</h2>
         <div className="taskHistoryRows">{entries.map(entry => {
         const menuId = `${entry.kind}:${entry.id}`;

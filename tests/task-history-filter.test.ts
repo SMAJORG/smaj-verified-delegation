@@ -55,3 +55,10 @@ test("service filters include services referenced by plan steps and Jobs delegat
   assert.equal(matchesTaskHistoryFilter(delegation, "applications", "jobs"), true);
   assert.equal(matchesTaskHistoryFilter(delegation, "", "store"), false);
 });
+
+test("unfiltered history search covers saved conversations across every service", () => {
+  for (const service of SMAJ_SERVICES) {
+    const savedTask = task(service.id, "Original conversation request", "Distinctive saved response", [service.id]);
+    assert.equal(matchesTaskHistoryFilter(savedTask, "distinctive response", "all"), true, service.name);
+  }
+});

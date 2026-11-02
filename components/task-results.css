@@ -58,16 +58,23 @@
 
 .taskHistoryPage{width:100%;max-width:760px;min-width:0;margin:0 auto;color:#20192f}
 .taskHistoryFilters{display:grid;gap:12px;margin:0 0 20px;min-width:0}
-.taskHistorySearch{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 13px;border:1px solid #e6e1eb;border-radius:12px;background:#fff;color:#81798d}
+.taskHistoryToolbar{position:relative;min-width:0}
+.taskHistorySearchRow{display:flex;align-items:center;gap:8px;min-width:0}
+.taskHistorySearch{display:flex;flex:1;align-items:center;gap:10px;width:100%;min-width:0;min-height:44px;padding:0 13px;border:1px solid #e6e1eb;border-radius:12px;background:#fff;color:#81798d}
 .taskHistorySearch:focus-within{border-color:#b7a4e3;box-shadow:0 0 0 3px #bda9eb33}
 .taskHistorySearch svg{width:18px;height:18px}
 .taskHistorySearch input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#20192f;font-size:13px}
 .taskHistorySearch input::placeholder{color:#9992a1}
+.taskHistoryFilterButton{display:grid;flex:0 0 44px;place-items:center;width:44px;height:44px;padding:0;border:1px solid #e6e1eb;border-radius:12px;background:#fff;color:#71697d}
+.taskHistoryFilterButton:hover,.taskHistoryFilterButton[aria-expanded=true]{border-color:#b7a4e3;color:#5630aa}
+.taskHistoryFilterButton.active{border-color:#d8caf2;background:#f4f0ff;color:#5630aa}
+.taskHistoryFilterButton svg{width:19px;height:19px}
+.taskHistoryServiceMenu{position:absolute;z-index:10;top:calc(100% + 8px);right:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;width:280px;max-width:calc(100vw - 40px);max-height:320px;overflow-y:auto;padding:9px;border:1px solid #e8e3ed;border-radius:13px;background:#fff;box-shadow:0 10px 28px #24143a1a}
+.taskHistoryServiceMenu button{min-width:0;min-height:34px;padding:7px 9px;border:1px solid transparent;border-radius:8px;background:#fff;color:#71697d;text-align:left;font-size:12px;font-weight:600}
+.taskHistoryServiceMenu button:hover{background:#f8f6fb;color:#5630aa}
+.taskHistoryServiceMenu button.selected{border-color:#d8caf2;background:#f4f0ff;color:#5630aa}
+.taskHistoryServiceMenu button.taskHistoryClearFilter{grid-column:1/-1;margin-top:3px;border-color:#eee9f3;color:#5630aa;text-align:center}
 .taskHistorySrOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.taskHistoryServiceFilters{display:flex;flex-wrap:wrap;gap:7px;min-width:0}
-.taskHistoryServiceFilters button{min-height:32px;padding:6px 11px;border:1px solid #e8e3ed;border-radius:18px;background:#fff;color:#71697d;font-size:11px;font-weight:650;white-space:nowrap}
-.taskHistoryServiceFilters button:hover{border-color:#b7a4e3;color:#5630aa}
-.taskHistoryServiceFilters button.selected{border-color:#d8caf2;background:#f4f0ff;color:#5630aa}
 .taskHistoryIntro{margin:0 0 18px;color:#827a90;font-size:13px;line-height:1.5}
 .taskHistoryGroups{display:grid;gap:22px;min-width:0}
 .taskHistoryGroup{min-width:0}
@@ -95,8 +102,6 @@
 .taskHistoryEmpty{padding:30px 12px;border:1px dashed #e6e0ed;border-radius:14px;color:#827a90;text-align:center;font-size:13px}
 @media(max-width:480px){
   .taskHistoryFilters{gap:10px;margin-bottom:16px}
-  .taskHistoryServiceFilters{gap:6px}
-  .taskHistoryServiceFilters button{min-height:34px;padding-inline:10px}
   .taskHistoryRow{grid-template-columns:minmax(0,1fr) 34px;gap:4px}
   .taskHistoryStatus{grid-column:1;grid-row:2;justify-self:start;margin:0 9px 6px}
   .taskHistoryMenu{grid-column:2;grid-row:1;align-self:start}
