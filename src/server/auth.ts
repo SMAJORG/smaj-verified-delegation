@@ -5,6 +5,7 @@ import { readDemoSession } from "@/src/server/demo-sessions";
 
 export const SESSION_COOKIE = "smaj_delegation_session";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
+export const actorStorageScope = (actorId: string) => createHash("sha256").update(`smaj-local-cache:${actorId}`).digest("hex");
 
 export type ActorSession = {
   actorId: string;

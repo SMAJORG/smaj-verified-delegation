@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revokePublicSession } from "@/src/server/public-access";
-import { cookieValue, createSession, demoAuthEnabled, requireActorSession, SESSION_COOKIE, ssoConfigured } from "@/src/server/auth";
+import { actorStorageScope, cookieValue, createSession, demoAuthEnabled, requireActorSession, SESSION_COOKIE, ssoConfigured } from "@/src/server/auth";
 import { revokeDemoSession } from "@/src/server/demo-sessions";
 import { apiError, AppError } from "@/src/server/http";
 
@@ -12,14 +12,16 @@ export async function GET(request: NextRequest) {
   let authType: string | null = null;
   let sandbox = false;
   let expiresAt: number | undefined;
+  let storageScope: string | null = null;
   try {
     const session = requireActorSession(request);
     authenticated = session.authType !== "public";
     authType = session.authType;
     sandbox = Boolean(session.sandbox);
     expiresAt = session.expiresAt;
+    storageScope = actorStorageScope(session.actorId);
   } catch { /* unauthenticated */ }
-  return NextResponse.json({ authenticated, publicAccess: authType === "public", authType, sandbox, expiresAt, ssoEnabled: ssoConfigured(), demoEnabled: demoAuthEnabled(), sampleTasksEnabled: process.env.SMAJ_SAMPLE_TASKS_ENABLED === "true" }, { headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json({ authenticated, publicAccess: authType === "public", authType, sandbox, expiresAt, storageScope, ssoEnabled: ssoConfigured(), demoEnabled: demoAuthEnabled(), sampleTasksEnabled: process.env.SMAJ_SAMPLE_TASKS_ENABLED === "true" }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request: NextRequest) {
@@ -27,7 +29,8 @@ export async function POST(request: NextRequest) {
     if (!demoAuthEnabled()) throw new AppError("demo_auth_disabled", "Demo access is disabled; continue with SMAJ PI HUB", 403);
     const body = await request.json() as { accessToken?: string };
     const session = createSession(String(body.accessToken || ""));
-    const response = NextResponse.json({ authenticated: true });
+    const storageScope = actorStorageScope(session.actorId);
+    const response = NextResponse.json({ authenticated: true, storageScope });
     response.cookies.set(SESSION_COOKIE, session.value, {
       httpOnly: true, sameSite: "strict",
       secure: request.nextUrl.protocol === "https:" || request.headers.get("x-forwarded-proto") === "https",

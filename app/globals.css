@@ -129,3 +129,4 @@
 }
 
 @media(max-width:480px){.workspace .workspaceHeader{padding-inline:12px}.workspace .workspaceHeader .headerSide{min-width:0}.workspace .workspaceBody.homeBody{width:100%;min-width:0}}
+.errorToast{position:fixed;z-index:1000;top:18px;right:18px;display:flex;align-items:flex-start;gap:14px;width:min(440px,calc(100vw - 36px));padding:14px 14px 14px 16px;border:1px solid #f0c5cc;border-radius:13px;background:#fff2f4;color:#8e2c40;box-shadow:0 12px 36px #24143a24;font-size:13px;line-height:1.5}.errorToast span{flex:1;min-width:0;overflow-wrap:anywhere}.errorToast button{flex:none;padding:0 2px;border:0;background:transparent;color:inherit;font-size:21px;line-height:1;cursor:pointer}

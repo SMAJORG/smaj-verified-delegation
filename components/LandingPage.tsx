@@ -16,11 +16,10 @@ type LandingPageProps = {
   accessToken: string;
   setAccessToken: (value: string) => void;
   busy: string | null;
-  error: string;
   login: (event: React.FormEvent) => void;
 };
 
-export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, startDemo, accessToken, setAccessToken, busy, error, login }: LandingPageProps) {
+export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, startDemo, accessToken, setAccessToken, busy, login }: LandingPageProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
@@ -94,7 +93,6 @@ export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, st
           <button className="pill" type="button" disabled={demoDisabled} onClick={startDemo}>{busy === "demo" ? "Preparing demo…" : "Explore Live Demo →"}</button>
           <small>Meta AI-powered planning · Human approval · Simulated execution</small>
           {busy === "demo" && <small role="status">Creating your private demo workspace…</small>}
-          {error && !authOpen && <small role="alert">{error}</small>}
         </section>
         <section className="wrap" id="how">
           <span className="sectionlabel">Built for trusted delegation</span>
@@ -112,7 +110,6 @@ export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, st
             {checking && <p className="demoStatus" role="status">Checking secure session…</p>}
             {!checking && !demoEnabled && <p className="demoStatus" role="status">Demo access is currently unavailable. <button className="textButton" onClick={() => setAuthOpen(true)}>Sign in to your workspace</button>.</p>}
             {busy === "demo" && <p className="demoStatus" role="status">Creating your private demo workspace…</p>}
-            {error && <p className="demoError" role="alert">{error}</p>}
             <p className="demoDisclaimer">Demo only: no real job applications or Pi payments. Not affiliated with or endorsed by Pi Network or Meta.</p>
           </div>
         </section>
@@ -127,7 +124,6 @@ export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, st
               <input id="landing-access-token" type="password" autoComplete="off" value={accessToken} onChange={event => setAccessToken(event.target.value)} placeholder="Enter your access token" required />
               <button className="pill" disabled={!accessToken || busy !== null || checking}>{busy === "login" ? "Signing in…" : "Open workspace →"}</button>
             </form>
-            {error && <p className="authError" role="alert">{error}</p>}
             <small>Protected by a secure HttpOnly session.</small>
           </div>
         </section>}

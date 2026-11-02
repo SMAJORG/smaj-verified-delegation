@@ -13,13 +13,14 @@ import Services from "@/components/Services";
 import servicesStyles from "@/components/Services.module.css";
 import TaskHistory from "@/components/TaskHistory";
 import { downloadReceiptFile } from "@/components/receipt-export";
+import { readConversationCache, writeConversationCache } from "@/components/conversation-storage";
 import type { AiTask } from "@/src/server/ai-tasks";
 import { SMAJ_SERVICES, type ServiceId, type ServiceRoutePlan } from "@/src/domain/services";
 import type { DelegationView, JobsApiJob } from "@/src/domain/types";
 import type { ServiceConnection } from "@/src/server/service-connections";
 
 type View = "home" | "tasks" | "task-detail" | "services" | "approvals" | "receipts" | "profile";
-type ApiResponse = { tasks?: AiTask[]; task?: AiTask; delegation?: DelegationView; delegations?: DelegationView[]; plan?: ServiceRoutePlan; connections?: ServiceConnection[]; message?: string };
+type ApiResponse = { tasks?: AiTask[]; task?: AiTask; delegation?: DelegationView; delegations?: DelegationView[]; plan?: ServiceRoutePlan; connections?: ServiceConnection[]; message?: string; storageScope?: string };
 const statusLabels: Record<string, string> = { awaiting_approval: "Awaiting approval", approved: "Approved", executing: "Executing", retrying: "Recovering", verifying: "Verifying", verified: "Verified", failed: "Needs attention" };
 const time = (value: string) => new Intl.DateTimeFormat("en", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 
@@ -33,7 +34,10 @@ const Icon = ({ name }: { name: string }) => {
 export default function Dashboard() {
   const [view,setViewState]=useState<View>("home"); const viewRef=useRef<View>("home"); const setView=(next:View)=>{viewRef.current=next;setViewState(next);}; const [menuOpen,setMenuOpen]=useState(false); const [authenticated,setAuthenticated]=useState<boolean|null>(null); const [ssoEnabled,setSsoEnabled]=useState(false); const [demoEnabled,setDemoEnabled]=useState(false); const [sandbox,setSandbox]=useState(false); const [expiresAt,setExpiresAt]=useState<number|null>(null); const [accessToken,setAccessToken]=useState("");
   const [aiTasks,setAiTasks]=useState<AiTask[]>([]); const [selectedService,setSelectedService]=useState<ServiceId|null>(null); const [task,setTask]=useState(""); const [routePlan,setRoutePlan]=useState<ServiceRoutePlan|null>(null); const [connections,setConnections]=useState<ServiceConnection[]>([]); const [history,setHistory]=useState<DelegationView[]>([]); const [delegation,setDelegation]=useState<DelegationView|null>(null);
-  const [candidateName,setCandidateName]=useState(""); const [skills,setSkills]=useState(""); const [selectedJobs,setSelectedJobs]=useState<string[]>([]); const [injectFailure,setInjectFailure]=useState(true); const [busy,setBusy]=useState<string|null>(null); const [error,setError]=useState("");
+  const [candidateName,setCandidateName]=useState(""); const [skills,setSkills]=useState(""); const [selectedJobs,setSelectedJobs]=useState<string[]>([]); const [injectFailure,setInjectFailure]=useState(true); const [busy,setBusy]=useState<string|null>(null); const [error,setError]=useState(""); const [storageScope,setStorageScope]=useState<string|null>(null);
+  const notifyError=(failure:unknown,fallback:string)=>{console.error("[SMAJ AI] Request failed:",failure);const detail=failure instanceof Error?failure.message:typeof failure==="string"?failure:"";setError(detail&&detail!=="Failed to fetch"?detail:detail==="Failed to fetch"?`${fallback} Check your connection and try again.`:fallback);};
+  useEffect(()=>{if(!error)return;const timer=setTimeout(()=>setError(""),5000);return()=>clearTimeout(timer);},[error]);
+  useEffect(()=>{if(authenticated!==true||!storageScope)return;try{writeConversationCache(window.localStorage,storageScope,{tasks:aiTasks,delegations:history});}catch(failure){notifyError(failure,"Conversation history could not be saved in this browser.");}},[aiTasks,history,authenticated,storageScope]);
   const demoEntryPending=useRef(false);
   const viewHistory=useRef<View[]>([]);
   const resumedSearch=useRef(false);
@@ -53,7 +57,7 @@ export default function Dashboard() {
   },[busy,authenticated]);
   const streamRef=useRef<EventSource|null>(null); const jobsById=useMemo(()=>new Map((delegation?.jobs||[]).map(job=>[job.id,job])),[delegation]);
   const updateDelegation=(next:DelegationView)=>{setDelegation(next);setHistory(current=>[next,...current.filter(item=>item.id!==next.id)]);};
-  const loadWorkspace=async(signal?:AbortSignal)=>{const [tasksResponse,connectionsResponse,aiTasksResponse]=await Promise.all([fetch("/api/delegations",{cache:"no-store",signal}),fetch("/api/connections",{cache:"no-store",signal}),fetch("/api/tasks",{cache:"no-store",signal})]);if(tasksResponse.status===401||tasksResponse.status===503){setAuthenticated(false);return false;}if(!tasksResponse.ok||!connectionsResponse.ok||!aiTasksResponse.ok)throw new Error("Workspace could not be loaded");const tasksPayload=await tasksResponse.json() as ApiResponse;const connectionsPayload=await connectionsResponse.json() as ApiResponse;setAiTasks((await aiTasksResponse.json()).tasks||[]);setHistory(tasksPayload.delegations||[]);setConnections(connectionsPayload.connections||[]);setAuthenticated(true);return true;};
+  const loadWorkspace=async(signal?:AbortSignal)=>{const [tasksResponse,connectionsResponse,aiTasksResponse]=await Promise.all([fetch("/api/delegations",{cache:"no-store",signal}),fetch("/api/connections",{cache:"no-store",signal}),fetch("/api/tasks",{cache:"no-store",signal})]);if(tasksResponse.status===401||tasksResponse.status===503){setAuthenticated(false);notifyError(new Error(`Workspace session is unavailable (${tasksResponse.status}).`),"Workspace session is unavailable.");return false;}if(!tasksResponse.ok||!connectionsResponse.ok||!aiTasksResponse.ok)throw new Error(`Workspace could not be loaded (HTTP ${[tasksResponse,connectionsResponse,aiTasksResponse].find(response=>!response.ok)?.status}).`);const tasksPayload=await tasksResponse.json() as ApiResponse;const connectionsPayload=await connectionsResponse.json() as ApiResponse;setAiTasks((await aiTasksResponse.json()).tasks||[]);setHistory(tasksPayload.delegations||[]);setConnections(connectionsPayload.connections||[]);setAuthenticated(true);return true;};
   useEffect(()=>{
     const controller=new AbortController();
     const load=async()=>{
@@ -65,20 +69,22 @@ export default function Dashboard() {
         payload=await opened.json();
         if(!opened.ok)throw new Error(payload.message || "Public AI could not be opened. Please try again.");
       }
+      const scope=payload.storageScope;
+      if(typeof scope==="string")setStorageScope(scope);
       setPublicAccess(Boolean(payload.publicAccess));
       setSampleTasksEnabled(Boolean(payload.sampleTasksEnabled));setSsoEnabled(Boolean(payload.ssoEnabled));setDemoEnabled(Boolean(payload.demoEnabled));setSandbox(Boolean(payload.sandbox));setExpiresAt(payload.expiresAt||null);
-      await loadWorkspace(controller.signal);
+      try{await loadWorkspace(controller.signal);}catch(failure){const cached=typeof scope==="string"?readConversationCache(window.localStorage,scope):null;if(cached){setAiTasks(cached.tasks);setHistory(cached.delegations);}setAuthenticated(true);notifyError(failure,"Saved conversations could not be refreshed.");}
     };
-    void load().catch(error=>{if(!controller.signal.aborted){setAuthenticated(false);setError(error instanceof Error?error.message:"Sign-in could not be checked");}});
+    void load().catch(error=>{if(!controller.signal.aborted){setAuthenticated(false);notifyError(error,"Sign-in could not be checked");}});
     return()=>{controller.abort();streamRef.current?.close();};
   },[]);
   useEffect(()=>{if(!sandbox||!expiresAt)return;const expire=()=>{streamRef.current?.close();setAuthenticated(false);setHistory([]);setAiTasks([]);setTask("");setSelectedService(null);setConnections([]);setDelegation(null);setRoutePlan(null);setSandbox(false);setExpiresAt(null);setError("Your demo session expired. Try Live Demo to start a fresh workspace.");};const timer=setTimeout(expire,Math.max(0,expiresAt-Date.now()));return()=>clearTimeout(timer);},[sandbox,expiresAt]);
-  const login=async(event:React.FormEvent)=>{event.preventDefault();setBusy("login");setError("");try{const response=await fetch("/api/auth/session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({accessToken})});const payload=await response.json() as ApiResponse;if(!response.ok)throw new Error(payload.message||"Authentication failed");setAccessToken("");await loadWorkspace();}catch(loginError){setError(loginError instanceof Error?loginError.message:"Authentication failed");}finally{setBusy(null);}};
-  const startDemo=async()=>{demoEntryPending.current=true;viewHistory.current=[];setView("home");setMenuOpen(false);setBusy("demo");setError("");const signal=AbortSignal.timeout(30000);try{const response=await fetch("/api/public/session",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}",signal});const payload=await response.json();if(!response.ok)throw new Error(payload.message||"The demo could not be started. Please try again.");setPublicAccess(Boolean(payload.publicAccess));setSandbox(false);setExpiresAt(payload.expiresAt);if(!await loadWorkspace(signal))throw new Error("The demo workspace could not be loaded. Please try again.");}catch(error){setError(error instanceof Error?error.message:"The demo could not be started. Please try again.");}finally{setBusy(null);}};
-  const logout=async()=>{setError("");try{const response=await fetch("/api/auth/session",{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok)throw new Error("Sign-out failed. Please try again.");streamRef.current?.close();setAuthenticated(false);setHistory([]);setAiTasks([]);setTask("");setSelectedService(null);setConnections([]);setDelegation(null);setRoutePlan(null);setSandbox(false);setExpiresAt(null);viewHistory.current=[];setView("home");setMenuOpen(false);}catch(error){setError(error instanceof Error?error.message:"Sign-out failed. Please try again.");}};
+  const login=async(event:React.FormEvent)=>{event.preventDefault();setBusy("login");setError("");try{const response=await fetch("/api/auth/session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({accessToken})});const payload=await response.json() as ApiResponse;if(!response.ok)throw new Error(payload.message||"Authentication failed");if(payload.storageScope)setStorageScope(payload.storageScope);setAccessToken("");await loadWorkspace();}catch(loginError){notifyError(loginError,"Authentication failed");}finally{setBusy(null);}};
+  const startDemo=async()=>{demoEntryPending.current=true;viewHistory.current=[];setView("home");setMenuOpen(false);setBusy("demo");setError("");const signal=AbortSignal.timeout(30000);try{const response=await fetch("/api/public/session",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}",signal});const payload=await response.json();if(!response.ok)throw new Error(payload.message||"The demo could not be started. Please try again.");if(typeof payload.storageScope==="string")setStorageScope(payload.storageScope);setPublicAccess(Boolean(payload.publicAccess));setSandbox(false);setExpiresAt(payload.expiresAt);if(!await loadWorkspace(signal))throw new Error("The demo workspace could not be loaded. Please try again.");}catch(failure){notifyError(failure,"The demo could not be started. Please try again.");}finally{setBusy(null);}};
+  const logout=async()=>{setError("");try{const response=await fetch("/api/auth/session",{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok)throw new Error("Sign-out failed. Please try again.");streamRef.current?.close();setAuthenticated(false);setStorageScope(null);setHistory([]);setAiTasks([]);setTask("");setSelectedService(null);setConnections([]);setDelegation(null);setRoutePlan(null);setSandbox(false);setExpiresAt(null);viewHistory.current=[];setView("home");setMenuOpen(false);}catch(failure){notifyError(failure,"Sign-out failed. Please try again.");}};
   const navigate=(next:View)=>{if(viewRef.current!==next)viewHistory.current.push(viewRef.current);setView(next);setMenuOpen(false);window.scrollTo({top:0,behavior:"smooth"});};
   const goBack=()=>{const previous=viewHistory.current.pop();setView(previous||"home");setMenuOpen(false);window.scrollTo({top:0,behavior:"smooth"});};
-  const routeTask=async(event:React.FormEvent)=>{event.preventDefault();if(!task.trim()){setError("Enter a message or task.");return;}const service=SMAJ_SERVICES.find(item=>item.id===selectedService);setBusy("routing");setError("");try{const response=await fetch("/api/tasks",{signal:AbortSignal.timeout(135000),method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({task:service?`${service.name}: ${task}`:task})});const payload=await response.json() as ApiResponse;if(!response.ok||!payload.plan)throw new Error((payload.message||"Meta could not route this task")+(response.status===429&&response.headers.get("Retry-After")?` Try again in ${response.headers.get("Retry-After")} seconds.`:""));if(payload.task)setAiTasks(items=>[payload.task!,...items.filter(item=>item.id!==payload.task!.id)]);setDelegation(null);setRoutePlan(payload.plan);navigate("task-detail");}catch(routeError){setError(routeError instanceof Error?routeError.message:"Task routing stopped safely");}finally{setBusy(null);}};
+  const routeTask=async(event:React.FormEvent)=>{event.preventDefault();if(!task.trim()){setError("Enter a message or task.");return;}const service=SMAJ_SERVICES.find(item=>item.id===selectedService);setBusy("routing");setError("");try{const response=await fetch("/api/tasks",{signal:AbortSignal.timeout(135000),method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({task:service?`${service.name}: ${task}`:task})});const payload=await response.json() as ApiResponse;if(!response.ok||!payload.plan)throw new Error((payload.message||"Meta could not route this task")+(response.status===429&&response.headers.get("Retry-After")?` Try again in ${response.headers.get("Retry-After")} seconds.`:""));if(payload.task)setAiTasks(items=>[payload.task!,...items.filter(item=>item.id!==payload.task!.id)]);setDelegation(null);setRoutePlan(payload.plan);navigate("task-detail");}catch(routeError){notifyError(routeError,"Task routing stopped safely");}finally{setBusy(null);}};
   const runDiscovery = async (saved: AiTask, resume = false) => {
     setBusy("discovery"); setError("");
     try {
@@ -94,8 +100,8 @@ export default function Dashboard() {
       const payload = await response.json();
       if (!response.ok) throw new Error((payload.message || "Search failed. Please try again.") + (response.status===429&&response.headers.get("Retry-After")?` Try again in ${response.headers.get("Retry-After")} seconds.`:""));
       setRoutePlan(payload.plan); setAiTasks(items => items.map(item => item.id === saved.id ? payload.task : item));
-      fetch("/api/connections", {cache:"no-store"}).then(r=>r.ok?r.json():null).then(p=>{if(p?.connections)setConnections(p.connections);}).catch(()=>undefined);
-    } catch (error) { setError(error instanceof Error ? error.message : "Search failed. Please try again."); }
+      fetch("/api/connections", {cache:"no-store"}).then(async response=>{if(!response.ok)throw new Error(`Connections could not be refreshed (HTTP ${response.status}).`);return response.json();}).then(payload=>{if(payload?.connections)setConnections(payload.connections);}).catch(failure=>notifyError(failure,"Connections could not be refreshed."));
+    } catch (failure) { notifyError(failure,"Search failed. Please try again."); }
     finally { setBusy(null); }
   };
   const discover = async () => {
@@ -129,7 +135,7 @@ export default function Dashboard() {
         if(!response.ok)throw new Error(payload.message || "Sign in to SMAJ PI HUB to perform protected actions.");
         window.sessionStorage.setItem("smaj_pending_search",activeTask.id);
         window.location.assign(payload.signInUrl);
-      } catch(error) {setError(error instanceof Error?error.message:"Sign-in is required for protected actions.");}
+      } catch(failure) {notifyError(failure,"Sign-in is required for protected actions.");}
       finally {setBusy(null);}
       return;
     }
@@ -138,7 +144,7 @@ export default function Dashboard() {
       const response = await fetch(`/api/tasks/${activeTask.id}/approve`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ approved: true, actionIds, reviewHash: activeTask.plan.actionReviewHash }) });
       const payload = await response.json(); if (!response.ok) throw new Error(payload.message || "Live approval failed");
       setRoutePlan(payload.plan); setAiTasks(items => items.map(item => item.id === activeTask.id ? payload.task : item));
-    } catch (error) { setError(error instanceof Error ? error.message : "Live approval failed"); } finally { setBusy(null); }
+    } catch (failure) { notifyError(failure,"Live approval failed"); } finally { setBusy(null); }
   };
   const retryLive = async () => {
     if (!activeTask) return;
@@ -148,31 +154,32 @@ export default function Dashboard() {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.message || "Safe retry failed");
       setRoutePlan(payload.plan); setAiTasks(items => items.map(item => item.id === activeTask.id ? payload.task : item));
-    } catch (error) { setError(error instanceof Error ? error.message : "Safe retry failed"); }
+    } catch (failure) { notifyError(failure,"Safe retry failed"); }
     finally { setBusy(null); }
   };
   useEffect(() => {
     if (!activeTask?.plan.execution || !["queued", "running", "retrying"].includes(activeTask.plan.execution.status)) return;
     const controller = new AbortController();
+    let reportedFailure = false;
     const timer = setInterval(async () => {
-      try { const response = await fetch(`/api/tasks/${activeTask.id}`, { cache: "no-store", signal: controller.signal }); if (!response.ok) return; const payload = await response.json(); setAiTasks(items => items.map(item => item.id === activeTask.id ? payload.task : item)); setRoutePlan(payload.task.plan); } catch { /* Saved state is available on reopen. */ }
+      try { const response = await fetch(`/api/tasks/${activeTask.id}`, { cache: "no-store", signal: controller.signal }); if (!response.ok) { if(!reportedFailure){reportedFailure=true;notifyError(new Error(`Task status could not be refreshed (${response.status}).`),"Task status could not be refreshed.");} return; } const payload = await response.json(); setAiTasks(items => items.map(item => item.id === activeTask.id ? payload.task : item)); setRoutePlan(payload.task.plan); } catch (failure) { if(!controller.signal.aborted&&!reportedFailure){reportedFailure=true;notifyError(failure,"Task status could not be refreshed.");} }
     }, 2500);
     return () => { clearInterval(timer); controller.abort(); };
   }, [activeTask?.id, activeTask?.plan.execution?.status]);
-  const deleteAiTask=async(id:string)=>{if(!window.confirm("Delete this task and its AI response?"))return;setBusy(`delete-${id}`);try{const response=await fetch(`/api/tasks/${id}`,{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok){const payload=await response.json();throw new Error(payload.message||"Task deletion failed");}setAiTasks(items=>items.filter(item=>item.id!==id));if(activeTask?.id===id){setRoutePlan(null);setTask("");if(viewHistory.current.at(-1)==="tasks")viewHistory.current.pop();setView("tasks");}}catch(error){setError(error instanceof Error?error.message:"Task deletion failed");}finally{setBusy(null);}};
-  const deleteDelegation=async(id:string)=>{if(!window.confirm("Delete this task, its drafts, and local proof receipt?"))return;setBusy(`delete-${id}`);try{const response=await fetch(`/api/delegations/${id}`,{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok){const payload=await response.json();throw new Error(payload.message||"Task deletion failed");}streamRef.current?.close();setHistory(items=>items.filter(item=>item.id!==id));if(delegation?.id===id){setDelegation(null);if(viewHistory.current.at(-1)==="tasks")viewHistory.current.pop();setView("tasks");}}catch(error){setError(error instanceof Error?error.message:"Task deletion failed");}finally{setBusy(null);}};
-  const setConnection=async(serviceId:ServiceId,connected:boolean)=>{setBusy(`connection-${serviceId}`);setError("");try{const response=await fetch("/api/connections",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({serviceId,connected})});const payload=await response.json() as ApiResponse;if(!response.ok||!payload.connections)throw new Error(payload.message||"Connection could not be updated");setConnections(payload.connections);}catch(connectionError){setError(connectionError instanceof Error?connectionError.message:"Connection failed safely");}finally{setBusy(null);}};
-  const watch=(id:string)=>{streamRef.current?.close();const source=new EventSource(`/api/delegations/${id}/events`);source.addEventListener("delegation",event=>{const next=JSON.parse((event as MessageEvent).data) as DelegationView;updateDelegation(next);if(["verified","failed"].includes(next.status))source.close();});source.onerror=()=>source.close();streamRef.current=source;};
-  const request=async(url:string,body:Record<string,unknown>,action:string)=>{setBusy(action);setError("");try{const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Idempotency-Key":`ui_${crypto.randomUUID()}`},body:JSON.stringify(body)});const payload=await response.json() as ApiResponse;if(!response.ok||!payload.delegation)throw new Error(payload.message||"Workflow request failed");updateDelegation(payload.delegation);return payload.delegation;}catch(requestError){setError(requestError instanceof Error?requestError.message:"Workflow stopped safely");return null;}finally{setBusy(null);}};
+  const deleteAiTask=async(id:string)=>{if(!window.confirm("Delete this task and its AI response?"))return;setBusy(`delete-${id}`);try{const response=await fetch(`/api/tasks/${id}`,{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok){const payload=await response.json();throw new Error(payload.message||"Task deletion failed");}setAiTasks(items=>items.filter(item=>item.id!==id));if(activeTask?.id===id){setRoutePlan(null);setTask("");if(viewHistory.current.at(-1)==="tasks")viewHistory.current.pop();setView("tasks");}}catch(failure){notifyError(failure,"Task deletion failed");}finally{setBusy(null);}};
+  const deleteDelegation=async(id:string)=>{if(!window.confirm("Delete this task, its drafts, and local proof receipt?"))return;setBusy(`delete-${id}`);try{const response=await fetch(`/api/delegations/${id}`,{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok){const payload=await response.json();throw new Error(payload.message||"Task deletion failed");}streamRef.current?.close();setHistory(items=>items.filter(item=>item.id!==id));if(delegation?.id===id){setDelegation(null);if(viewHistory.current.at(-1)==="tasks")viewHistory.current.pop();setView("tasks");}}catch(failure){notifyError(failure,"Task deletion failed");}finally{setBusy(null);}};
+  const setConnection=async(serviceId:ServiceId,connected:boolean)=>{setBusy(`connection-${serviceId}`);setError("");try{const response=await fetch("/api/connections",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({serviceId,connected})});const payload=await response.json() as ApiResponse;if(!response.ok||!payload.connections)throw new Error(payload.message||"Connection could not be updated");setConnections(payload.connections);}catch(failure){notifyError(failure,"Connection failed safely");}finally{setBusy(null);}};
+  const watch=(id:string)=>{streamRef.current?.close();const source=new EventSource(`/api/delegations/${id}/events`);source.addEventListener("delegation",event=>{try{const next=JSON.parse((event as MessageEvent).data) as DelegationView;updateDelegation(next);if(["verified","failed"].includes(next.status))source.close();}catch(failure){source.close();notifyError(failure,"Task updates could not be read.");}});source.onerror=()=>{source.close();notifyError(new Error("Task update stream disconnected."),"Task updates could not be received.");};streamRef.current=source;};
+  const request=async(url:string,body:Record<string,unknown>,action:string)=>{setBusy(action);setError("");try{const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Idempotency-Key":`ui_${crypto.randomUUID()}`},body:JSON.stringify(body)});const payload=await response.json() as ApiResponse;if(!response.ok||!payload.delegation)throw new Error(payload.message||"Workflow request failed");updateDelegation(payload.delegation);return payload.delegation;}catch(failure){notifyError(failure,"Workflow stopped safely");return null;}finally{setBusy(null);}};
   const createJobsPlan=async()=>{const created=await request("/api/delegations",{goal:task,candidateName,skills:skills.split(",").map(value=>value.trim()).filter(Boolean),maxApplications:3},"planning");if(created){setSelectedJobs(created.selectedJobIds);setDelegation(created);}};
   const approve=()=>delegation&&request(`/api/delegations/${delegation.id}/approve`,{selectedJobIds:selectedJobs},"approving"); const execute=()=>{if(!delegation)return;watch(delegation.id);return request(`/api/delegations/${delegation.id}/execute`,{injectTransientFailure:injectFailure},"executing");};
   const openTask=(item:DelegationView)=>{setRoutePlan(null);setTask(item.goal);setDelegation(item);setSelectedJobs(item.selectedJobIds);navigate("task-detail");if(["executing","retrying","verifying"].includes(item.status))watch(item.id);};
   const downloadReceipt=(format: "json" | "pdf" = "json")=>{if(!delegation?.receipt)return;downloadReceiptFile(delegation.receipt,format,`smaj-proof-${delegation.id}.${format}`);};
   if(busy==="demo")return <DemoLoading/>;
-  if(authenticated!==true)return <LandingPage demoEnabled={demoEnabled} startDemo={startDemo} authenticated={authenticated} ssoEnabled={ssoEnabled} accessToken={accessToken} setAccessToken={setAccessToken} busy={busy} error={error} login={login}/>;
+  if(authenticated!==true)return <><LandingPage demoEnabled={demoEnabled} startDemo={startDemo} authenticated={authenticated} ssoEnabled={ssoEnabled} accessToken={accessToken} setAccessToken={setAccessToken} busy={busy} login={login}/><ErrorToast message={error} dismiss={()=>setError("")}/></>;
   const connectedIds=new Set(connections.filter(item=>item.connected).map(item=>item.serviceId)); const pending=history.filter(item=>item.status==="awaiting_approval"); const receipts=history.filter(item=>item.receipt);
   const pageTitle: Record<Exclude<View, "home">, string> = { tasks:"All Tasks", "task-detail":delegation||routePlan?.discovery||routePlan?.execution?"Results":"Conversations", services:"Connect Apps", approvals:"Approvals", receipts:"Results", profile:"Settings" };
-  return <main className="workspace">
+  return <><main className="workspace">
     {view==="home"&&<header className="workspaceHeader">
       <div className="headerSide"><button className="iconButton" onClick={()=>setMenuOpen(true)} aria-label="Open menu"><Icon name="menu"/></button><button className="headerBrand" onClick={()=>navigate("home")}><BrandLogo/><div><strong>SMAJ AI</strong><small>VERIFIED DELEGATION</small></div></button></div>
       <div className="headerSide"><button className="headerNav" onClick={()=>navigate("tasks")} aria-label="Tasks"><Icon name="tasks"/><span>Tasks</span></button><button className="headerNav" onClick={()=>navigate("services")} aria-label="Apps"><Icon name="apps"/><span>Apps</span></button></div>
@@ -188,19 +195,20 @@ export default function Dashboard() {
     </aside>
     <section className={`workspaceBody ${view==="services"?servicesStyles.body:""} ${view==="home"?"homeBody":"internalBody"}`}>
       {sampleTasksEnabled&&sandbox&&<div className="demoNotice" role="status"><strong>Hackathon Demo</strong><span>Sample data. Simulated actions. Expires {expiresAt?time(new Date(expiresAt).toISOString()):"in one hour"}.</span><button className="secondaryButton" onClick={()=>navigate("tasks")}>Sample tasks</button><button className="secondaryButton" onClick={logout}>Exit demo</button></div>}
-      {error&&<div className="errorBanner" role="alert"><strong>Request failed.</strong> {error}<button onClick={()=>setError("")}>×</button></div>}
       {view==="home"&&<HomeWorkspace task={task} setTask={setTask} selectedService={selectedService} selectService={setSelectedService} routeTask={routeTask} busy={busy} connectedIds={connectedIds}/>}
       {view==="services"&&<Services connections={connections} setConnection={setConnection} busy={busy}/>}
       {view==="tasks"&&<TaskHistory tasks={aiTasks} delegations={sampleTasksEnabled?history:[]} busy={busy} openAiTask={saved=>{setDelegation(null);setTask(saved.task);setRoutePlan(saved.plan);navigate("task-detail");}} deleteAiTask={deleteAiTask} openDelegation={openTask} deleteDelegation={deleteDelegation}/>}
-      {view==="task-detail"&&<Tasks liveTaskResult={activeTask?<LiveTaskResult key={activeTask.id} task={activeTask} busy={Boolean(busy)} sandbox={sandbox} discover={discover} approve={approveLive} retry={retryLive}/>:null} routePlan={routePlan} task={task} busy={busy} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
+      {view==="task-detail"&&<Tasks liveTaskResult={activeTask?<LiveTaskResult key={activeTask.id} task={activeTask} busy={Boolean(busy)} sandbox={sandbox} discover={discover} approve={approveLive} retry={retryLive} reportError={message=>notifyError(message,"The task reported an error.")}/>:null} routePlan={routePlan} task={task} busy={busy} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
       {view==="approvals"&&aiTasks.filter(t=>t.plan.proposedActions?.length&&!t.plan.execution).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail");}}>Review live actions: {t.task}</button>)}
       {view==="approvals"&&<Approvals items={pending} openTask={openTask}/>}
       {view==="receipts"&&aiTasks.filter(t=>t.plan.execution?.receipt).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail");}}>Live verified receipt: {t.task}</button>)}
       {view==="receipts"&&<Receipts items={receipts} openTask={openTask}/>}
       {view==="profile"&&<Profile connectedCount={connectedIds.size} taskCount={history.length} navigate={navigate} logout={logout}/>}
     </section>
-  </main>;
+  </main><ErrorToast message={error} dismiss={()=>setError("")}/></>;
 }
+
+function ErrorToast({message,dismiss}:{message:string;dismiss:()=>void}){return message?<div className="errorToast" role="alert" aria-live="assertive"><span>{message}</span><button type="button" aria-label="Dismiss error notification" onClick={dismiss}>×</button></div>:null;}
 
 function DrawerItem({icon,label,badge,active,onClick}:{icon:string;label:string;badge?:number;active:boolean;onClick:()=>void}){return <button className={active?"active":""} onClick={onClick}><Icon name={icon}/><span>{label}</span>{badge!==undefined&&badge>0&&<b>{badge}</b>}</button>}
 
