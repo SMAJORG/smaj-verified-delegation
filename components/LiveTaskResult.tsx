@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { AiTask } from "@/src/server/ai-tasks";
+import type { StoreMessageEvidence } from "@/src/domain/services";
 
 function ResultImage({ src, alt }: { src?: string; alt: string }) {
   const [failed, setFailed] = useState(false);
@@ -17,13 +18,16 @@ function ResultDescription({ children }: { children: string }) {
   </div>;
 }
 
-export default function LiveTaskResult({ task, busy, sandbox, discover, approve, retry, reportError }: { task: AiTask; busy: boolean; sandbox: boolean; discover: (taskId: string) => void; approve: (taskId: string, ids: string[]) => void; retry: (taskId: string) => void; reportError: (message: string) => void }) {
+export default function LiveTaskResult({ task, busy, sandbox, discover, approve, retry, refreshActionUpdates, reportError }: { task: AiTask; busy: boolean; sandbox: boolean; discover: (taskId: string) => void; approve: (taskId: string, ids: string[]) => void; retry: (taskId: string) => void; refreshActionUpdates?: (taskId: string) => void; reportError: (message: string) => void }) {
   const plan = task.plan;
   const [dismissed, setDismissed] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const lastReportedError = useRef("");
   const errors = [plan.summaryError?.message, ...(plan.discovery?.results.map(result => result.error) || []), plan.execution?.error].filter((message): message is string => Boolean(message));
   const errorDetails = errors.join("\n");
+  const sellerConversation = plan.execution?.evidence?.find(item => Boolean(item) && typeof item === "object" && (item as Record<string, unknown>).kind === "contact_seller") as Record<string, unknown> | undefined;
+  const pendingOrder = plan.execution?.evidence?.find(item => Boolean(item) && typeof item === "object" && (item as Record<string, unknown>).kind === "create_order") as Record<string, unknown> | undefined;
+  const orderAction = plan.execution?.actions.find(item => item.kind === "create_order");
   useEffect(() => {
     const key = `${task.id}:${errorDetails}`;
     if (!errorDetails || lastReportedError.current === key) return;
@@ -86,8 +90,11 @@ export default function LiveTaskResult({ task, busy, sandbox, discover, approve,
       </section>;})}
     </>}
     {!plan.execution && !!plan.proposedActions?.length && <div className="approvalBar"><div><h3>Review before submission</h3><p>Nothing is submitted until you approve the exact details below.</p>{plan.proposedActions.map(action => {
-      const preview = action.applicationPreview;
-      return <label className="liveAction" key={action.id}><input type="checkbox" checked={selected.includes(action.id)} onChange={e => setSelected(ids => e.target.checked ? [...ids, action.id] : ids.filter(id => id !== action.id))}/><span><strong>{action.title}</strong><small>{action.recordId}</small>{action.coverNote && <p><strong>Application note</strong><br />{action.coverNote}</p>}
+      const preview = action.kind === "apply" ? action.applicationPreview : undefined;
+      const storePreview = action.kind === "contact_seller" || action.kind === "create_order" ? action.storePreview : undefined;
+      return <label className="liveAction" key={action.id}><input type="checkbox" checked={selected.includes(action.id)} onChange={e => setSelected(ids => e.target.checked ? [...ids, action.id] : ids.filter(id => id !== action.id))}/><span><strong>{action.title}</strong><small>{action.recordId}</small>{action.kind === "apply" && <p><strong>Application note</strong><br />{action.coverNote}</p>}
+        {action.kind === "contact_seller" && <div className="taskEvidence"><strong>Exact seller message</strong><p>{action.message}</p>{storePreview&&<p>Product: {storePreview.product.title} · Seller: {storePreview.product.sellerName}</p>}</div>}
+        {action.kind === "create_order" && <div className="taskEvidence"><strong>Pending order review</strong>{storePreview&&<p>{action.quantity} × {storePreview.product.title} · {storePreview.product.sellerName} · {(storePreview.product.pricePi*action.quantity).toFixed(7).replace(/0+$/,"").replace(/\.$/,"")} Pi</p>}<p>Approval reserves the item in SMAJ PI HUB. Payment stays pending; you must separately complete checkout.</p></div>}
         {action.kind === "apply" && (preview ? <div className="taskEvidence">
           <strong>Exact application details</strong>
           <p>Job: {preview.job.title} · {preview.job.company}</p>
@@ -100,6 +107,6 @@ export default function LiveTaskResult({ task, busy, sandbox, discover, approve,
         </div> : <p>Sign in to SMAJ PI HUB to load your profile and CV sharing details before approval. No application has been submitted.</p>)}
       </span></label>;
     })}</div><button className="primaryButton" disabled={busy || sandbox || !selected.length} onClick={() => approve(task.id, selected)}>Approve {selected.length} live actions</button></div>}
-    {plan.execution && <section aria-live="polite"><h3>Live execution · {plan.execution.status}</h3><details className="taskEvidence"><summary>Execution activity</summary><p>Approved {plan.execution.approvedAt} · Attempt {plan.execution.attempts}</p>{plan.execution.events?.map((event,index)=><p key={index}><small>{event.at}</small> · {event.message}</p>)}</details>{plan.execution.status === "failed" && plan.execution.retryable && <button className="secondaryButton" disabled={busy} onClick={()=>retry(task.id)}>Retry safely</button>}{plan.execution.receipt && <><p>Verified against Hub backend records · {plan.execution.receipt.verifiedAt}</p><a className="secondaryButton" href={`/api/tasks/${task.id}/receipt`} download>Download JSON receipt</a> <a className="secondaryButton" href={`/api/tasks/${task.id}/receipt/pdf`} download>Download PDF receipt</a></>}</section>}
+    {plan.execution && <section aria-live="polite"><h3>Live execution · {plan.execution.status}</h3>{plan.execution.actions.some(action=>action.kind==="contact_seller")&&<section className="taskEvidence"><h4>Seller conversation</h4>{refreshActionUpdates&&<button type="button" className="secondaryButton" disabled={busy} onClick={()=>refreshActionUpdates(task.id)}>Refresh seller replies</button>}{Array.isArray(sellerConversation?.messages)&&sellerConversation.messages.map((value,index)=>{const message=value as StoreMessageEvidence;return <p key={message.id||index}><strong>{message.senderName||message.senderId}</strong> · {message.createdAt}<br/>{message.message}</p>;})}{!Array.isArray(sellerConversation?.messages)&&<p>No seller replies have been retrieved yet.</p>}</section>}{pendingOrder&&orderAction&&<section className="taskEvidence"><h4>SMAJ PI HUB order</h4><p>Order status: {String(pendingOrder.status)} · Payment status: {String(pendingOrder.paymentStatus)} · Total: {String(pendingOrder.totalPricePi)} Pi</p><p>Payment has not been initiated by SMAJ AI. Complete payment only in the secure SMAJ PI HUB checkout.</p>{refreshActionUpdates&&<button type="button" className="secondaryButton" disabled={busy} onClick={()=>refreshActionUpdates(task.id)}>Refresh order status</button>}{pendingOrder.paymentStatus==="pending"&&<a className="taskViewLink" href={`https://smajpihub.com/product/${encodeURIComponent(orderAction.recordId)}`} target="_blank" rel="noreferrer">Open SMAJ PI HUB to continue checkout ↗</a>}</section>}<details className="taskEvidence"><summary>Execution activity</summary><p>Approved {plan.execution.approvedAt} · Attempt {plan.execution.attempts}</p>{plan.execution.events?.map((event,index)=><p key={index}><small>{event.at}</small> · {event.message}</p>)}</details>{plan.execution.status === "failed" && plan.execution.retryable && <button className="secondaryButton" disabled={busy} onClick={()=>retry(task.id)}>Retry safely</button>}{plan.execution.receipt && <><p>Verified against Hub backend records · {plan.execution.receipt.verifiedAt}</p><a className="secondaryButton" href={`/api/tasks/${task.id}/receipt`} download>Download JSON receipt</a> <a className="secondaryButton" href={`/api/tasks/${task.id}/receipt/pdf`} download>Download PDF receipt</a></>}</section>}
   </section>;
 }

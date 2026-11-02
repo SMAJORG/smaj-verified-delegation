@@ -10,6 +10,24 @@ import { HubActionAdapter, type ActionAdapter } from "@/src/server/live-actions"
 type Run = { task_id: string; owner_id: string; uid: string; state: string; attempts: number; approved_at: string; expires_at: string; actions_json: string; lease_token: string };
 export class LiveWorkflow {
   constructor(private db: AppDatabase, private adapter: ActionAdapter = new HubActionAdapter(), private now = () => new Date()) {}
+  async refreshActionUpdates(session: ActorSession, id: string) {
+    if (session.authType !== "sso" || session.sandbox || !session.uid) throw new AppError("live_identity_required", "Refreshing live action updates requires a real Hub sign-in", 403);
+    const store = new AiTaskStore(this.db);
+    const task = store.get(session.actorId, id);
+    const execution = task.plan.execution;
+    if (!execution || execution.status !== "verified") throw new AppError("live_action_not_verified", "The approved live action has not been verified yet", 409);
+    const actions = execution.actions.filter(item => item.serviceId === "store" && (item.kind === "contact_seller" || item.kind === "create_order"));
+    if (!actions.length) throw new AppError("live_action_not_found", "This task has no refreshable Store actions", 404);
+    const run = this.db.prepare("SELECT * FROM live_action_runs WHERE task_id = ? AND owner_id = ? AND uid = ? AND state = 'verified'").get(id, session.actorId, session.uid) as Run | undefined;
+    if (!run || JSON.stringify(JSON.parse(run.actions_json)) !== JSON.stringify(execution.actions)) throw new AppError("seller_message_contract_mismatch", "The approved seller conversation could not be verified", 409);
+    const contract = { ownerId: run.owner_id, uid: run.uid, taskId: id, approvedAt: run.approved_at, expiresAt: run.expires_at };
+    const latestEvidence = await Promise.all(actions.map(action => this.adapter.perform(contract, action, "verify")));
+    const evidence = [...(execution.evidence || []).filter(item => !(item && typeof item === "object" && (item as Record<string, unknown>).serviceId === "store" && ["contact_seller", "create_order"].includes(String((item as Record<string, unknown>).kind)))), ...latestEvidence];
+    const verifiedAt = this.now().toISOString();
+    const proof = { contract, actions: execution.actions, mode: "live" as const, verifiedAt, evidence };
+    const receipt = { mode: "live" as const, verifiedAt, evidence, proof, proofHash: createHash("sha256").update(JSON.stringify(proof)).digest("hex") };
+    return store.savePlan(session.actorId, id, { ...task.plan, execution: { ...execution, evidence, receipt } });
+  }
   retry(session: ActorSession, id: string) {
     if (session.authType !== "sso" || session.sandbox || !session.uid) throw new AppError("live_identity_required", "Retrying live execution requires a real Hub sign-in", 403);
     if (process.env.SMAJ_PRODUCTION_WRITES_ENABLED !== "true" || (process.env.SMAJ_AI_DELEGATION_SECRET?.trim().length || 0) < 32) throw new AppError("live_delegation_not_configured", "Live actions are not configured on both servers", 503);
@@ -43,6 +61,25 @@ export class LiveWorkflow {
       const selected = [...new Set(actionIds)].map(actionId => proposals.find(a => a.id === actionId));
       if (!selected.length || selected.length > 3 || selected.some(a => !a)) throw new AppError("invalid_actions", "Select one to three proposed actions", 400);
       const actions = selected as LiveAction[];
+      if (actions.some(action => action.serviceId === "store" && action.kind === "contact_seller" && (!action.message.trim() || action.message.length > 1000 || action.storePreview?.product.recordId !== action.recordId))) throw new AppError("seller_message_review_required", "Review the exact seller message and current product before approval", 409);
+      if (actions.some(action => action.serviceId === "store" && action.kind === "create_order" && (!Number.isInteger(action.quantity) || action.quantity < 1 || action.quantity > 20 || action.storePreview?.product.recordId !== action.recordId || action.quantity > action.storePreview.product.quantityAvailable))) throw new AppError("order_review_required", "Review an available quantity and current product price before order approval", 409);
+      const storeOrderActions = actions.filter((action): action is Extract<LiveAction, { kind: "create_order" }> => action.serviceId === "store" && action.kind === "create_order");
+      if (storeOrderActions.length) {
+        const turns = store.conversationHistory(session.actorId, task.conversationId || task.id);
+        for (const action of storeOrderActions) {
+          const sellerConfirmedAvailability = turns.some(turn => (turn.plan.execution?.evidence || []).some(item => {
+            if (!item || typeof item !== "object") return false;
+            const evidence = item as Record<string, unknown>;
+            return evidence.kind === "contact_seller" && evidence.recordId === action.recordId && typeof evidence.sellerId === "string" && Array.isArray(evidence.messages) && evidence.messages.some(message => {
+              if (!message || typeof message !== "object") return false;
+              const saved = message as Record<string, unknown>;
+              const text = typeof saved.message === "string" ? saved.message : "";
+              return saved.senderId === evidence.sellerId && /\b(yes|available|in stock|still have|can sell)\b/i.test(text) && !/\b(no|not available|out of stock|sold out|unavailable)\b/i.test(text);
+            });
+          }));
+          if (!sellerConfirmedAvailability) throw new AppError("seller_availability_unconfirmed", "Wait for a seller reply confirming this product is available before preparing an order", 409);
+        }
+      }
       const employerBackedJobs = new Set((task.plan.discovery.results.find(result => result.serviceId === "jobs")?.records || [])
         .filter((record): record is Record<string, unknown> => Boolean(record) && typeof record === "object")
         .filter(record => record.listingProvenance === "employer_backed" && record.employerVerified === true)

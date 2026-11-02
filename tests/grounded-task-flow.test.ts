@@ -50,7 +50,8 @@ test("authenticated natural request routes through provider, approved live catal
     const db = workspaceDatabase(request({})); const connections = new ServiceConnectionStore(db); connections.list(identity.sub,"sso"); connections.set(identity.sub,"store",true);
     const discovered = await discover(request({}),context); assert.equal(discovered.status,200);
     const grounded = (await discovered.json()).task;
-    assert.equal(grounded.plan.summary,"I found one car within your budget. It is listed for $25,000 USDT.");
+    assert.match(grounded.plan.summary,/^I found one car within your budget\. It is listed for \$25,000 USDT\./);
+    assert.match(grounded.plan.summary,/Would you like to contact a seller/);
     assert.equal(grounded.plan.summaryAi.responseId,"fixture-2"); assert.equal(grounded.plan.proposedActions.length,1); assert.equal(grounded.plan.matches.length,1); assert.equal(writes,0);
     assert.match(grounded.plan.matches[0].reason, /25,?000 USDT reference.*30,?000 USDT limit/);
     assert.equal((await approve(request({approved:true,actionIds:["action-1"],reviewHash:"stale"}),context)).status,409);

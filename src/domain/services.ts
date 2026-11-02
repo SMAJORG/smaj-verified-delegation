@@ -15,9 +15,9 @@ export type SmajService = {
 };
 
 export const SMAJ_SERVICES: readonly SmajService[] = [
-  { id: "store", name: "SMAJ Store", shortName: "Store", description: "Products and verified stores", platformStatus: "live", adapterMode: "connected", capabilities: ["product discovery", "price comparison"], example: "Compare products that fit my budget", accent: "#7c3aed" },
+  { id: "store", name: "SMAJ Store", shortName: "Store", description: "Products, seller messaging, and order preparation", platformStatus: "live", adapterMode: "connected", capabilities: ["product discovery", "price comparison", "contact a seller with approval", "prepare an order with approval"], example: "Find a product and ask its seller if it is available", accent: "#7c3aed" },
   { id: "stream", name: "SMAJ Stream", shortName: "Stream", description: "Published public creator content", platformStatus: "live", adapterMode: "connected", capabilities: ["content discovery", "watch planning"], example: "Build a weekend watchlist", accent: "#db2777" },
-  { id: "jobs", name: "SMAJ Jobs", shortName: "Jobs", description: "Jobs and freelance opportunities", platformStatus: "live", adapterMode: "connected", capabilities: ["read opportunities", "match roles", "application drafts", "mock applications"], example: "Find matching jobs and prepare applications", accent: "#6d28d9" },
+  { id: "jobs", name: "SMAJ Jobs", shortName: "Jobs", description: "Jobs, verified employer listings, and approved applications", platformStatus: "live", adapterMode: "connected", capabilities: ["read opportunities", "match roles", "prepare applications", "submit an application after approval"], example: "Find matching jobs and prepare applications", accent: "#6d28d9" },
   { id: "education", name: "SMAJ Education", shortName: "Education", description: "Courses and practical skills", platformStatus: "coming_soon", adapterMode: "planning_only", capabilities: ["learning plans", "course discovery"], example: "Create a learning path for product design", accent: "#2563eb" },
   { id: "sports", name: "SMAJ Sports", shortName: "Sports", description: "Sports, fixtures, and scores", platformStatus: "in_progress", adapterMode: "planning_only", capabilities: ["fixture planning", "sports summaries"], example: "Plan which matches to follow this week", accent: "#ea580c" },
   { id: "food", name: "SMAJ Food", shortName: "Food", description: "Restaurants and food delivery", platformStatus: "in_progress", adapterMode: "planning_only", capabilities: ["meal planning", "restaurant discovery"], example: "Plan affordable meals near me", accent: "#dc2626" },
@@ -42,7 +42,21 @@ export type JobApplicationPreview = {
   profile: { title: string; skills: string[]; location: string; portfolio: string; summary: string; profilePhoto: string };
   cv: { attached: boolean; name?: string; size?: number; visibility?: string };
 };
-export type LiveAction = { id: string; serviceId: "jobs" | "store"; recordId: string; kind: "apply" | "save_product"; title: string; coverNote?: string; applicationPreview?: JobApplicationPreview };
+export type StoreActionPreview = {
+  product: { recordId: string; title: string; sellerName: string; pricePi: number; quantityAvailable: number };
+};
+export type StoreMessageEvidence = {
+  id: string;
+  senderId: string;
+  senderName: string;
+  message: string;
+  createdAt: string;
+};
+export type LiveAction =
+  | { id: string; serviceId: "jobs"; recordId: string; kind: "apply"; title: string; coverNote: string; applicationPreview?: JobApplicationPreview }
+  | { id: string; serviceId: "store"; recordId: string; kind: "save_product"; title: string }
+  | { id: string; serviceId: "store"; recordId: string; kind: "contact_seller"; title: string; message: string; storePreview?: StoreActionPreview }
+  | { id: string; serviceId: "store"; recordId: string; kind: "create_order"; title: string; quantity: number; storePreview?: StoreActionPreview };
 export type LiveExecution = { status: "queued" | "running" | "retrying" | "verified" | "failed"; approvedAt: string; expiresAt: string; actions: LiveAction[]; attempts: number; error?: string; retryable?: boolean; evidence?: unknown[]; events?: Array<{ at: string; type: string; message: string }>; receipt?: { mode: "live"; verifiedAt: string; evidence: unknown[]; proofHash: string; proof: unknown } };
 
 export type ServicePlanStep = {

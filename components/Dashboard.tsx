@@ -223,6 +223,17 @@ export default function Dashboard() {
     } catch (failure) { notifyError(failure,"Safe retry failed"); }
     finally { setBusy(null); }
   };
+  const refreshActionUpdates=async(taskId:string)=>{
+    setBusy(`action-updates-${taskId}`);setError("");
+    try{
+      const response=await fetch(`/api/tasks/${taskId}/updates`,{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+      const payload=await response.json();
+      if(!response.ok||!payload.task)throw new Error(payload.message||"Live action updates could not be refreshed.");
+      setAiTasks(items=>items.map(item=>item.id===taskId?payload.task:item));
+      if(route.taskId===taskId)setRoutePlan(payload.task.plan);
+    }catch(failure){notifyError(failure,"Live action updates could not be refreshed.");}
+    finally{setBusy(null);}
+  };
   const runningConversationTasks=conversationTasks.filter(item=>item.plan.execution&&["queued","running","retrying"].includes(item.plan.execution.status)).map(item=>item.id);
   const runningConversationKey=runningConversationTasks.join(",");
   useEffect(() => {
@@ -267,7 +278,7 @@ export default function Dashboard() {
       {view==="home"&&<HomeWorkspace task={task} setTask={setTask} selectedService={selectedService} selectService={setSelectedService} routeTask={routeTask} busy={busy} connectedIds={connectedIds}/>}
       {view==="services"&&<Services connections={connections} setConnection={setConnection} busy={busy}/>}
       {view==="tasks"&&<TaskHistory tasks={aiTasks} delegations={sampleTasksEnabled?history:[]} busy={busy} openAiTask={saved=>{setDelegation(null);setTask(saved.task);setRoutePlan(saved.plan);navigate("task-detail",{taskId:saved.id});}} deleteAiTask={deleteAiTask} openDelegation={openTask} deleteDelegation={deleteDelegation}/>}
-      {view==="task-detail"&&<Tasks messages={conversationTasks} routePlan={routePlan} task={task} busy={busy} conversationId={activeTask?.conversationId} onFollowUp={(message:string,id:string)=>submitTask(message,id)} discover={discover} approveLive={approveLive} retryLive={retryLive} sandbox={sandbox} reportError={(message:string)=>notifyError(message,"The task reported an error.")} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
+      {view==="task-detail"&&<Tasks messages={conversationTasks} routePlan={routePlan} task={task} busy={busy} conversationId={activeTask?.conversationId} onFollowUp={(message:string,id:string)=>submitTask(message,id)} discover={discover} approveLive={approveLive} retryLive={retryLive} refreshActionUpdates={refreshActionUpdates} sandbox={sandbox} reportError={(message:string)=>notifyError(message,"The task reported an error.")} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
       {view==="approvals"&&aiTasks.filter(t=>t.plan.proposedActions?.length&&!t.plan.execution).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Review live actions: {t.task}</button>)}
       {view==="approvals"&&<Approvals items={pending} openTask={openTask}/>}
       {view==="receipts"&&aiTasks.filter(t=>t.plan.execution?.receipt).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Live verified receipt: {t.task}</button>)}
@@ -295,7 +306,7 @@ export function Tasks(props:any){
       {props.messages.map((message:AiTask,index:number)=><article className="chatTurn" key={message.id}>
         <div className="chatUserMessage">{message.task}</div>
         <section className="chatAssistantMessage"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><p className="resultsWho">SMAJ AI</p><p className="taskAnswer">{message.plan.summary}</p>
-          <LiveTaskResult key={message.id} task={message} busy={Boolean(props.busy)} sandbox={props.sandbox} discover={props.discover} approve={props.approveLive} retry={props.retryLive} reportError={props.reportError}/>
+          <LiveTaskResult key={message.id} task={message} busy={Boolean(props.busy)} sandbox={props.sandbox} discover={props.discover} approve={props.approveLive} retry={props.retryLive} refreshActionUpdates={props.refreshActionUpdates} reportError={props.reportError}/>
         </div></section>
         {index===props.messages.length-1&&<div ref={lastTurn} aria-hidden="true"/>}
       </article>)}

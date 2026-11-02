@@ -1,12 +1,13 @@
 import { createHmac } from "node:crypto";
-import type { JobApplicationPreview, LiveAction } from "@/src/domain/services";
+import type { JobApplicationPreview, LiveAction, StoreActionPreview, StoreMessageEvidence } from "@/src/domain/services";
 import { AppError } from "@/src/server/http";
 
 export type LiveContract = { ownerId: string; uid: string; taskId: string; approvedAt: string; expiresAt: string };
 export type PreparationContract = { ownerId: string; uid: string; taskId: string };
 export interface ActionAdapter {
   perform(contract: LiveContract, action: LiveAction, operation: "execute" | "verify"): Promise<Record<string, unknown>>;
-  prepare?(contract: PreparationContract, action: LiveAction): Promise<JobApplicationPreview>;
+  prepare?(contract: PreparationContract, action: Extract<LiveAction, { serviceId: "jobs" }>): Promise<JobApplicationPreview>;
+  prepare?(contract: PreparationContract, action: Extract<LiveAction, { kind: "contact_seller" | "create_order" }>): Promise<StoreActionPreview>;
 }
 export class HubActionAdapter implements ActionAdapter {
   constructor(private fetcher: typeof fetch = fetch) {}
@@ -24,7 +25,7 @@ export class HubActionAdapter implements ActionAdapter {
       ...(contract.approvedAt ? { approvedAt: contract.approvedAt } : {}),
       ...(contract.expiresAt ? { expiresAt: contract.expiresAt } : {}),
       ...(operation !== "prepare" ? { bindingConfirmed: true } : {}),
-      ...(action.applicationPreview ? { applicationDetailsHash: action.applicationPreview.detailsHash } : {}),
+      ...(action.serviceId === "jobs" && action.kind === "apply" && action.applicationPreview ? { applicationDetailsHash: action.applicationPreview.detailsHash } : {}),
       exp: Math.floor(Date.now() / 1000) + 60,
       action,
     })).toString("base64url");
@@ -36,8 +37,18 @@ export class HubActionAdapter implements ActionAdapter {
     if (!response.ok) throw new AppError("hub_action_failed", typeof body.message === "string" ? body.message.slice(0, 400) : `Hub action failed (HTTP ${response.status})`, response.status);
     return body;
   }
-  async prepare(contract: PreparationContract, action: LiveAction) {
-    if (action.serviceId !== "jobs" || action.kind !== "apply") throw new AppError("unsupported_preparation", "Only job applications can be prepared", 400);
+  async prepare(contract: PreparationContract, action: Extract<LiveAction, { kind: "contact_seller" | "create_order" }>): Promise<StoreActionPreview>;
+  async prepare(contract: PreparationContract, action: Extract<LiveAction, { serviceId: "jobs" }>): Promise<JobApplicationPreview>;
+  async prepare(contract: PreparationContract, action: LiveAction): Promise<JobApplicationPreview | StoreActionPreview> {
+    if (action.serviceId === "store" && (action.kind === "contact_seller" || action.kind === "create_order")) {
+      const body = await this.request(contract, action, "prepare");
+      const preview = body.preview as StoreActionPreview | undefined;
+      if (!preview?.product || preview.product.recordId !== action.recordId || !preview.product.title || !preview.product.sellerName || !Number.isFinite(preview.product.pricePi) || preview.product.pricePi <= 0 || !Number.isInteger(preview.product.quantityAvailable) || preview.product.quantityAvailable < 0) {
+        throw new AppError("invalid_store_action_preview", "Hub did not return a complete product and seller review", 502);
+      }
+      return preview;
+    }
+    if (action.serviceId !== "jobs" || action.kind !== "apply") throw new AppError("unsupported_preparation", "This action cannot be prepared", 400);
     const body = await this.request(contract, action, "prepare");
     const preview = body.preview as JobApplicationPreview | undefined;
     if (!preview || typeof preview.detailsHash !== "string" || !preview.detailsHash || preview.job?.recordId !== action.recordId || !preview.profile?.title || typeof preview.cv?.attached !== "boolean") {
@@ -48,7 +59,15 @@ export class HubActionAdapter implements ActionAdapter {
   async perform(contract: LiveContract, action: LiveAction, operation: "execute" | "verify") {
     const body = await this.request(contract, action, operation);
     const evidence = body.evidence;
-    if (!evidence || evidence.ownerId !== contract.ownerId || evidence.contractId !== contract.taskId || evidence.serviceId !== action.serviceId || evidence.recordId !== action.recordId || evidence.kind !== action.kind || typeof evidence.backendId !== "string" || !evidence.backendId || (action.kind === "save_product" ? evidence.status !== "saved" : !["submitted", "reviewing", "shortlisted", "hired", "rejected"].includes(evidence.status) || typeof evidence.createdAt !== "string" || evidence.applicationDetailsHash !== action.applicationPreview?.detailsHash || typeof evidence.idempotencyKey !== "string" || !evidence.idempotencyKey)) throw new AppError("verification_mismatch", "Backend evidence did not match the approved action", 409);
+    const validEvidence = evidence && evidence.ownerId === contract.ownerId && evidence.contractId === contract.taskId && evidence.serviceId === action.serviceId && evidence.recordId === action.recordId && evidence.kind === action.kind && typeof evidence.backendId === "string" && !!evidence.backendId;
+    const validKind = action.kind === "save_product"
+      ? evidence?.status === "saved"
+      : action.kind === "apply"
+        ? ["submitted", "reviewing", "shortlisted", "hired", "rejected"].includes(String(evidence?.status)) && typeof evidence?.createdAt === "string" && evidence.applicationDetailsHash === action.applicationPreview?.detailsHash && typeof evidence.idempotencyKey === "string" && !!evidence.idempotencyKey
+        : action.kind === "contact_seller"
+          ? evidence?.status === "sent" && typeof evidence.conversationId === "string" && typeof evidence.messageId === "string" && typeof evidence.createdAt === "string" && Array.isArray(evidence.messages) && evidence.messages.every((message: StoreMessageEvidence) => message && typeof message.id === "string" && typeof message.senderId === "string" && typeof message.message === "string" && typeof message.createdAt === "string")
+          : typeof evidence?.status === "string" && typeof evidence.paymentStatus === "string" && evidence.orderId === evidence.backendId && evidence.quantity === action.quantity && typeof evidence.totalPricePi === "number" && Number.isFinite(evidence.totalPricePi) && typeof evidence.createdAt === "string";
+    if (!validEvidence || !validKind) throw new AppError("verification_mismatch", "Backend evidence did not match the approved action", 409);
     return evidence as Record<string, unknown>;
   }
 }
