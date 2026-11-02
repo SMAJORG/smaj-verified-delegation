@@ -5,7 +5,7 @@ export async function catalogJson(source: string, fetcher: typeof fetch = fetch)
   const url = new URL(source);
   const allowedOrigins = new Set([process.env.SMAJ_HUB_API_ORIGIN ? new URL(process.env.SMAJ_HUB_API_ORIGIN).origin : null, "https://smajpihub.com", "https://smajpihub.onrender.com"].filter(Boolean));
   if (!allowedOrigins.has(url.origin) || url.protocol !== "https:" || url.username || url.password || url.hash) throw new AppError("invalid_catalog_url", "Catalog URL must use the configured HTTPS HUB origin", 503);
-  if (!["/services/jobs/search", "/jobs/jobs", "/marketplace/products", "/stream/creator-content", "/stream/search", "/stream/trending"].includes(url.pathname)) throw new AppError("invalid_catalog_url", "Catalog path is not allowlisted", 503);
+  if (!["/services/jobs/search", "/jobs/jobs", "/marketplace/products", "/stream/creator-content"].includes(url.pathname)) throw new AppError("invalid_catalog_url", "Catalog path is not allowlisted", 503);
   const response = await fetcher(url.toString(), { method: "GET", headers: { Accept: "application/json" }, redirect: "error", cache: "no-store", signal: AbortSignal.timeout(20_000) });
   if (!response.ok) throw new AppError("catalog_unavailable", `HUB catalog returned HTTP ${response.status}`, 502);
   const reader = response.body?.getReader();
@@ -28,10 +28,10 @@ export function catalogSearchUrl(source: string, query: import("@/src/domain/ser
   query = normalizeCatalogQuery(query, service);
   const url = new URL(source);
   if (service === "stream") {
-    url.pathname = query.search ? "/stream/search" : "/stream/trending";
-    url.searchParams.delete("search");
+    url.pathname = "/stream/creator-content";
     url.searchParams.delete("q");
-    if (query.search) url.searchParams.set("q", query.search.slice(0, 80));
+    url.searchParams.delete("search");
+    if (query.search) url.searchParams.set("search", query.search.slice(0, 80));
     return url.toString();
   }
   // Jobs search is performed against the complete bounded catalog by the

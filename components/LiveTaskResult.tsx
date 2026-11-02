@@ -18,12 +18,11 @@ function ResultDescription({ children }: { children: string }) {
   </div>;
 }
 
-export default function LiveTaskResult({ task, busy, sandbox, discover, approve, retry, refreshActionUpdates, reportError }: { task: AiTask; busy: boolean; sandbox: boolean; discover: (taskId: string) => void; approve: (taskId: string, ids: string[]) => void; retry: (taskId: string) => void; refreshActionUpdates?: (taskId: string) => void; reportError: (message: string) => void }) {
+export default function LiveTaskResult({ task, busy, sandbox, approve, retry, refreshActionUpdates, reportError }: { task: AiTask; busy: boolean; sandbox: boolean; approve: (taskId: string, ids: string[]) => void; retry: (taskId: string) => void; refreshActionUpdates?: (taskId: string) => void; reportError: (message: string) => void }) {
   const plan = task.plan;
-  const [dismissed, setDismissed] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const lastReportedError = useRef("");
-  const errors = [plan.summaryError?.message, ...(plan.discovery?.results.map(result => result.error) || []), plan.execution?.error].filter((message): message is string => Boolean(message));
+  const errors = [...new Set([plan.summaryError?.message, ...(plan.discovery?.results.map(result => result.error) || []), plan.execution?.error].filter((message): message is string => Boolean(message)))];
   const errorDetails = errors.join("\n");
   const sellerConversation = plan.execution?.evidence?.find(item => Boolean(item) && typeof item === "object" && (item as Record<string, unknown>).kind === "contact_seller") as Record<string, unknown> | undefined;
   const pendingOrder = plan.execution?.evidence?.find(item => Boolean(item) && typeof item === "object" && (item as Record<string, unknown>).kind === "create_order") as Record<string, unknown> | undefined;
@@ -34,14 +33,11 @@ export default function LiveTaskResult({ task, busy, sandbox, discover, approve,
     lastReportedError.current = key;
     reportError(errorDetails);
   }, [task.id, errorDetails, reportError]);
-  const available = plan.services.some(id => ["jobs", "store", "stream"].includes(id));
   return <section className="liveTaskResults" aria-label="Live data and execution">
-    {plan.steps.filter(step => step.status === "unavailable").map(step => <p className="taskResultMeta" key={step.id}>{step.reason}</p>)}
-    {available && (!plan.discovery || plan.discovery.results.some(result=>result.status === "unavailable")) && !plan.execution && !dismissed && <div className="resultsApproval"><strong>Ready to search public listings?</strong><p>SMAJ AI reads published catalog listings only. No purchase or application will be made.</p><div className="resultsActions"><button className="primaryButton" disabled={busy} onClick={()=>discover(task.id)}>{busy ? "Searching…" : "Search public listings"}</button><button className="secondaryButton" disabled={busy} onClick={() => setDismissed(true)}>Not now</button></div>{sandbox&&<p>Sign in to SMAJ PI HUB to continue this search.</p>}</div>}
-    {dismissed&&!plan.discovery&&<button className="taskViewLink" onClick={()=>setDismissed(false)}>Continue public search</button>}
+    {!plan.discovery && plan.services.some(id => ["jobs", "store", "stream"].includes(id)) && busy && <p className="taskResultMeta" role="status">Searching published public listings…</p>}
     {plan.discovery && <>
       {plan.discovery.results.map(result => {
-        const records = plan.summaryAi ? result.records.filter(value => plan.matches?.some(match => match.serviceId === result.serviceId && match.id === String((value as {id?:unknown}).id))) : result.records;
+        const records = plan.summaryAi && result.serviceId !== "stream" ? result.records.filter(value => plan.matches?.some(match => match.serviceId === result.serviceId && match.id === String((value as {id?:unknown}).id))) : result.records;
         const employerBacked = result.serviceId === "jobs" ? records.filter(value => (value as { listingProvenance?: string }).listingProvenance === "employer_backed") : [];
         const sampleJobs = result.serviceId === "jobs" ? records.filter(value => (value as { listingProvenance?: string }).listingProvenance !== "employer_backed") : [];
         const renderCards = (items: unknown[], sample = false) => <div
@@ -81,7 +77,6 @@ export default function LiveTaskResult({ task, busy, sandbox, discover, approve,
         })}</div>;
         return <section key={result.serviceId}>
         <h3>{result.serviceId} · {result.status === "read" ? "Results" : "Unavailable"}</h3>
-        {result.status === "unavailable" && result.error && <p>{result.error}</p>}
         {result.status === "read" && !records.length && <p>No matching listings were found. Try another search or a higher budget.</p>}
         {result.serviceId === "jobs" ? <>
           {!!employerBacked.length && <><h4>Employer-backed Listings</h4>{renderCards(employerBacked)}</>}

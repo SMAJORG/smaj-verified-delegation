@@ -28,7 +28,6 @@ const renderResult = (record: Record<string, unknown>, additionalRecords: Record
     task,
     busy: false,
     sandbox: false,
-    discover: () => {},
     approve: () => {},
     retry: () => {},
     reportError: () => {},

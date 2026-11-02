@@ -116,18 +116,20 @@ test("Store adapter performs a GET and normalizes read-only products", async () 
   assert.equal(result[0].sellerName, "Ada Stores");
 });
 
-test("Stream adapter searches the public title catalog and preserves real poster and title details", async () => {
+test("Stream adapter searches published creator content and preserves real playback details", async () => {
   let requested: URL | undefined;
   const adapter = new SmajStreamReadAdapter("https://smajpihub.com/stream/creator-content", (async input => {
     requested = new URL(String(input));
-    return Response.json({ results: [{ id: "603", title: "The Matrix", mediaType: "movie", overview: "A computer hacker learns about reality.", posterUrl: "https://image.tmdb.org/t/p/w500/matrix.jpg", releaseDate: "1999-03-30", rating: 8.2 }] });
+    return Response.json({ videos: [{ _id: "video-1", title: "Creator film", creatorName: "SMAJ creator", description: "Published video description", category: "Film", cloudflareUid: "cloudflare-1", posterUrl: "https://smajpihub.com/uploads/poster.jpg" }] });
   }) as typeof fetch);
-  const [movie] = await adapter.listContent({ search: "The Matrix" });
-  assert.equal(requested?.pathname, "/stream/search");
-  assert.equal(requested?.searchParams.get("q"), "The Matrix");
-  assert.equal(movie.title, "The Matrix");
-  assert.equal(movie.imageUrl, "https://image.tmdb.org/t/p/w500/matrix.jpg");
-  assert.equal(movie.description, "A computer hacker learns about reality.");
-  assert.equal(movie.url, "https://smajpihub.com/app/services/stream/title/603");
-  assert.equal(movie.rating, 8.2);
+  const [video] = await adapter.listContent({ search: "Creator film" });
+  assert.equal(requested?.origin, "https://smajpihub.onrender.com");
+  assert.equal(requested?.pathname, "/stream/creator-content");
+  assert.equal(requested?.searchParams.get("search"), "Creator film");
+  assert.equal(video.id, "video-1");
+  assert.equal(video.title, "Creator film");
+  assert.equal(video.creatorName, "SMAJ creator");
+  assert.equal(video.imageUrl, "https://smajpihub.com/uploads/poster.jpg");
+  assert.equal(video.description, "Published video description");
+  assert.equal(video.url, "https://smajpihub.com/app/services/stream/watch/cloudflare-1");
 });

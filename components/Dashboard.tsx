@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [route,setRoute]=useState<DashboardRoute>({view:"home"});
   const [aiTasks,setAiTasks]=useState<AiTask[]>([]); const [selectedService,setSelectedService]=useState<ServiceId|null>(null); const [task,setTask]=useState(""); const [routePlan,setRoutePlan]=useState<ServiceRoutePlan|null>(null); const [connections,setConnections]=useState<ServiceConnection[]>([]); const [history,setHistory]=useState<DelegationView[]>([]); const [delegation,setDelegation]=useState<DelegationView|null>(null);
   const [threadTaskIds,setThreadTaskIds]=useState<string[]>([]); const [threadConversationId,setThreadConversationId]=useState<string|null>(null); const loadedConversations=useRef(new Set<string>());
+  const discoveryInFlight=useRef(new Set<string>()); const automaticDiscoveryStarted=useRef(new Set<string>());
   const [pendingMessage,setPendingMessage]=useState<PendingMessage|null>(null);
   const [candidateName,setCandidateName]=useState(""); const [skills,setSkills]=useState(""); const [selectedJobs,setSelectedJobs]=useState<string[]>([]); const [injectFailure,setInjectFailure]=useState(true); const [busy,setBusy]=useState<string|null>(null); const [error,setError]=useState(""); const [storageScope,setStorageScope]=useState<string|null>(null);
   const notifyError=(failure:unknown,fallback:string)=>{console.error("[SMAJ AI] Request failed:",failure);const detail=failure instanceof Error?failure.message:typeof failure==="string"?failure:"";setError(detail&&detail!=="Failed to fetch"?detail:detail==="Failed to fetch"?`${fallback} Check your connection and try again.`:fallback);};
@@ -126,6 +127,9 @@ export default function Dashboard() {
   const retryPendingMessage=()=>{if(!pendingMessage)return;void submitTask(pendingMessage.text,pendingMessage.persistedConversation?pendingMessage.conversationId:undefined,pendingMessage);};
   const routeTask=async(event:React.FormEvent)=>{event.preventDefault();await submitTask(task);};
   const runDiscovery = async (saved: AiTask, resume = false) => {
+    if(discoveryInFlight.current.has(saved.id))return;
+    automaticDiscoveryStarted.current.add(saved.id);
+    discoveryInFlight.current.add(saved.id);
     setBusy("discovery"); setError("");
     try {
       if (sandbox) {
@@ -142,12 +146,7 @@ export default function Dashboard() {
       if(route.taskId===saved.id)setRoutePlan(payload.plan); setAiTasks(items => items.map(item => item.id === saved.id ? payload.task : item));
       fetch("/api/connections", {cache:"no-store"}).then(async response=>{if(!response.ok)throw new Error(`Connections could not be refreshed (HTTP ${response.status}).`);return response.json();}).then(payload=>{if(payload?.connections)setConnections(payload.connections);}).catch(failure=>notifyError(failure,"Connections could not be refreshed."));
     } catch (failure) { notifyError(failure,"Search failed. Please try again."); }
-    finally { setBusy(null); }
-  };
-  const discover = async (taskId?:string) => {
-    const saved = aiTasks.find(item => item.id===taskId) || aiTasks.find(item => JSON.stringify(item.plan) === JSON.stringify(routePlan));
-    if (!saved) { setError("Open your saved request and approve the search again."); return; }
-    await runDiscovery(saved);
+    finally { discoveryInFlight.current.delete(saved.id); setBusy(null); }
   };
   useEffect(() => {
     if (authenticated !== true || routeRestored.current) return;
@@ -234,6 +233,11 @@ export default function Dashboard() {
   const activeTask = aiTasks.find(item => route.taskId ? item.id === route.taskId : item.plan === routePlan || JSON.stringify(item.plan) === JSON.stringify(routePlan));
   const currentRoutePlan = activeTask?.plan || routePlan;
   const conversationTasks = threadConversationId===activeTask?.conversationId ? threadTaskIds.map(id=>aiTasks.find(item=>item.id===id)).filter((item):item is AiTask=>item!==undefined&&item.plan.generationStatus!=="pending"&&item.plan.generationStatus!=="failed") : activeTask&&activeTask.plan.generationStatus!=="pending"&&activeTask.plan.generationStatus!=="failed"?[activeTask]:[];
+  useEffect(()=>{
+    if(authenticated!==true||sandbox||route.view!=="task-detail"||!activeTask||activeTask.plan.generationStatus==="pending"||activeTask.plan.generationStatus==="failed"||activeTask.plan.discovery||activeTask.plan.execution||!activeTask.plan.services.some(id=>["store","jobs","stream"].includes(id))||automaticDiscoveryStarted.current.has(activeTask.id))return;
+    automaticDiscoveryStarted.current.add(activeTask.id);
+    void runDiscovery(activeTask);
+  },[authenticated,sandbox,route.view,activeTask?.id,activeTask?.plan.generationStatus,activeTask?.plan.discovery,activeTask?.plan.execution,activeTask?.plan.services]);
   const approveLive = async (taskId:string,actionIds: string[]) => {
     const target=aiTasks.find(item=>item.id===taskId);if(!target)return;
     if (publicAccess) {
@@ -321,7 +325,7 @@ export default function Dashboard() {
       {view==="home"&&<HomeWorkspace task={task} setTask={setTask} selectedService={selectedService} selectService={setSelectedService} routeTask={routeTask} busy={busy} connectedIds={connectedIds}/>}
       {view==="services"&&<Services connections={connections} setConnection={setConnection} busy={busy}/>}
       {view==="tasks"&&<TaskHistory tasks={aiTasks} delegations={sampleTasksEnabled?history:[]} busy={busy} openAiTask={saved=>{setDelegation(null);setTask(saved.task);setRoutePlan(saved.plan);navigate("task-detail",{taskId:saved.id});}} deleteAiTask={deleteAiTask} openDelegation={openTask} deleteDelegation={deleteDelegation}/>}
-      {view==="task-detail"&&<Tasks messages={conversationTasks} pendingMessage={pendingMessage&&(!pendingMessage.persistedConversation?!route.taskId:(activeTask?.conversationId||activeTask?.id)===pendingMessage.conversationId)?pendingMessage:null} retryPendingMessage={retryPendingMessage} routePlan={currentRoutePlan} task={task} busy={busy} conversationId={activeTask?.conversationId||activeTask?.id||(!pendingMessage?.persistedConversation?pendingMessage?.conversationId:undefined)} onFollowUp={(message:string,id:string)=>submitTask(message,id)} discover={discover} approveLive={approveLive} retryLive={retryLive} refreshActionUpdates={refreshActionUpdates} sandbox={sandbox} reportError={(message:string)=>notifyError(message,"The task reported an error.")} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
+      {view==="task-detail"&&<Tasks messages={conversationTasks} pendingMessage={pendingMessage&&(!pendingMessage.persistedConversation?!route.taskId:(activeTask?.conversationId||activeTask?.id)===pendingMessage.conversationId)?pendingMessage:null} retryPendingMessage={retryPendingMessage} routePlan={currentRoutePlan} task={task} busy={busy} conversationId={activeTask?.conversationId||activeTask?.id||(!pendingMessage?.persistedConversation?pendingMessage?.conversationId:undefined)} onFollowUp={(message:string,id:string)=>submitTask(message,id)} approveLive={approveLive} retryLive={retryLive} refreshActionUpdates={refreshActionUpdates} sandbox={sandbox} reportError={(message:string)=>notifyError(message,"The task reported an error.")} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
       {view==="approvals"&&aiTasks.filter(t=>t.plan.proposedActions?.length&&!t.plan.execution).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Review live actions: {t.task}</button>)}
       {view==="approvals"&&<Approvals items={pending} openTask={openTask}/>}
       {view==="receipts"&&aiTasks.filter(t=>t.plan.execution?.receipt).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Live verified receipt: {t.task}</button>)}
@@ -351,7 +355,7 @@ export function Tasks(props:any){
         <section className={`chatAssistantMessage${props.pendingMessage?.id===message.id&&!message.plan.summary?" chatTyping":""}`}>{props.pendingMessage?.id===message.id&&!message.plan.summary
           ? <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><span className="taskDots" role="status" aria-label="SMAJ AI is responding"><i/><i/><i/></span></>
           : <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><TypedResponse text={message.plan.summary}/>
-            <LiveTaskResult key={message.id} task={message} busy={Boolean(props.busy)} sandbox={props.sandbox} discover={props.discover} approve={props.approveLive} retry={props.retryLive} refreshActionUpdates={props.refreshActionUpdates} reportError={props.reportError}/>
+            <LiveTaskResult key={message.id} task={message} busy={Boolean(props.busy)} sandbox={props.sandbox} approve={props.approveLive} retry={props.retryLive} refreshActionUpdates={props.refreshActionUpdates} reportError={props.reportError}/>
           </div></>}</section>
         {index===props.messages.length-1&&<div ref={lastTurn} aria-hidden="true"/>}
       </article>)}
