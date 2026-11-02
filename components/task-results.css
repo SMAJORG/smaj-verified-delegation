@@ -57,6 +57,18 @@
 .compactResults .taskResultCard{background:#fff}
 
 .taskHistoryPage{width:100%;max-width:760px;min-width:0;margin:0 auto;color:#20192f}
+.taskHistoryFilters{display:grid;gap:12px;margin:0 0 20px;min-width:0}
+.taskHistorySearch{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 13px;border:1px solid #e6e1eb;border-radius:12px;background:#fff;color:#81798d}
+.taskHistorySearch:focus-within{border-color:#b7a4e3;box-shadow:0 0 0 3px #bda9eb33}
+.taskHistorySearch svg{width:18px;height:18px}
+.taskHistorySearch input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#20192f;font-size:13px}
+.taskHistorySearch input::placeholder{color:#9992a1}
+.taskHistorySrOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.taskHistoryServiceFilters{display:flex;flex-wrap:wrap;gap:7px;min-width:0}
+.taskHistoryServiceFilters button{min-height:32px;padding:6px 11px;border:1px solid #e8e3ed;border-radius:18px;background:#fff;color:#71697d;font-size:11px;font-weight:650;white-space:nowrap}
+.taskHistoryServiceFilters button:hover{border-color:#b7a4e3;color:#5630aa}
+.taskHistoryServiceFilters button.selected{border-color:#d8caf2;background:#f4f0ff;color:#5630aa}
+.taskHistoryIntro{margin:0 0 18px;color:#827a90;font-size:13px;line-height:1.5}
 .taskHistoryGroups{display:grid;gap:22px;min-width:0}
 .taskHistoryGroup{min-width:0}
 .taskHistoryGroup>h2{margin:0 0 7px;padding:0 4px;color:#81798d;font-size:12px;font-weight:700}
@@ -82,6 +94,9 @@
 .taskHistoryMenuPopover button:disabled{opacity:.6}
 .taskHistoryEmpty{padding:30px 12px;border:1px dashed #e6e0ed;border-radius:14px;color:#827a90;text-align:center;font-size:13px}
 @media(max-width:480px){
+  .taskHistoryFilters{gap:10px;margin-bottom:16px}
+  .taskHistoryServiceFilters{gap:6px}
+  .taskHistoryServiceFilters button{min-height:34px;padding-inline:10px}
   .taskHistoryRow{grid-template-columns:minmax(0,1fr) 34px;gap:4px}
   .taskHistoryStatus{grid-column:1;grid-row:2;justify-self:start;margin:0 9px 6px}
   .taskHistoryMenu{grid-column:2;grid-row:1;align-self:start}

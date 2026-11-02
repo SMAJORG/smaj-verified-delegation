@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { AiTask } from "@/src/server/ai-tasks";
 import type { DelegationView } from "@/src/domain/types";
+import { SMAJ_SERVICES, type ServiceId } from "@/src/domain/services";
+import { matchesTaskHistoryFilter } from "@/components/task-history-filter";
 
 type HistoryEntry =
   | { kind: "ai"; id: string; title: string; createdAt: string; status: string; open: () => void; remove: () => void; deleting: boolean }
@@ -58,6 +60,8 @@ export default function TaskHistory({
   openDelegation: (task: DelegationView) => void;
   deleteDelegation: (id: string) => void;
 }) {
+  const [query, setQuery] = useState("");
+  const [service, setService] = useState<ServiceId | "all">("all");
   const groups = useMemo(() => {
     const entries: HistoryEntry[] = [
       ...tasks.map(task => ({
@@ -80,19 +84,33 @@ export default function TaskHistory({
         remove: () => deleteDelegation(task.id),
         deleting: busy === `delete-${task.id}`,
       })),
-    ].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    ].filter(entry => {
+      const task = entry.kind === "ai" ? tasks.find(item => item.id === entry.id) : delegations.find(item => item.id === entry.id);
+      return task !== undefined && matchesTaskHistoryFilter(task, query, service);
+    }).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
     const grouped = new Map<string, HistoryEntry[]>();
     for (const entry of entries) {
       const label = dateGroup(entry.createdAt);
       grouped.set(label, [...(grouped.get(label) || []), entry]);
     }
     return [...grouped.entries()];
-  }, [tasks, delegations, busy, openAiTask, deleteAiTask, openDelegation, deleteDelegation]);
+  }, [tasks, delegations, busy, query, service, openAiTask, deleteAiTask, openDelegation, deleteDelegation]);
 
   return <section className="taskHistoryPage">
+    <div className="taskHistoryFilters">
+      <label className="taskHistorySearch">
+        <span className="taskHistorySrOnly">Search saved tasks</span>
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search conversations and tasks" />
+      </label>
+      <div className="taskHistoryServiceFilters" role="group" aria-label="Filter tasks by service">
+        <button type="button" className={service === "all" ? "selected" : ""} aria-pressed={service === "all"} onClick={() => setService("all")}>All</button>
+        {SMAJ_SERVICES.map(item => <button type="button" key={item.id} className={service === item.id ? "selected" : ""} aria-pressed={service === item.id} onClick={() => setService(item.id)}>{item.shortName}</button>)}
+      </div>
+    </div>
     <p className="taskHistoryIntro">Open a saved request to review its conversation, results, approvals, and status.</p>
     {!tasks.length && !delegations.length ? <p className="taskHistoryEmpty">Your saved tasks will appear here.</p> : <div className="taskHistoryGroups">
-      {groups.map(([label, entries]) => <section className="taskHistoryGroup" key={label} aria-label={label}>
+      {!groups.length ? <p className="taskHistoryEmpty">No tasks match your search and filters.</p> : groups.map(([label, entries]) => <section className="taskHistoryGroup" key={label} aria-label={label}>
         <h2>{label}</h2>
         <div className="taskHistoryRows">{entries.map(entry => {
         const menuId = `${entry.kind}:${entry.id}`;
