@@ -12,13 +12,13 @@ for (const service of ["jobs", "store", "stream"] as const) {
     const fetcher = (async (_url, init) => {
       assert.equal(init?.method, "GET"); assert.equal(init?.redirect, "error");
       assert.deepEqual(init?.headers, { Accept: "application/json" });
-      const key = service === "jobs" ? "jobs" : service === "store" ? "products" : "videos";
-      return Response.json({ [key]: [{ employerId: "real-employer", id: "a", _id: "a", title: "Published item", privateEmail: "private" }] });
+      const key = service === "jobs" ? "jobs" : service === "store" ? "products" : "results";
+      return Response.json({ [key]: [{ employerId: "real-employer", id: "a", _id: "a", title: "Published item", posterUrl: "https://image.tmdb.org/t/p/w500/poster.jpg", mediaType: "movie", privateEmail: "private" }] });
     }) as typeof fetch;
     const adapter = service === "jobs" ? new SmajJobsReadAdapter(undefined, fetcher) : service === "store" ? new SmajStoreReadAdapter(undefined, fetcher) : new SmajStreamReadAdapter(undefined, fetcher);
     const records = adapter instanceof SmajJobsReadAdapter ? await adapter.listJobs() : adapter instanceof SmajStoreReadAdapter ? await adapter.listProducts() : await adapter.listContent();
     assert.equal(records.length, 1); assert.ok(!JSON.stringify(records).includes("privateEmail"));
-    const bad = (async () => Response.json({ jobs: [{}], products: [{}], videos: [{}] })) as typeof fetch;
+    const bad = (async () => Response.json({ jobs: [{}], products: [{}], results: [{}] })) as typeof fetch;
     await assert.rejects(() => service === "jobs" ? new SmajJobsReadAdapter(undefined, bad).listJobs() : service === "store" ? new SmajStoreReadAdapter(undefined, bad).listProducts() : new SmajStreamReadAdapter(undefined, bad).listContent());
   });
 }
@@ -35,6 +35,16 @@ test("disconnected services send no requests; failures remain independent and tr
     const proof = await discoverCatalogs(["jobs", "store", "stream"], id => id === "store");
     assert.equal(calls, 1); assert.deepEqual(proof.results.map(r => r.status), ["unavailable", "read", "unavailable"]);
     assert.equal(proof.proofHash.length, 64);
+  } finally { globalThis.fetch = original; }
+});
+test("planning-only service discovery clearly reports no live results without making a request", async () => {
+  const original = globalThis.fetch; let calls = 0;
+  globalThis.fetch = async () => { calls++; return Response.json({}); };
+  try {
+    const proof = await discoverCatalogs(["education"], () => true);
+    assert.equal(calls, 0);
+    assert.equal(proof.results[0].status, "unavailable");
+    assert.match(proof.results[0].error || "", /not connected to SMAJ AI for live results yet/);
   } finally { globalThis.fetch = original; }
 });
 test("approval endpoints reject missing or cross-site origin", () => {
@@ -89,4 +99,14 @@ test("search preserves dollar budgets and labels sample Jobs separately from emp
   const rows = await jobs.listJobs();
   assert.deepEqual(rows.map(j=>j.id), ["seed", "published-slug"]);
   assert.deepEqual(rows.map(j=>j.listingProvenance), ["sample_unverified", "employer_backed"]);
+});
+
+test("Store leaves unknown attributes and prices blank instead of supplying invented values", async () => {
+  const store = new SmajStoreReadAdapter(undefined, async () => Response.json({ products: [{ id: "actual-id", title: "Catalog product", pricePi: null, priceUsdt: null, quantity: null, category: null, location: null }] }));
+  const [product] = await store.listProducts();
+  assert.equal(product.title, "Catalog product");
+  assert.equal(product.price, "");
+  assert.equal(product.category, "");
+  assert.equal(product.location, "");
+  assert.equal(product.quantity, undefined);
 });

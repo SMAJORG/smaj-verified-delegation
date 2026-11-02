@@ -43,6 +43,27 @@ test("short messages produce a provider answer and tasks remain owner-scoped thr
   }
 });
 
+test("planning-only services give a truthful live-availability answer", async () => {
+  const previous = { ...process.env };
+  process.env.META_API_KEY = "test-only-secret";
+  process.env.META_MODEL = "test-account-model";
+  const fetcher = async (_url: string | URL | Request, init?: RequestInit) => {
+    if (String(_url).endsWith("/models")) return Response.json({ data: [{ id: "test-account-model" }] });
+    const prompt = String(JSON.parse(String(init?.body)).input);
+    assert.match(prompt, /adapterMode/);
+    return Response.json({ status: "completed", output: [{ content: [{ type: "output_text", text: JSON.stringify({ summary: "I found several courses for you.", steps: [{ id: "courses", serviceId: "education", title: "Find courses", capability: "course discovery" }], services: ["education"], warnings: [] }) }] }] });
+  };
+  try {
+    const plan = await new MetaServiceRouter(fetcher as typeof fetch).plan("Find current product design courses", []);
+    assert.match(plan.summary, /not connected to SMAJ AI for live results yet/i);
+    assert.match(plan.steps[0].description, /cannot verify current listings or availability/i);
+    assert.equal(plan.steps[0].status, "unavailable");
+  } finally {
+    for (const name of Object.keys(process.env)) if (!(name in previous)) delete process.env[name];
+    Object.assign(process.env, previous);
+  }
+});
+
 test("AI rejects missing credentials and blank models, uses the default model, and reports upstream failures", async () => {
   const previous = { ...process.env };
   try {

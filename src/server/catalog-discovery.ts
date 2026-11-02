@@ -4,13 +4,17 @@ import { createHash } from "node:crypto";
 import { SmajJobsReadAdapter } from "@/src/server/jobs-adapter";
 import { SmajStoreReadAdapter } from "@/src/server/store-adapter";
 import { SmajStreamReadAdapter } from "@/src/server/stream-adapter";
-import type { ServiceId, ServiceRoutePlan, ServicePlanStep } from "@/src/domain/services";
+import { SMAJ_SERVICES, type ServiceId, type ServiceRoutePlan, type ServicePlanStep } from "@/src/domain/services";
 
 export async function discoverCatalogs(ids: ServiceId[], authorized: (id: ServiceId) => boolean, steps: ServicePlanStep[] = []) {
   const approvedAt = new Date().toISOString();
   const results: NonNullable<ServiceRoutePlan["discovery"]>["results"] = [];
   for (const id of [...new Set(ids)]) {
-    if (!["jobs", "store", "stream"].includes(id)) continue;
+    if (!["jobs", "store", "stream"].includes(id)) {
+      const service = SMAJ_SERVICES.find(item => item.id === id);
+      results.push({ serviceId: id, source: "", status: "unavailable", records: [], error: `${service?.name || "This service"} is not connected to SMAJ AI for live results yet.` });
+      continue;
+    }
     if (!authorized(id)) { results.push({ serviceId: id, source: "", status: "unavailable", records: [], error: "Service disconnected; no request sent" }); continue; }
     const adapter = id === "jobs" ? new SmajJobsReadAdapter() : id === "store" ? new SmajStoreReadAdapter() : new SmajStreamReadAdapter();
     const query = steps.find(step => step.serviceId === id)?.query;

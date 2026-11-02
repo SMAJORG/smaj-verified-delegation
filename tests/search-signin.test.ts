@@ -66,7 +66,7 @@ test("approved search requires verified SSO, transfers only the approved request
   const context={params:Promise.resolve({id:taskId})};
   assert.equal((await discover(req("/api/tasks/id/discover",signedCookie.replace(token,"wrong"),{resume:true}),context)).status,409);assert.equal(reads,0);
   const searched=await discover(req("/api/tasks/id/discover",signedCookie,{resume:true}),context);assert.equal(searched.status,200);assert.equal(searched.cookies.get(SEARCH_SIGNIN_COOKIE)?.value, "");assert.equal(reads,1);
-  const result=(await searched.json()).plan.discovery.results[0];assert.deepEqual(result.records.map((r:any)=>r.id),["fixture-car"]);assert.equal(result.records[0].price,"$22,500");assert.equal(result.records[0].imageUrl,"https://images.example/car.jpg");
+  const result=(await searched.json()).plan.discovery.results[0];assert.deepEqual(result.records.map((r:any)=>r.id),["fixture-car"]);assert.equal(result.records[0].price,"$22,500 USDT");assert.equal(result.records[0].imageUrl,"https://images.example/car.jpg");
   assert.equal(new ServiceConnectionStore(production).list(owner.actorId,"sso").find(c=>c.serviceId==="store")!.connected,true);
   assert.equal((await discover(req("/api/tasks/id/discover",signedCookie,{resume:true}),context)).status,409);assert.equal(reads,1);
   const expired=new SearchSignInStore(production);const handle=expired.create(source);expired.bind(handle,"state");production.prepare("UPDATE search_signins SET expires_at = 0").run();assert.throws(()=>expired.complete(handle,"state",owner.actorId));

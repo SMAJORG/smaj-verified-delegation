@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { SmajJobsReadAdapter } from "@/src/server/jobs-adapter";
 import { SmajStoreReadAdapter } from "@/src/server/store-adapter";
+import { SmajStreamReadAdapter } from "@/src/server/stream-adapter";
 import { MetaJobsPlanner } from "@/src/server/meta-planner";
 import { jobs } from "./fixtures";
 
@@ -113,4 +114,20 @@ test("Store adapter performs a GET and normalizes read-only products", async () 
   assert.equal(result[0].price, "12 Pi");
   assert.equal(result[0].imageUrl, "https://smajpihub.com/uploads/lamp.jpg");
   assert.equal(result[0].sellerName, "Ada Stores");
+});
+
+test("Stream adapter searches the public title catalog and preserves real poster and title details", async () => {
+  let requested: URL | undefined;
+  const adapter = new SmajStreamReadAdapter("https://smajpihub.com/stream/creator-content", (async input => {
+    requested = new URL(String(input));
+    return Response.json({ results: [{ id: "603", title: "The Matrix", mediaType: "movie", overview: "A computer hacker learns about reality.", posterUrl: "https://image.tmdb.org/t/p/w500/matrix.jpg", releaseDate: "1999-03-30", rating: 8.2 }] });
+  }) as typeof fetch);
+  const [movie] = await adapter.listContent({ search: "The Matrix" });
+  assert.equal(requested?.pathname, "/stream/search");
+  assert.equal(requested?.searchParams.get("q"), "The Matrix");
+  assert.equal(movie.title, "The Matrix");
+  assert.equal(movie.imageUrl, "https://image.tmdb.org/t/p/w500/matrix.jpg");
+  assert.equal(movie.description, "A computer hacker learns about reality.");
+  assert.equal(movie.url, "https://smajpihub.com/app/services/stream/title/603");
+  assert.equal(movie.rating, 8.2);
 });

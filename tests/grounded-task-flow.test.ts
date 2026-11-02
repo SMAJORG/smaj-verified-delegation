@@ -47,6 +47,7 @@ test("authenticated natural request routes through provider, approved live catal
     const discovered = await discover(request({approved:true}),context); assert.equal(discovered.status,200);
     const grounded = (await discovered.json()).task;
     assert.equal(grounded.plan.summaryAi.responseId,"fixture-2"); assert.equal(grounded.plan.proposedActions.length,1); assert.equal(grounded.plan.matches.length,1); assert.equal(writes,0);
+    assert.match(grounded.plan.matches[0].reason, /25,?000 USDT reference.*30,?000 USDT limit/);
     assert.equal((await approve(request({approved:true,actionIds:["action-1"],reviewHash:"stale"}),context)).status,409);
     assert.equal((await approve(request({approved:true,actionIds:["action-1"],reviewHash:grounded.plan.actionReviewHash},"https://evil.example"),context)).status,403);
     const approved = await approve(request({approved:true,actionIds:["action-1"],reviewHash:grounded.plan.actionReviewHash}),context); assert.equal(approved.status,202); assert.equal(writes,0);
