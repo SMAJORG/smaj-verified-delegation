@@ -14,6 +14,11 @@ export class AiTaskStore {
     const rows = this.database.prepare("SELECT id, task, plan_json, created_at, conversation_id FROM ai_tasks WHERE owner_id = ? AND conversation_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 10").all(owner, conversationId) as Array<{ id: string; task: string; plan_json: string; created_at: string; conversation_id: string }>;
     return rows.reverse().map(row => ({ id: row.id, task: row.task, plan: JSON.parse(row.plan_json), createdAt: row.created_at, conversationId: row.conversation_id || row.id }));
   }
+  conversationHistory(owner: string, conversationId: string): AiTask[] {
+    const rows = this.database.prepare("SELECT id, task, plan_json, created_at, conversation_id FROM ai_tasks WHERE owner_id = ? AND conversation_id = ? ORDER BY created_at ASC, rowid ASC").all(owner, conversationId) as Array<{ id: string; task: string; plan_json: string; created_at: string; conversation_id: string }>;
+    if (!rows.length) throw new AppError("conversation_not_found", "Conversation not found", 404);
+    return rows.map(row => ({ id: row.id, task: row.task, plan: JSON.parse(row.plan_json), createdAt: row.created_at, conversationId: row.conversation_id || row.id }));
+  }
   conversations(owner: string): AiConversation[] {
     return this.database.prepare(`
       SELECT c.id, c.title, c.created_at AS createdAt, MAX(t.created_at) AS updatedAt, COUNT(t.id) AS taskCount,

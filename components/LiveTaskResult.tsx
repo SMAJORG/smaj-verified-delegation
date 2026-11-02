@@ -17,7 +17,7 @@ function ResultDescription({ children }: { children: string }) {
   </div>;
 }
 
-export default function LiveTaskResult({ task, busy, sandbox, discover, approve, retry, reportError }: { task: AiTask; busy: boolean; sandbox: boolean; discover: () => void; approve: (ids: string[]) => void; retry: () => void; reportError: (message: string) => void }) {
+export default function LiveTaskResult({ task, busy, sandbox, discover, approve, retry, reportError }: { task: AiTask; busy: boolean; sandbox: boolean; discover: (taskId: string) => void; approve: (taskId: string, ids: string[]) => void; retry: (taskId: string) => void; reportError: (message: string) => void }) {
   const plan = task.plan;
   const [dismissed, setDismissed] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
@@ -33,7 +33,7 @@ export default function LiveTaskResult({ task, busy, sandbox, discover, approve,
   const available = plan.services.some(id => ["jobs", "store", "stream"].includes(id));
   return <section className="liveTaskResults" aria-label="Live data and execution">
     {plan.steps.filter(step => step.status === "unavailable").map(step => <p className="taskResultMeta" key={step.id}>{step.reason}</p>)}
-    {available && (!plan.discovery || plan.discovery.results.some(result=>result.status === "unavailable")) && !plan.execution && !dismissed && <div className="resultsApproval"><strong>Ready to search public listings?</strong><p>SMAJ AI reads published catalog listings only. No purchase or application will be made.</p><div className="resultsActions"><button className="primaryButton" disabled={busy} onClick={discover}>{busy ? "Searching…" : "Search public listings"}</button><button className="secondaryButton" disabled={busy} onClick={() => setDismissed(true)}>Not now</button></div>{sandbox&&<p>Sign in to SMAJ PI HUB to continue this search.</p>}</div>}
+    {available && (!plan.discovery || plan.discovery.results.some(result=>result.status === "unavailable")) && !plan.execution && !dismissed && <div className="resultsApproval"><strong>Ready to search public listings?</strong><p>SMAJ AI reads published catalog listings only. No purchase or application will be made.</p><div className="resultsActions"><button className="primaryButton" disabled={busy} onClick={()=>discover(task.id)}>{busy ? "Searching…" : "Search public listings"}</button><button className="secondaryButton" disabled={busy} onClick={() => setDismissed(true)}>Not now</button></div>{sandbox&&<p>Sign in to SMAJ PI HUB to continue this search.</p>}</div>}
     {dismissed&&!plan.discovery&&<button className="taskViewLink" onClick={()=>setDismissed(false)}>Continue public search</button>}
     {plan.discovery && <>
       {plan.discovery.results.map(result => {
@@ -99,7 +99,7 @@ export default function LiveTaskResult({ task, busy, sandbox, discover, approve,
           <p>CV: {preview.cv.attached ? `Attached — ${preview.cv.name || "CV"} (${preview.cv.size || 0} bytes; ${preview.cv.visibility})` : `Not attached${preview.cv.visibility ? ` — visibility is ${preview.cv.visibility}` : ""}`}</p>
         </div> : <p>Sign in to SMAJ PI HUB to load your profile and CV sharing details before approval. No application has been submitted.</p>)}
       </span></label>;
-    })}</div><button className="primaryButton" disabled={busy || sandbox || !selected.length} onClick={() => approve(selected)}>Approve {selected.length} live actions</button></div>}
-    {plan.execution && <section aria-live="polite"><h3>Live execution · {plan.execution.status}</h3><details className="taskEvidence"><summary>Execution activity</summary><p>Approved {plan.execution.approvedAt} · Attempt {plan.execution.attempts}</p>{plan.execution.events?.map((event,index)=><p key={index}><small>{event.at}</small> · {event.message}</p>)}</details>{plan.execution.status === "failed" && plan.execution.retryable && <button className="secondaryButton" disabled={busy} onClick={retry}>Retry safely</button>}{plan.execution.receipt && <><p>Verified against Hub backend records · {plan.execution.receipt.verifiedAt}</p><a className="secondaryButton" href={`/api/tasks/${task.id}/receipt`} download>Download JSON receipt</a> <a className="secondaryButton" href={`/api/tasks/${task.id}/receipt/pdf`} download>Download PDF receipt</a></>}</section>}
+    })}</div><button className="primaryButton" disabled={busy || sandbox || !selected.length} onClick={() => approve(task.id, selected)}>Approve {selected.length} live actions</button></div>}
+    {plan.execution && <section aria-live="polite"><h3>Live execution · {plan.execution.status}</h3><details className="taskEvidence"><summary>Execution activity</summary><p>Approved {plan.execution.approvedAt} · Attempt {plan.execution.attempts}</p>{plan.execution.events?.map((event,index)=><p key={index}><small>{event.at}</small> · {event.message}</p>)}</details>{plan.execution.status === "failed" && plan.execution.retryable && <button className="secondaryButton" disabled={busy} onClick={()=>retry(task.id)}>Retry safely</button>}{plan.execution.receipt && <><p>Verified against Hub backend records · {plan.execution.receipt.verifiedAt}</p><a className="secondaryButton" href={`/api/tasks/${task.id}/receipt`} download>Download JSON receipt</a> <a className="secondaryButton" href={`/api/tasks/${task.id}/receipt/pdf`} download>Download PDF receipt</a></>}</section>}
   </section>;
 }

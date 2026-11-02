@@ -36,6 +36,7 @@ export default function Dashboard() {
   const [view,setViewState]=useState<View>("home"); const viewRef=useRef<View>("home"); const setView=(next:View)=>{viewRef.current=next;setViewState(next);}; const [menuOpen,setMenuOpen]=useState(false); const [authenticated,setAuthenticated]=useState<boolean|null>(null); const [ssoEnabled,setSsoEnabled]=useState(false); const [demoEnabled,setDemoEnabled]=useState(false); const [sandbox,setSandbox]=useState(false); const [expiresAt,setExpiresAt]=useState<number|null>(null); const [accessToken,setAccessToken]=useState("");
   const [route,setRoute]=useState<DashboardRoute>({view:"home"});
   const [aiTasks,setAiTasks]=useState<AiTask[]>([]); const [selectedService,setSelectedService]=useState<ServiceId|null>(null); const [task,setTask]=useState(""); const [routePlan,setRoutePlan]=useState<ServiceRoutePlan|null>(null); const [connections,setConnections]=useState<ServiceConnection[]>([]); const [history,setHistory]=useState<DelegationView[]>([]); const [delegation,setDelegation]=useState<DelegationView|null>(null);
+  const [threadTaskIds,setThreadTaskIds]=useState<string[]>([]); const [threadConversationId,setThreadConversationId]=useState<string|null>(null); const loadedConversations=useRef(new Set<string>());
   const [candidateName,setCandidateName]=useState(""); const [skills,setSkills]=useState(""); const [selectedJobs,setSelectedJobs]=useState<string[]>([]); const [injectFailure,setInjectFailure]=useState(true); const [busy,setBusy]=useState<string|null>(null); const [error,setError]=useState(""); const [storageScope,setStorageScope]=useState<string|null>(null);
   const notifyError=(failure:unknown,fallback:string)=>{console.error("[SMAJ AI] Request failed:",failure);const detail=failure instanceof Error?failure.message:typeof failure==="string"?failure:"";setError(detail&&detail!=="Failed to fetch"?detail:detail==="Failed to fetch"?`${fallback} Check your connection and try again.`:fallback);};
   useEffect(()=>{if(!error)return;const timer=setTimeout(()=>setError(""),5000);return()=>clearTimeout(timer);},[error]);
@@ -90,20 +91,23 @@ export default function Dashboard() {
   const logout=async()=>{setError("");try{const response=await fetch("/api/auth/session",{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok)throw new Error("Sign-out failed. Please try again.");streamRef.current?.close();setAuthenticated(false);setStorageScope(null);setHistory([]);setAiTasks([]);setTask("");setSelectedService(null);setConnections([]);setDelegation(null);setRoutePlan(null);setSandbox(false);setExpiresAt(null);viewHistory.current=[];updateRoute({view:"home"},true);setMenuOpen(false);}catch(failure){notifyError(failure,"Sign-out failed. Please try again.");}};
   const navigate=(next:View,selection?:Pick<DashboardRoute,"taskId"|"delegationId">)=>{if(viewRef.current!==next)viewHistory.current.push(viewRef.current);updateRoute({view:next,...selection});setMenuOpen(false);window.scrollTo({top:0,behavior:"smooth"});};
   const goBack=()=>{if(window.history.state?.smajDashboard){window.history.back();return;}const previous=viewHistory.current.pop()||"home";updateRoute({view:previous},true);setMenuOpen(false);window.scrollTo({top:0,behavior:"smooth"});};
-  const submitTask=async(message:string,conversationId?:string)=>{
-    if(!message.trim()){setError("Enter a message or task.");return;}
+  const submitTask=async(message:string,conversationId?:string):Promise<boolean>=>{
+    if(!message.trim()){setError("Enter a message or task.");return false;}
     const service=conversationId?undefined:SMAJ_SERVICES.find(item=>item.id===selectedService);
     const requestTask=service?`${service.name}: ${message.trim()}`:message.trim();
+    let discoveryTask:AiTask|undefined;
     setTask(message.trim());setBusy("routing");setError("");
     try{
       const response=await fetch("/api/tasks",{signal:AbortSignal.timeout(135000),method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({task:requestTask,...(conversationId?{conversationId}:{})})});
       const payload=await response.json() as ApiResponse;
       if(!response.ok||!payload.plan)throw new Error((payload.message||"Meta could not route this task")+(response.status===429&&response.headers.get("Retry-After")?` Try again in ${response.headers.get("Retry-After")} seconds.`:""));
-      if(payload.task)setAiTasks(items=>[payload.task!,...items.filter(item=>item.id!==payload.task!.id)]);
+      if(payload.task){setAiTasks(items=>[payload.task!,...items.filter(item=>item.id!==payload.task!.id)]);const id=payload.task.conversationId||payload.task.id;setThreadTaskIds(current=>conversationId&&threadConversationId===conversationId?[...current,payload.task!.id]:[payload.task!.id]);setThreadConversationId(id);loadedConversations.current.add(id);}
       setDelegation(null);setRoutePlan(payload.plan);navigate("task-detail",payload.task?{taskId:payload.task.id}:undefined);
-      if(!sandbox&&payload.task&&payload.plan.steps.some(step=>["store","jobs","stream"].includes(step.serviceId)))await runDiscovery(payload.task);
+      if(!sandbox&&payload.task&&payload.plan.steps.some(step=>["store","jobs","stream"].includes(step.serviceId)))discoveryTask=payload.task;
+      return true;
     }catch(routeError){notifyError(routeError,"Task routing stopped safely");}
-    finally{setBusy(null);}
+    finally{setBusy(null);if(discoveryTask)void runDiscovery(discoveryTask);}
+    return false;
   };
   const routeTask=async(event:React.FormEvent)=>{event.preventDefault();await submitTask(task);};
   const runDiscovery = async (saved: AiTask, resume = false) => {
@@ -120,13 +124,13 @@ export default function Dashboard() {
       const response = await fetch(`/api/tasks/${saved.id}/discover`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(resume ? {resume:true} : {}), signal:AbortSignal.timeout(180000)});
       const payload = await response.json();
       if (!response.ok) throw new Error((payload.message || "Search failed. Please try again.") + (response.status===429&&response.headers.get("Retry-After")?` Try again in ${response.headers.get("Retry-After")} seconds.`:""));
-      setRoutePlan(payload.plan); setAiTasks(items => items.map(item => item.id === saved.id ? payload.task : item));
+      if(route.taskId===saved.id)setRoutePlan(payload.plan); setAiTasks(items => items.map(item => item.id === saved.id ? payload.task : item));
       fetch("/api/connections", {cache:"no-store"}).then(async response=>{if(!response.ok)throw new Error(`Connections could not be refreshed (HTTP ${response.status}).`);return response.json();}).then(payload=>{if(payload?.connections)setConnections(payload.connections);}).catch(failure=>notifyError(failure,"Connections could not be refreshed."));
     } catch (failure) { notifyError(failure,"Search failed. Please try again."); }
     finally { setBusy(null); }
   };
-  const discover = async () => {
-    const saved = aiTasks.find(item => JSON.stringify(item.plan) === JSON.stringify(routePlan));
+  const discover = async (taskId?:string) => {
+    const saved = aiTasks.find(item => item.id===taskId) || aiTasks.find(item => JSON.stringify(item.plan) === JSON.stringify(routePlan));
     if (!saved) { setError("Open your saved request and approve the search again."); return; }
     await runDiscovery(saved);
   };
@@ -169,16 +173,33 @@ export default function Dashboard() {
     if (route.taskId || resume || params.has("sso")) updateRoute({view:"task-detail",taskId:saved.id},true);
     if (resume && !sandbox) void runDiscovery(saved, true);
   }, [authenticated, sandbox, aiTasks, history, route]);
+  useEffect(()=>{
+    if(authenticated!==true||route.view!=="task-detail"||!route.taskId)return;
+    const saved=aiTasks.find(item=>item.id===route.taskId);
+    const conversationId=saved?.conversationId||saved?.id;
+    if(!conversationId||(threadConversationId===conversationId&&loadedConversations.current.has(conversationId)))return;
+    loadedConversations.current.add(conversationId);
+    const controller=new AbortController();
+    void fetch(`/api/conversations/${conversationId}`,{cache:"no-store",signal:controller.signal}).then(async response=>{
+      const payload=await response.json();
+      if(!response.ok||!Array.isArray(payload.tasks))throw new Error(payload.message||"Conversation could not be restored.");
+      const turns=payload.tasks as AiTask[];
+      setAiTasks(current=>{const byId=new Map(current.map(item=>[item.id,item]));for(const item of turns)byId.set(item.id,item);return [...byId.values()];});
+      setThreadTaskIds(turns.map(item=>item.id));setThreadConversationId(conversationId);
+    }).catch(failure=>{loadedConversations.current.delete(conversationId);if(!controller.signal.aborted)notifyError(failure,"Conversation could not be restored.");});
+    return()=>controller.abort();
+  },[authenticated,route.view,route.taskId,aiTasks,threadConversationId]);
   const activeTask = aiTasks.find(item => item.plan === routePlan || JSON.stringify(item.plan) === JSON.stringify(routePlan));
-  const approveLive = async (actionIds: string[]) => {
-    if (!activeTask) return;
+  const conversationTasks = threadConversationId===activeTask?.conversationId ? threadTaskIds.map(id=>aiTasks.find(item=>item.id===id)).filter((item):item is AiTask=>Boolean(item)) : activeTask?[activeTask]:[];
+  const approveLive = async (taskId:string,actionIds: string[]) => {
+    const target=aiTasks.find(item=>item.id===taskId);if(!target)return;
     if (publicAccess) {
       setBusy("live-approval");setError("");
       try {
-        const response=await fetch("/api/auth/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({taskId:activeTask.id,approved:true})});
+        const response=await fetch("/api/auth/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({taskId:target.id,approved:true})});
         const payload=await response.json();
         if(!response.ok)throw new Error(payload.message || "Sign in to SMAJ PI HUB to perform protected actions.");
-        window.sessionStorage.setItem("smaj_pending_search",activeTask.id);
+        window.sessionStorage.setItem("smaj_pending_search",target.id);
         window.location.assign(payload.signInUrl);
       } catch(failure) {notifyError(failure,"Sign-in is required for protected actions.");}
       finally {setBusy(null);}
@@ -186,32 +207,34 @@ export default function Dashboard() {
     }
     setBusy("live-approval"); setError("");
     try {
-      const response = await fetch(`/api/tasks/${activeTask.id}/approve`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ approved: true, actionIds, reviewHash: activeTask.plan.actionReviewHash }) });
+      const response = await fetch(`/api/tasks/${target.id}/approve`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ approved: true, actionIds, reviewHash: target.plan.actionReviewHash }) });
       const payload = await response.json(); if (!response.ok) throw new Error(payload.message || "Live approval failed");
-      setRoutePlan(payload.plan); setAiTasks(items => items.map(item => item.id === activeTask.id ? payload.task : item));
+      if(route.taskId===target.id)setRoutePlan(payload.plan); setAiTasks(items => items.map(item => item.id === target.id ? payload.task : item));
     } catch (failure) { notifyError(failure,"Live approval failed"); } finally { setBusy(null); }
   };
-  const retryLive = async () => {
-    if (!activeTask) return;
+  const retryLive = async (taskId:string) => {
+    const target=aiTasks.find(item=>item.id===taskId);if(!target)return;
     setBusy("live-retry"); setError("");
     try {
-      const response = await fetch(`/api/tasks/${activeTask.id}/retry`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const response = await fetch(`/api/tasks/${target.id}/retry`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.message || "Safe retry failed");
-      setRoutePlan(payload.plan); setAiTasks(items => items.map(item => item.id === activeTask.id ? payload.task : item));
+      if(route.taskId===target.id)setRoutePlan(payload.plan); setAiTasks(items => items.map(item => item.id === target.id ? payload.task : item));
     } catch (failure) { notifyError(failure,"Safe retry failed"); }
     finally { setBusy(null); }
   };
+  const runningConversationTasks=conversationTasks.filter(item=>item.plan.execution&&["queued","running","retrying"].includes(item.plan.execution.status)).map(item=>item.id);
+  const runningConversationKey=runningConversationTasks.join(",");
   useEffect(() => {
-    if (!activeTask?.plan.execution || !["queued", "running", "retrying"].includes(activeTask.plan.execution.status)) return;
+    if (!runningConversationTasks.length) return;
     const controller = new AbortController();
     let reportedFailure = false;
     const timer = setInterval(async () => {
-      try { const response = await fetch(`/api/tasks/${activeTask.id}`, { cache: "no-store", signal: controller.signal }); if (!response.ok) { if(!reportedFailure){reportedFailure=true;notifyError(new Error(`Task status could not be refreshed (${response.status}).`),"Task status could not be refreshed.");} return; } const payload = await response.json(); setAiTasks(items => items.map(item => item.id === activeTask.id ? payload.task : item)); setRoutePlan(payload.task.plan); } catch (failure) { if(!controller.signal.aborted&&!reportedFailure){reportedFailure=true;notifyError(failure,"Task status could not be refreshed.");} }
+      try { const results=await Promise.all(runningConversationTasks.map(async id=>{const response=await fetch(`/api/tasks/${id}`,{cache:"no-store",signal:controller.signal});if(!response.ok)throw new Error(`Task status could not be refreshed (${response.status}).`);return (await response.json()).task as AiTask;}));setAiTasks(items=>items.map(item=>results.find(result=>result.id===item.id)||item));const current=results.find(item=>item.id===route.taskId);if(current)setRoutePlan(current.plan); } catch (failure) { if(!controller.signal.aborted&&!reportedFailure){reportedFailure=true;notifyError(failure,"Task status could not be refreshed.");} }
     }, 2500);
     return () => { clearInterval(timer); controller.abort(); };
-  }, [activeTask?.id, activeTask?.plan.execution?.status]);
-  const deleteAiTask=async(id:string)=>{if(!window.confirm("Delete this task and its AI response?"))return;setBusy(`delete-${id}`);try{const response=await fetch(`/api/tasks/${id}`,{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok){const payload=await response.json();throw new Error(payload.message||"Task deletion failed");}setAiTasks(items=>items.filter(item=>item.id!==id));if(activeTask?.id===id){setRoutePlan(null);setTask("");if(viewHistory.current.at(-1)==="tasks")viewHistory.current.pop();updateRoute({view:"tasks"},true);}}catch(failure){notifyError(failure,"Task deletion failed");}finally{setBusy(null);}};
+  }, [runningConversationKey,route.taskId]);
+  const deleteAiTask=async(id:string)=>{if(!window.confirm("Delete this task and its AI response?"))return;setBusy(`delete-${id}`);try{const response=await fetch(`/api/tasks/${id}`,{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok){const payload=await response.json();throw new Error(payload.message||"Task deletion failed");}setAiTasks(items=>items.filter(item=>item.id!==id));setThreadTaskIds(items=>items.filter(taskId=>taskId!==id));if(activeTask?.id===id){setRoutePlan(null);setTask("");if(viewHistory.current.at(-1)==="tasks")viewHistory.current.pop();updateRoute({view:"tasks"},true);}}catch(failure){notifyError(failure,"Task deletion failed");}finally{setBusy(null);}};
   const deleteDelegation=async(id:string)=>{if(!window.confirm("Delete this task, its drafts, and local proof receipt?"))return;setBusy(`delete-${id}`);try{const response=await fetch(`/api/delegations/${id}`,{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok){const payload=await response.json();throw new Error(payload.message||"Task deletion failed");}streamRef.current?.close();setHistory(items=>items.filter(item=>item.id!==id));if(delegation?.id===id){setDelegation(null);if(viewHistory.current.at(-1)==="tasks")viewHistory.current.pop();updateRoute({view:"tasks"},true);}}catch(failure){notifyError(failure,"Task deletion failed");}finally{setBusy(null);}};
   const setConnection=async(serviceId:ServiceId,connected:boolean)=>{setBusy(`connection-${serviceId}`);setError("");try{const response=await fetch("/api/connections",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({serviceId,connected})});const payload=await response.json() as ApiResponse;if(!response.ok||!payload.connections)throw new Error(payload.message||"Connection could not be updated");setConnections(payload.connections);}catch(failure){notifyError(failure,"Connection failed safely");}finally{setBusy(null);}};
   const watch=(id:string)=>{streamRef.current?.close();const source=new EventSource(`/api/delegations/${id}/events`);source.addEventListener("delegation",event=>{try{const next=JSON.parse((event as MessageEvent).data) as DelegationView;updateDelegation(next);if(["verified","failed"].includes(next.status))source.close();}catch(failure){source.close();notifyError(failure,"Task updates could not be read.");}});source.onerror=()=>{source.close();notifyError(new Error("Task update stream disconnected."),"Task updates could not be received.");};streamRef.current=source;};
@@ -244,7 +267,7 @@ export default function Dashboard() {
       {view==="home"&&<HomeWorkspace task={task} setTask={setTask} selectedService={selectedService} selectService={setSelectedService} routeTask={routeTask} busy={busy} connectedIds={connectedIds}/>}
       {view==="services"&&<Services connections={connections} setConnection={setConnection} busy={busy}/>}
       {view==="tasks"&&<TaskHistory tasks={aiTasks} delegations={sampleTasksEnabled?history:[]} busy={busy} openAiTask={saved=>{setDelegation(null);setTask(saved.task);setRoutePlan(saved.plan);navigate("task-detail",{taskId:saved.id});}} deleteAiTask={deleteAiTask} openDelegation={openTask} deleteDelegation={deleteDelegation}/>}
-      {view==="task-detail"&&<Tasks liveTaskResult={activeTask?<LiveTaskResult key={activeTask.id} task={activeTask} busy={Boolean(busy)} sandbox={sandbox} discover={discover} approve={approveLive} retry={retryLive} reportError={message=>notifyError(message,"The task reported an error.")}/>:null} routePlan={routePlan} task={task} busy={busy} conversationId={activeTask?.conversationId} onFollowUp={(message:string,id:string)=>submitTask(message,id)} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
+      {view==="task-detail"&&<Tasks messages={conversationTasks} routePlan={routePlan} task={task} busy={busy} conversationId={activeTask?.conversationId} onFollowUp={(message:string,id:string)=>submitTask(message,id)} discover={discover} approveLive={approveLive} retryLive={retryLive} sandbox={sandbox} reportError={(message:string)=>notifyError(message,"The task reported an error.")} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
       {view==="approvals"&&aiTasks.filter(t=>t.plan.proposedActions?.length&&!t.plan.execution).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Review live actions: {t.task}</button>)}
       {view==="approvals"&&<Approvals items={pending} openTask={openTask}/>}
       {view==="receipts"&&aiTasks.filter(t=>t.plan.execution?.receipt).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Live verified receipt: {t.task}</button>)}
@@ -260,24 +283,40 @@ function DrawerItem({icon,label,badge,active,onClick}:{icon:string;label:string;
 
 
 export function Tasks(props:any){
-  return <section className="tasksView compactResults" data-results-design="approved-compact-v2">
+  const lastTurn=useRef<HTMLDivElement|null>(null);
+  const messageKey=(props.messages as AiTask[]).map(item=>item.id).join(",");
+  useEffect(()=>{
+    const frame=requestAnimationFrame(()=>lastTurn.current?.scrollIntoView({behavior:"smooth",block:"end"}));
+    return()=>cancelAnimationFrame(frame);
+  },[messageKey]);
+  return <section className={`tasksView compactResults${props.conversationId?" hasChatComposer":""}`} data-results-design="approved-compact-v2">
     <p className="resultsEyebrow">AI TASK RESULTS</p>
-    {props.task&&props.routePlan&&<div className="taskRequest">{props.task}</div>}
-    {(props.routePlan||props.busy)&&<section className="resultsResponse"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><p className="resultsWho">SMAJ AI</p>
+    {props.messages?.length>0&&<div className="chatThread" aria-label="Conversation messages">
+      {props.messages.map((message:AiTask,index:number)=><article className="chatTurn" key={message.id}>
+        <div className="chatUserMessage">{message.task}</div>
+        <section className="chatAssistantMessage"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><p className="resultsWho">SMAJ AI</p><p className="taskAnswer">{message.plan.summary}</p>
+          <LiveTaskResult key={message.id} task={message} busy={Boolean(props.busy)} sandbox={props.sandbox} discover={props.discover} approve={props.approveLive} retry={props.retryLive} reportError={props.reportError}/>
+        </div></section>
+        {index===props.messages.length-1&&<div ref={lastTurn} aria-hidden="true"/>}
+      </article>)}
+    </div>}
+    {!props.messages?.length&&props.task&&props.routePlan&&<div className="taskRequest">{props.task}</div>}
+    {!props.messages?.length&&(props.routePlan||props.busy)&&<section className="resultsResponse"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><p className="resultsWho">SMAJ AI</p>
       {props.busy?<Analyzing/>:props.routePlan&&<TypedResponse text={props.routePlan.summary}/>}
-      {props.liveTaskResult}
     </div></section>}
-    {props.routePlan&&props.conversationId&&<FollowUpComposer key={props.conversationId} busy={Boolean(props.busy)} onSubmit={(message:string)=>props.onFollowUp(message,props.conversationId)}/>}
+    {props.routePlan&&props.conversationId&&<ChatComposer key={props.conversationId} busy={Boolean(props.busy)} onSubmit={(message:string)=>props.onFollowUp(message,props.conversationId)}/>}
     {props.delegation&&<DelegationDetail {...props}/>}
   </section>;
 }
 
-function FollowUpComposer({busy,onSubmit}:{busy:boolean;onSubmit:(message:string)=>void}){
+function ChatComposer({busy,onSubmit}:{busy:boolean;onSubmit:(message:string)=>Promise<boolean>}){
   const [message,setMessage]=useState("");
-  return <form className="followUpComposer" onSubmit={event=>{event.preventDefault();if(!message.trim()||busy)return;onSubmit(message.trim());setMessage("");}}>
-    <label htmlFor="ai-follow-up">Continue this conversation</label>
-    <textarea id="ai-follow-up" value={message} onChange={event=>setMessage(event.target.value)} maxLength={1900} rows={2} placeholder="Ask a follow-up or refine your request"/>
-    <button className="primaryButton" type="submit" disabled={busy||!message.trim()}>{busy?"Working…":"Send follow-up"}</button>
+  const [sending,setSending]=useState(false);
+  const submit=async(event:React.FormEvent)=>{event.preventDefault();if(!message.trim()||busy||sending)return;setSending(true);try{if(await onSubmit(message.trim()))setMessage("");}finally{setSending(false);}};
+  return <form className="chatComposer" onSubmit={submit}>
+    <label className="taskSrOnly" htmlFor="ai-chat-message">Message SMAJ AI</label>
+    <textarea id="ai-chat-message" value={message} onChange={event=>setMessage(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();event.currentTarget.form?.requestSubmit();}}} maxLength={2000} rows={1} placeholder="Message SMAJ AI"/>
+    <button className="primaryButton" type="submit" aria-label="Send message" disabled={busy||sending||!message.trim()}>{busy||sending?"…":"Send"}</button>
   </form>;
 }
 

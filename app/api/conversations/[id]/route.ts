@@ -8,6 +8,16 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ id: string }> };
 
+export async function GET(request: NextRequest, context: Context) {
+  try {
+    const session = requireActorSession(request);
+    const tasks = new AiTaskStore(workspaceDatabase(request)).conversationHistory(session.actorId, (await context.params).id);
+    return NextResponse.json({ tasks }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    return apiError(error);
+  }
+}
+
 export async function PATCH(request: NextRequest, context: Context) {
   try {
     requireSameOrigin(request);
