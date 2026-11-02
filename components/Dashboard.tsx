@@ -348,9 +348,9 @@ export function Tasks(props:any){
     {(props.messages?.length>0||props.pendingMessage)&&<div className="chatThread" aria-label="Conversation messages">
       {(props.messages||[]).map((message:AiTask,index:number)=><article className="chatTurn" key={message.id}>
         <div className="chatUserMessage">{message.task}</div>
-        <section className="chatAssistantMessage">{props.pendingMessage?.id===message.id
+        <section className={`chatAssistantMessage${props.pendingMessage?.id===message.id&&!message.plan.summary?" chatTyping":""}`}>{props.pendingMessage?.id===message.id&&!message.plan.summary
           ? <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><span className="taskDots" role="status" aria-label="SMAJ AI is responding"><i/><i/><i/></span></>
-          : <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><p className="taskAnswer">{message.plan.summary}</p>
+          : <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><TypedResponse text={message.plan.summary}/>
             <LiveTaskResult key={message.id} task={message} busy={Boolean(props.busy)} sandbox={props.sandbox} discover={props.discover} approve={props.approveLive} retry={props.retryLive} refreshActionUpdates={props.refreshActionUpdates} reportError={props.reportError}/>
           </div></>}</section>
         {index===props.messages.length-1&&<div ref={lastTurn} aria-hidden="true"/>}
@@ -365,7 +365,7 @@ export function Tasks(props:any){
     </div>}
     {!props.messages?.length&&!props.pendingMessage&&props.task&&props.routePlan&&<div className="taskRequest">{props.task}</div>}
     {!props.messages?.length&&!props.pendingMessage&&(props.routePlan||props.busy)&&<section className="resultsResponse"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent">
-      {props.busy?<span className="taskDots" role="status" aria-label="SMAJ AI is responding"><i/><i/><i/></span>:props.routePlan&&<TypedResponse text={props.routePlan.summary}/>}
+      {props.routePlan?.summary?<TypedResponse text={props.routePlan.summary}/>:props.busy&&<span className="taskDots taskDotsInline" role="status" aria-label="SMAJ AI is responding"><i/><i/><i/></span>}
     </div></section>}
     {props.conversationId&&<ChatComposer key={props.conversationId} busy={Boolean(props.busy)||Boolean(props.pendingMessage)} onSubmit={(message:string)=>props.onFollowUp(message,props.conversationId)}/>}
     {props.delegation&&<DelegationDetail {...props}/>}
@@ -375,7 +375,7 @@ export function Tasks(props:any){
 function ChatComposer({busy,onSubmit}:{busy:boolean;onSubmit:(message:string)=>Promise<boolean>}){
   const [message,setMessage]=useState("");
   const [sending,setSending]=useState(false);
-  const submit=async(event:React.FormEvent)=>{event.preventDefault();if(!message.trim()||busy||sending)return;setSending(true);try{if(await onSubmit(message.trim()))setMessage("");}finally{setSending(false);}};
+  const submit=async(event:React.FormEvent)=>{event.preventDefault();const submitted=message.trim();if(!submitted||busy||sending)return;setMessage("");setSending(true);try{await onSubmit(submitted);}finally{setSending(false);}};
   return <form className="chatComposer" onSubmit={submit}>
     <label className="taskSrOnly" htmlFor="ai-chat-message">Message SMAJ AI</label>
     <textarea id="ai-chat-message" value={message} onChange={event=>setMessage(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();event.currentTarget.form?.requestSubmit();}}} maxLength={2000} rows={1} placeholder="Message SMAJ AI"/>

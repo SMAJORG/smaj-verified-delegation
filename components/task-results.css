@@ -9,7 +9,7 @@
 .chatAssistantMessage .resultsContent{min-width:0;flex:1}
 .chatAssistantMessage .taskAnswer{margin:0 0 10px}
 .chatAssistantMessage.chatTyping{align-items:center;min-height:36px;margin-top:16px}
-.chatAssistantMessage.chatTyping .taskDots{gap:4px;padding:0;background:transparent}
+.chatAssistantMessage.chatTyping .taskDots,.compactResults .resultsResponse .taskDots{gap:4px;padding:0;background:transparent;border-radius:0}
 .chatAssistantMessage.chatTyping .taskDots i{width:6px;height:6px}
 .chatFailure{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0 0 43px;padding:10px 12px;border:1px solid #f0c5cc;border-radius:12px;background:#fff2f4;color:#9d3348;font-size:12px;line-height:1.45}
 .chatFailure button{flex:none;padding:7px 12px;border:0;border-radius:9px;background:#7547d5;color:#fff;font-size:11px;font-weight:700}
