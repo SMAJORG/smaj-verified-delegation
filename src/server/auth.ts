@@ -76,7 +76,7 @@ export const requireActorSession = (request: Request): ActorSession => {
   const hubToken = request.headers.get("x-smaj-hub-token");
   if (hubToken) {
     const secret = process.env.SMAJ_AI_SSO_SECRET?.trim();
-    if (!secret || secret.length < 32) throw new AppError("unauthorized", "Hub authentication is not configured", 401);
+    if (!secret || secret.length < 32) throw new AppError("sso_not_configured", "Hub authentication is not configured. Configure matching server-only SMAJ_AI_SSO_SECRET values (at least 32 characters) on SMAJ PI HUB and SMAJ AI.", 503);
     const claims = verifySmajSsoToken(hubToken, secret);
     if (!claims.exp || claims.exp * 1000 > Date.now() + 90_000) throw new AppError("unauthorized", "Hub token lifetime is invalid", 401);
     return { actorId: claims.sub, authType: "sso", uid: claims.uid, piUsername: claims.piUsername };

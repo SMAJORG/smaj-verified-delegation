@@ -106,7 +106,12 @@ test("Hub bridge uses verified identity and rejects tampered, expired or long-li
     assert.throws(() => requireActorSession(request(token(now + 3600))));
     assert.throws(() => requireActorSession(request(token(now + 60, ""))));
     delete process.env.SMAJ_AI_SSO_SECRET;
-    assert.throws(() => requireActorSession(request(valid)));
+    assert.throws(() => requireActorSession(request(valid)), (error: unknown) =>
+      error instanceof AppError
+      && error.status === 503
+      && error.code === "sso_not_configured"
+      && error.message.includes("SMAJ_AI_SSO_SECRET"),
+    );
   } finally {
     if (previous === undefined) delete process.env.SMAJ_AI_SSO_SECRET;
     else process.env.SMAJ_AI_SSO_SECRET = previous;
