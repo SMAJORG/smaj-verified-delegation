@@ -14,6 +14,7 @@ import servicesStyles from "@/components/Services.module.css";
 import TaskHistory from "@/components/TaskHistory";
 import { downloadReceiptFile } from "@/components/receipt-export";
 import { readConversationCache, writeConversationCache } from "@/components/conversation-storage";
+import { dashboardRouteUrl, parseDashboardRoute, type DashboardRoute } from "@/src/domain/dashboard-route";
 import type { AiTask } from "@/src/server/ai-tasks";
 import { SMAJ_SERVICES, type ServiceId, type ServiceRoutePlan } from "@/src/domain/services";
 import type { DelegationView, JobsApiJob } from "@/src/domain/types";
@@ -33,6 +34,7 @@ const Icon = ({ name }: { name: string }) => {
 
 export default function Dashboard() {
   const [view,setViewState]=useState<View>("home"); const viewRef=useRef<View>("home"); const setView=(next:View)=>{viewRef.current=next;setViewState(next);}; const [menuOpen,setMenuOpen]=useState(false); const [authenticated,setAuthenticated]=useState<boolean|null>(null); const [ssoEnabled,setSsoEnabled]=useState(false); const [demoEnabled,setDemoEnabled]=useState(false); const [sandbox,setSandbox]=useState(false); const [expiresAt,setExpiresAt]=useState<number|null>(null); const [accessToken,setAccessToken]=useState("");
+  const [route,setRoute]=useState<DashboardRoute>({view:"home"});
   const [aiTasks,setAiTasks]=useState<AiTask[]>([]); const [selectedService,setSelectedService]=useState<ServiceId|null>(null); const [task,setTask]=useState(""); const [routePlan,setRoutePlan]=useState<ServiceRoutePlan|null>(null); const [connections,setConnections]=useState<ServiceConnection[]>([]); const [history,setHistory]=useState<DelegationView[]>([]); const [delegation,setDelegation]=useState<DelegationView|null>(null);
   const [candidateName,setCandidateName]=useState(""); const [skills,setSkills]=useState(""); const [selectedJobs,setSelectedJobs]=useState<string[]>([]); const [injectFailure,setInjectFailure]=useState(true); const [busy,setBusy]=useState<string|null>(null); const [error,setError]=useState(""); const [storageScope,setStorageScope]=useState<string|null>(null);
   const notifyError=(failure:unknown,fallback:string)=>{console.error("[SMAJ AI] Request failed:",failure);const detail=failure instanceof Error?failure.message:typeof failure==="string"?failure:"";setError(detail&&detail!=="Failed to fetch"?detail:detail==="Failed to fetch"?`${fallback} Check your connection and try again.`:fallback);};
@@ -40,7 +42,7 @@ export default function Dashboard() {
   useEffect(()=>{if(authenticated!==true||!storageScope)return;try{writeConversationCache(window.localStorage,storageScope,{tasks:aiTasks,delegations:history});}catch(failure){notifyError(failure,"Conversation history could not be saved in this browser.");}},[aiTasks,history,authenticated,storageScope]);
   const demoEntryPending=useRef(false);
   const viewHistory=useRef<View[]>([]);
-  const resumedSearch=useRef(false);
+  const routeRestored=useRef(false);
   const [sampleTasksEnabled,setSampleTasksEnabled]=useState(false);
   const [publicAccess,setPublicAccess]=useState(false);
   useLayoutEffect(()=>{
@@ -56,35 +58,39 @@ export default function Dashboard() {
     return()=>{cancelAnimationFrame(frame);window.history.scrollRestoration=previousRestoration;};
   },[busy,authenticated]);
   const streamRef=useRef<EventSource|null>(null); const jobsById=useMemo(()=>new Map((delegation?.jobs||[]).map(job=>[job.id,job])),[delegation]);
+  const updateRoute=(next:DashboardRoute,replace=false)=>{routeRestored.current=true;setRoute(next);setView(next.view);const url=dashboardRouteUrl(window.location.href,next);if(replace)window.history.replaceState({smajDashboard:true},"",url);else window.history.pushState({smajDashboard:true},"",url);};
   const updateDelegation=(next:DelegationView)=>{setDelegation(next);setHistory(current=>[next,...current.filter(item=>item.id!==next.id)]);};
-  const loadWorkspace=async(signal?:AbortSignal)=>{const [tasksResponse,connectionsResponse,aiTasksResponse]=await Promise.all([fetch("/api/delegations",{cache:"no-store",signal}),fetch("/api/connections",{cache:"no-store",signal}),fetch("/api/tasks",{cache:"no-store",signal})]);if(tasksResponse.status===401||tasksResponse.status===503){setAuthenticated(false);notifyError(new Error(`Workspace session is unavailable (${tasksResponse.status}).`),"Workspace session is unavailable.");return false;}if(!tasksResponse.ok||!connectionsResponse.ok||!aiTasksResponse.ok)throw new Error(`Workspace could not be loaded (HTTP ${[tasksResponse,connectionsResponse,aiTasksResponse].find(response=>!response.ok)?.status}).`);const tasksPayload=await tasksResponse.json() as ApiResponse;const connectionsPayload=await connectionsResponse.json() as ApiResponse;setAiTasks((await aiTasksResponse.json()).tasks||[]);setHistory(tasksPayload.delegations||[]);setConnections(connectionsPayload.connections||[]);setAuthenticated(true);return true;};
+  const loadWorkspace=async(signal?:AbortSignal)=>{const [tasksResponse,connectionsResponse,aiTasksResponse]=await Promise.all([fetch("/api/delegations",{cache:"no-store",signal}),fetch("/api/connections",{cache:"no-store",signal}),fetch("/api/tasks",{cache:"no-store",signal})]);const unauthorized=[tasksResponse,connectionsResponse,aiTasksResponse].find(response=>response.status===401);if(unauthorized){setAuthenticated(false);return false;}if(!tasksResponse.ok||!connectionsResponse.ok||!aiTasksResponse.ok)throw new Error(`Workspace could not be loaded (HTTP ${[tasksResponse,connectionsResponse,aiTasksResponse].find(response=>!response.ok)?.status}).`);const tasksPayload=await tasksResponse.json() as ApiResponse;const connectionsPayload=await connectionsResponse.json() as ApiResponse;setAiTasks((await aiTasksResponse.json()).tasks||[]);setHistory(tasksPayload.delegations||[]);setConnections(connectionsPayload.connections||[]);setAuthenticated(true);return true;};
+  useEffect(()=>{
+    const restoreFromUrl=()=>{const next=parseDashboardRoute(window.location.search);setRoute(next);setView(next.view);};
+    restoreFromUrl();
+    const onPopState=()=>{routeRestored.current=false;restoreFromUrl();setMenuOpen(false);};
+    window.addEventListener("popstate",onPopState);
+    return()=>window.removeEventListener("popstate",onPopState);
+  },[]);
   useEffect(()=>{
     const controller=new AbortController();
     const load=async()=>{
       const response=await fetch("/api/auth/session",{cache:"no-store",signal:controller.signal});
       if(!response.ok)throw new Error("Your sign-in status could not be checked. Please try again.");
-      let payload=await response.json();
-      if ((!payload.authenticated && !payload.publicAccess) || payload.sandbox) {
-        const opened=await fetch("/api/public/session",{method:"POST",signal:controller.signal});
-        payload=await opened.json();
-        if(!opened.ok)throw new Error(payload.message || "Public AI could not be opened. Please try again.");
-      }
+      const payload=await response.json();
       const scope=payload.storageScope;
       if(typeof scope==="string")setStorageScope(scope);
       setPublicAccess(Boolean(payload.publicAccess));
       setSampleTasksEnabled(Boolean(payload.sampleTasksEnabled));setSsoEnabled(Boolean(payload.ssoEnabled));setDemoEnabled(Boolean(payload.demoEnabled));setSandbox(Boolean(payload.sandbox));setExpiresAt(payload.expiresAt||null);
-      try{await loadWorkspace(controller.signal);}catch(failure){const cached=typeof scope==="string"?readConversationCache(window.localStorage,scope):null;if(cached){setAiTasks(cached.tasks);setHistory(cached.delegations);}setAuthenticated(true);notifyError(failure,"Saved conversations could not be refreshed.");}
+      if(!payload.authenticated&&!payload.publicAccess){setAuthenticated(false);return;}
+      try{const loaded=await loadWorkspace(controller.signal);if(!loaded)setAuthenticated(false);}catch(failure){if(controller.signal.aborted)return;let check:Response;try{check=await fetch("/api/auth/session",{cache:"no-store",signal:controller.signal});}catch{if(!controller.signal.aborted){setAuthenticated(false);notifyError(failure,"Saved conversations could not be refreshed.");}return;}if(!check.ok){setAuthenticated(false);notifyError(failure,"Saved conversations could not be refreshed.");return;}const current=await check.json();if(!current.authenticated&&!current.publicAccess){setAuthenticated(false);return;}const cached=typeof scope==="string"?readConversationCache(window.localStorage,scope):null;if(cached){setAiTasks(cached.tasks);setHistory(cached.delegations);}setAuthenticated(true);notifyError(failure,"Saved conversations could not be refreshed.");}
     };
     void load().catch(error=>{if(!controller.signal.aborted){setAuthenticated(false);notifyError(error,"Sign-in could not be checked");}});
     return()=>{controller.abort();streamRef.current?.close();};
   },[]);
   useEffect(()=>{if(!sandbox||!expiresAt)return;const expire=()=>{streamRef.current?.close();setAuthenticated(false);setHistory([]);setAiTasks([]);setTask("");setSelectedService(null);setConnections([]);setDelegation(null);setRoutePlan(null);setSandbox(false);setExpiresAt(null);setError("Your demo session expired. Try Live Demo to start a fresh workspace.");};const timer=setTimeout(expire,Math.max(0,expiresAt-Date.now()));return()=>clearTimeout(timer);},[sandbox,expiresAt]);
   const login=async(event:React.FormEvent)=>{event.preventDefault();setBusy("login");setError("");try{const response=await fetch("/api/auth/session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({accessToken})});const payload=await response.json() as ApiResponse;if(!response.ok)throw new Error(payload.message||"Authentication failed");if(payload.storageScope)setStorageScope(payload.storageScope);setAccessToken("");await loadWorkspace();}catch(loginError){notifyError(loginError,"Authentication failed");}finally{setBusy(null);}};
-  const startDemo=async()=>{demoEntryPending.current=true;viewHistory.current=[];setView("home");setMenuOpen(false);setBusy("demo");setError("");const signal=AbortSignal.timeout(30000);try{const response=await fetch("/api/public/session",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}",signal});const payload=await response.json();if(!response.ok)throw new Error(payload.message||"The demo could not be started. Please try again.");if(typeof payload.storageScope==="string")setStorageScope(payload.storageScope);setPublicAccess(Boolean(payload.publicAccess));setSandbox(false);setExpiresAt(payload.expiresAt);if(!await loadWorkspace(signal))throw new Error("The demo workspace could not be loaded. Please try again.");}catch(failure){notifyError(failure,"The demo could not be started. Please try again.");}finally{setBusy(null);}};
-  const logout=async()=>{setError("");try{const response=await fetch("/api/auth/session",{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok)throw new Error("Sign-out failed. Please try again.");streamRef.current?.close();setAuthenticated(false);setStorageScope(null);setHistory([]);setAiTasks([]);setTask("");setSelectedService(null);setConnections([]);setDelegation(null);setRoutePlan(null);setSandbox(false);setExpiresAt(null);viewHistory.current=[];setView("home");setMenuOpen(false);}catch(failure){notifyError(failure,"Sign-out failed. Please try again.");}};
-  const navigate=(next:View)=>{if(viewRef.current!==next)viewHistory.current.push(viewRef.current);setView(next);setMenuOpen(false);window.scrollTo({top:0,behavior:"smooth"});};
-  const goBack=()=>{const previous=viewHistory.current.pop();setView(previous||"home");setMenuOpen(false);window.scrollTo({top:0,behavior:"smooth"});};
-  const routeTask=async(event:React.FormEvent)=>{event.preventDefault();if(!task.trim()){setError("Enter a message or task.");return;}const service=SMAJ_SERVICES.find(item=>item.id===selectedService);setBusy("routing");setError("");try{const response=await fetch("/api/tasks",{signal:AbortSignal.timeout(135000),method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({task:service?`${service.name}: ${task}`:task})});const payload=await response.json() as ApiResponse;if(!response.ok||!payload.plan)throw new Error((payload.message||"Meta could not route this task")+(response.status===429&&response.headers.get("Retry-After")?` Try again in ${response.headers.get("Retry-After")} seconds.`:""));if(payload.task)setAiTasks(items=>[payload.task!,...items.filter(item=>item.id!==payload.task!.id)]);setDelegation(null);setRoutePlan(payload.plan);navigate("task-detail");}catch(routeError){notifyError(routeError,"Task routing stopped safely");}finally{setBusy(null);}};
+  const startDemo=async()=>{demoEntryPending.current=true;viewHistory.current=[];updateRoute({view:"home"},true);setMenuOpen(false);setBusy("demo");setError("");const signal=AbortSignal.timeout(30000);try{const response=await fetch("/api/public/session",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}",signal});const payload=await response.json();if(!response.ok)throw new Error(payload.message||"The demo could not be started. Please try again.");if(typeof payload.storageScope==="string")setStorageScope(payload.storageScope);setPublicAccess(Boolean(payload.publicAccess));setSandbox(false);setExpiresAt(payload.expiresAt);if(!await loadWorkspace(signal))throw new Error("The demo workspace could not be loaded. Please try again.");}catch(failure){notifyError(failure,"The demo could not be started. Please try again.");}finally{setBusy(null);}};
+  const logout=async()=>{setError("");try{const response=await fetch("/api/auth/session",{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok)throw new Error("Sign-out failed. Please try again.");streamRef.current?.close();setAuthenticated(false);setStorageScope(null);setHistory([]);setAiTasks([]);setTask("");setSelectedService(null);setConnections([]);setDelegation(null);setRoutePlan(null);setSandbox(false);setExpiresAt(null);viewHistory.current=[];updateRoute({view:"home"},true);setMenuOpen(false);}catch(failure){notifyError(failure,"Sign-out failed. Please try again.");}};
+  const navigate=(next:View,selection?:Pick<DashboardRoute,"taskId"|"delegationId">)=>{if(viewRef.current!==next)viewHistory.current.push(viewRef.current);updateRoute({view:next,...selection});setMenuOpen(false);window.scrollTo({top:0,behavior:"smooth"});};
+  const goBack=()=>{if(window.history.state?.smajDashboard){window.history.back();return;}const previous=viewHistory.current.pop()||"home";updateRoute({view:previous},true);setMenuOpen(false);window.scrollTo({top:0,behavior:"smooth"});};
+  const routeTask=async(event:React.FormEvent)=>{event.preventDefault();if(!task.trim()){setError("Enter a message or task.");return;}const service=SMAJ_SERVICES.find(item=>item.id===selectedService);setBusy("routing");setError("");try{const response=await fetch("/api/tasks",{signal:AbortSignal.timeout(135000),method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({task:service?`${service.name}: ${task}`:task})});const payload=await response.json() as ApiResponse;if(!response.ok||!payload.plan)throw new Error((payload.message||"Meta could not route this task")+(response.status===429&&response.headers.get("Retry-After")?` Try again in ${response.headers.get("Retry-After")} seconds.`:""));if(payload.task)setAiTasks(items=>[payload.task!,...items.filter(item=>item.id!==payload.task!.id)]);setDelegation(null);setRoutePlan(payload.plan);navigate("task-detail",payload.task?{taskId:payload.task.id}:undefined);}catch(routeError){notifyError(routeError,"Task routing stopped safely");}finally{setBusy(null);}};
   const runDiscovery = async (saved: AiTask, resume = false) => {
     setBusy("discovery"); setError("");
     try {
@@ -110,20 +116,44 @@ export default function Dashboard() {
     await runDiscovery(saved);
   };
   useEffect(() => {
-    if (authenticated !== true || resumedSearch.current) return;
+    if (authenticated !== true || routeRestored.current) return;
     const params = new URLSearchParams(window.location.search);
-    const id = params.get("task") || (params.has("sso") ? window.sessionStorage.getItem("smaj_pending_search") : null);
-    if (!id) return;
-    const saved = aiTasks.find(item=>item.id===id);
-    if (!saved) return;
-    resumedSearch.current = true;
-    setTask(saved.task); setRoutePlan(saved.plan); setDelegation(null); setView("task-detail");
-    if(params.has("sso")) setError("SMAJ PI HUB sign-in did not complete. Your request is saved; approve the search to try again.");
-    window.sessionStorage.removeItem("smaj_pending_search");
+    const pendingSearchId = params.has("sso") ? window.sessionStorage.getItem("smaj_pending_search") : null;
+    if (route.view !== "task-detail" && pendingSearchId) {
+      const saved = aiTasks.find(item => item.id === pendingSearchId);
+      if (saved) {
+        setTask(saved.task);setRoutePlan(saved.plan);setDelegation(null);setView("task-detail");
+        window.sessionStorage.removeItem("smaj_pending_search");
+        routeRestored.current = true;
+        updateRoute({view:"task-detail",taskId:saved.id},true);
+        setError("SMAJ PI HUB sign-in did not complete. Your request is saved; approve the search to try again.");
+        return;
+      }
+    }
+    if (route.view !== "task-detail") {
+      setView(route.view);
+      routeRestored.current = true;
+      return;
+    }
+    if (route.delegationId) {
+      const saved = history.find(item => item.id === route.delegationId);
+      if (!saved) { updateRoute({view:"tasks"},true);return; }
+      setRoutePlan(null);setTask(saved.goal);setDelegation(saved);setSelectedJobs(saved.selectedJobIds);setView("task-detail");
+      routeRestored.current = true;
+      if(["executing","retrying","verifying"].includes(saved.status))watch(saved.id);
+      return;
+    }
+    const taskId = route.taskId || (params.has("sso") ? window.sessionStorage.getItem("smaj_pending_search") : null);
+    const saved = aiTasks.find(item => item.id === taskId);
+    if (!saved) { updateRoute({view:"tasks"},true);return; }
+    setTask(saved.task);setRoutePlan(saved.plan);setDelegation(null);setView("task-detail");
     const resume = params.get("resumeSearch") === "1";
-    window.history.replaceState(null,"",window.location.pathname);
+    if (params.has("sso")) setError("SMAJ PI HUB sign-in did not complete. Your request is saved; approve the search to try again.");
+    window.sessionStorage.removeItem("smaj_pending_search");
+    routeRestored.current = true;
+    if (route.taskId || resume || params.has("sso")) updateRoute({view:"task-detail",taskId:saved.id},true);
     if (resume && !sandbox) void runDiscovery(saved, true);
-  }, [authenticated, sandbox, aiTasks]);
+  }, [authenticated, sandbox, aiTasks, history, route]);
   const activeTask = aiTasks.find(item => item.plan === routePlan || JSON.stringify(item.plan) === JSON.stringify(routePlan));
   const approveLive = async (actionIds: string[]) => {
     if (!activeTask) return;
@@ -166,16 +196,17 @@ export default function Dashboard() {
     }, 2500);
     return () => { clearInterval(timer); controller.abort(); };
   }, [activeTask?.id, activeTask?.plan.execution?.status]);
-  const deleteAiTask=async(id:string)=>{if(!window.confirm("Delete this task and its AI response?"))return;setBusy(`delete-${id}`);try{const response=await fetch(`/api/tasks/${id}`,{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok){const payload=await response.json();throw new Error(payload.message||"Task deletion failed");}setAiTasks(items=>items.filter(item=>item.id!==id));if(activeTask?.id===id){setRoutePlan(null);setTask("");if(viewHistory.current.at(-1)==="tasks")viewHistory.current.pop();setView("tasks");}}catch(failure){notifyError(failure,"Task deletion failed");}finally{setBusy(null);}};
-  const deleteDelegation=async(id:string)=>{if(!window.confirm("Delete this task, its drafts, and local proof receipt?"))return;setBusy(`delete-${id}`);try{const response=await fetch(`/api/delegations/${id}`,{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok){const payload=await response.json();throw new Error(payload.message||"Task deletion failed");}streamRef.current?.close();setHistory(items=>items.filter(item=>item.id!==id));if(delegation?.id===id){setDelegation(null);if(viewHistory.current.at(-1)==="tasks")viewHistory.current.pop();setView("tasks");}}catch(failure){notifyError(failure,"Task deletion failed");}finally{setBusy(null);}};
+  const deleteAiTask=async(id:string)=>{if(!window.confirm("Delete this task and its AI response?"))return;setBusy(`delete-${id}`);try{const response=await fetch(`/api/tasks/${id}`,{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok){const payload=await response.json();throw new Error(payload.message||"Task deletion failed");}setAiTasks(items=>items.filter(item=>item.id!==id));if(activeTask?.id===id){setRoutePlan(null);setTask("");if(viewHistory.current.at(-1)==="tasks")viewHistory.current.pop();updateRoute({view:"tasks"},true);}}catch(failure){notifyError(failure,"Task deletion failed");}finally{setBusy(null);}};
+  const deleteDelegation=async(id:string)=>{if(!window.confirm("Delete this task, its drafts, and local proof receipt?"))return;setBusy(`delete-${id}`);try{const response=await fetch(`/api/delegations/${id}`,{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok){const payload=await response.json();throw new Error(payload.message||"Task deletion failed");}streamRef.current?.close();setHistory(items=>items.filter(item=>item.id!==id));if(delegation?.id===id){setDelegation(null);if(viewHistory.current.at(-1)==="tasks")viewHistory.current.pop();updateRoute({view:"tasks"},true);}}catch(failure){notifyError(failure,"Task deletion failed");}finally{setBusy(null);}};
   const setConnection=async(serviceId:ServiceId,connected:boolean)=>{setBusy(`connection-${serviceId}`);setError("");try{const response=await fetch("/api/connections",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({serviceId,connected})});const payload=await response.json() as ApiResponse;if(!response.ok||!payload.connections)throw new Error(payload.message||"Connection could not be updated");setConnections(payload.connections);}catch(failure){notifyError(failure,"Connection failed safely");}finally{setBusy(null);}};
   const watch=(id:string)=>{streamRef.current?.close();const source=new EventSource(`/api/delegations/${id}/events`);source.addEventListener("delegation",event=>{try{const next=JSON.parse((event as MessageEvent).data) as DelegationView;updateDelegation(next);if(["verified","failed"].includes(next.status))source.close();}catch(failure){source.close();notifyError(failure,"Task updates could not be read.");}});source.onerror=()=>{source.close();notifyError(new Error("Task update stream disconnected."),"Task updates could not be received.");};streamRef.current=source;};
   const request=async(url:string,body:Record<string,unknown>,action:string)=>{setBusy(action);setError("");try{const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Idempotency-Key":`ui_${crypto.randomUUID()}`},body:JSON.stringify(body)});const payload=await response.json() as ApiResponse;if(!response.ok||!payload.delegation)throw new Error(payload.message||"Workflow request failed");updateDelegation(payload.delegation);return payload.delegation;}catch(failure){notifyError(failure,"Workflow stopped safely");return null;}finally{setBusy(null);}};
   const createJobsPlan=async()=>{const created=await request("/api/delegations",{goal:task,candidateName,skills:skills.split(",").map(value=>value.trim()).filter(Boolean),maxApplications:3},"planning");if(created){setSelectedJobs(created.selectedJobIds);setDelegation(created);}};
   const approve=()=>delegation&&request(`/api/delegations/${delegation.id}/approve`,{selectedJobIds:selectedJobs},"approving"); const execute=()=>{if(!delegation)return;watch(delegation.id);return request(`/api/delegations/${delegation.id}/execute`,{injectTransientFailure:injectFailure},"executing");};
-  const openTask=(item:DelegationView)=>{setRoutePlan(null);setTask(item.goal);setDelegation(item);setSelectedJobs(item.selectedJobIds);navigate("task-detail");if(["executing","retrying","verifying"].includes(item.status))watch(item.id);};
+  const openTask=(item:DelegationView)=>{setRoutePlan(null);setTask(item.goal);setDelegation(item);setSelectedJobs(item.selectedJobIds);navigate("task-detail",{delegationId:item.id});if(["executing","retrying","verifying"].includes(item.status))watch(item.id);};
   const downloadReceipt=(format: "json" | "pdf" = "json")=>{if(!delegation?.receipt)return;downloadReceiptFile(delegation.receipt,format,`smaj-proof-${delegation.id}.${format}`);};
   if(busy==="demo")return <DemoLoading/>;
+  if(authenticated===null)return <main className="workspace" aria-busy="true"><div className="workspaceBody"><p role="status">Checking secure session…</p></div></main>;
   if(authenticated!==true)return <><LandingPage demoEnabled={demoEnabled} startDemo={startDemo} authenticated={authenticated} ssoEnabled={ssoEnabled} accessToken={accessToken} setAccessToken={setAccessToken} busy={busy} login={login}/><ErrorToast message={error} dismiss={()=>setError("")}/></>;
   const connectedIds=new Set(connections.filter(item=>item.connected).map(item=>item.serviceId)); const pending=history.filter(item=>item.status==="awaiting_approval"); const receipts=history.filter(item=>item.receipt);
   const pageTitle: Record<Exclude<View, "home">, string> = { tasks:"All Tasks", "task-detail":delegation||routePlan?.discovery||routePlan?.execution?"Results":"Conversations", services:"Connect Apps", approvals:"Approvals", receipts:"Results", profile:"Settings" };
@@ -197,11 +228,11 @@ export default function Dashboard() {
       {sampleTasksEnabled&&sandbox&&<div className="demoNotice" role="status"><strong>Hackathon Demo</strong><span>Sample data. Simulated actions. Expires {expiresAt?time(new Date(expiresAt).toISOString()):"in one hour"}.</span><button className="secondaryButton" onClick={()=>navigate("tasks")}>Sample tasks</button><button className="secondaryButton" onClick={logout}>Exit demo</button></div>}
       {view==="home"&&<HomeWorkspace task={task} setTask={setTask} selectedService={selectedService} selectService={setSelectedService} routeTask={routeTask} busy={busy} connectedIds={connectedIds}/>}
       {view==="services"&&<Services connections={connections} setConnection={setConnection} busy={busy}/>}
-      {view==="tasks"&&<TaskHistory tasks={aiTasks} delegations={sampleTasksEnabled?history:[]} busy={busy} openAiTask={saved=>{setDelegation(null);setTask(saved.task);setRoutePlan(saved.plan);navigate("task-detail");}} deleteAiTask={deleteAiTask} openDelegation={openTask} deleteDelegation={deleteDelegation}/>}
+      {view==="tasks"&&<TaskHistory tasks={aiTasks} delegations={sampleTasksEnabled?history:[]} busy={busy} openAiTask={saved=>{setDelegation(null);setTask(saved.task);setRoutePlan(saved.plan);navigate("task-detail",{taskId:saved.id});}} deleteAiTask={deleteAiTask} openDelegation={openTask} deleteDelegation={deleteDelegation}/>}
       {view==="task-detail"&&<Tasks liveTaskResult={activeTask?<LiveTaskResult key={activeTask.id} task={activeTask} busy={Boolean(busy)} sandbox={sandbox} discover={discover} approve={approveLive} retry={retryLive} reportError={message=>notifyError(message,"The task reported an error.")}/>:null} routePlan={routePlan} task={task} busy={busy} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
-      {view==="approvals"&&aiTasks.filter(t=>t.plan.proposedActions?.length&&!t.plan.execution).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail");}}>Review live actions: {t.task}</button>)}
+      {view==="approvals"&&aiTasks.filter(t=>t.plan.proposedActions?.length&&!t.plan.execution).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Review live actions: {t.task}</button>)}
       {view==="approvals"&&<Approvals items={pending} openTask={openTask}/>}
-      {view==="receipts"&&aiTasks.filter(t=>t.plan.execution?.receipt).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail");}}>Live verified receipt: {t.task}</button>)}
+      {view==="receipts"&&aiTasks.filter(t=>t.plan.execution?.receipt).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Live verified receipt: {t.task}</button>)}
       {view==="receipts"&&<Receipts items={receipts} openTask={openTask}/>}
       {view==="profile"&&<Profile connectedCount={connectedIds.size} taskCount={history.length} navigate={navigate} logout={logout}/>}
     </section>

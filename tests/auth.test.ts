@@ -3,6 +3,8 @@ import test from "node:test";
 import { createSession, createUserSession, requireActor, requireActorSession, SESSION_COOKIE, verifySmajSsoToken } from "@/src/server/auth";
 import { createHmac } from "node:crypto";
 import { AppError } from "@/src/server/http";
+import { GET as authStatus } from "@/app/api/auth/session/route";
+import { NextRequest } from "next/server";
 
 test("creates a signed session and rejects tampering", () => {
   const previous = process.env.SMAJ_DEMO_ACCESS_TOKEN;
@@ -41,6 +43,26 @@ test("creates an SSO user session bound to the PiHub subject", () => {
     assert.equal(actor.authType, "sso");
     assert.equal(actor.piUsername, "amina");
     assert.equal(requireActor(request), "pihub-user-123");
+  } finally {
+    if (previous === undefined) delete process.env.SMAJ_AI_SESSION_SECRET;
+    else process.env.SMAJ_AI_SESSION_SECRET = previous;
+  }
+});
+
+test("session status revalidates persistent cookies on the server and rejects expired or invalid sessions", async () => {
+  const previous = process.env.SMAJ_AI_SESSION_SECRET;
+  process.env.SMAJ_AI_SESSION_SECRET = "test-session-secret-at-least-16-chars";
+  const valid = createUserSession({ sub: "persistent-user" });
+  const request = (value = "") => new NextRequest("https://ai.example/api/auth/session", { headers: value ? { cookie: `${SESSION_COOKIE}=${value}` } : {} });
+  try {
+    assert.equal(valid.maxAge, 8 * 60 * 60);
+    const response = await authStatus(request(valid.value));
+    const body = await response.json();
+    assert.equal(body.authenticated, true);
+    assert.ok(body.storageScope);
+    assert.equal(response.headers.get("Cache-Control"), "no-store");
+    assert.equal((await (await authStatus(request(`${valid.value}invalid`))).json()).authenticated, false);
+    assert.equal((await (await authStatus(request())).json()).authenticated, false);
   } finally {
     if (previous === undefined) delete process.env.SMAJ_AI_SESSION_SECRET;
     else process.env.SMAJ_AI_SESSION_SECRET = previous;

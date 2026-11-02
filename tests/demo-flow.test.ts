@@ -105,7 +105,12 @@ test("complete restricted demo login, approval, execution, isolation, expiry and
     assert.equal(productionWorkflow.list("production-user").length, 1);
     assert.equal((await (await list(request("/api/delegations", cookie))).json()).delegations.some((item: { id: string }) => item.id === productionTask.id), false);
     assert.equal((await enterDemo(request("/api/auth/demo", `${SESSION_COOKIE}=${regular.value}`, "POST", {}))).status, 409);
-    assert.equal((await tokenLogin(request("/api/auth/session", "", "POST", { accessToken: process.env.SMAJ_DEMO_ACCESS_TOKEN }))).status, 200);
+    const tokenLoginResponse = await tokenLogin(request("/api/auth/session", "", "POST", { accessToken: process.env.SMAJ_DEMO_ACCESS_TOKEN }));
+    assert.equal(tokenLoginResponse.status, 200);
+    assert.match(tokenLoginResponse.headers.get("set-cookie")!, /Max-Age=28800/);
+    assert.match(tokenLoginResponse.headers.get("set-cookie")!, /HttpOnly/i);
+    assert.match(tokenLoginResponse.headers.get("set-cookie")!, /SameSite=strict/i);
+    assert.match(tokenLoginResponse.headers.get("set-cookie")!, /Secure/i);
     assert.equal((await list(request("/api/delegations", `${cookie}tampered`))).status, 401);
     const timed = issueDemoSession(getDemoDatabase(), 1000);
     assert.equal(readDemoSession(timed.value, getDemoDatabase(), 1001).sandbox, true);
