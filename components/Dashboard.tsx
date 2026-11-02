@@ -273,7 +273,7 @@ export default function Dashboard() {
   if(authenticated===null)return <main className="workspace" aria-busy="true"><div className="workspaceBody"><p role="status">Checking secure session…</p></div></main>;
   if(authenticated!==true)return <><LandingPage demoEnabled={demoEnabled} startDemo={startDemo} authenticated={authenticated} ssoEnabled={ssoEnabled} accessToken={accessToken} setAccessToken={setAccessToken} busy={busy} login={login}/><ErrorToast message={error} dismiss={()=>setError("")}/></>;
   const connectedIds=new Set(connections.filter(item=>item.connected).map(item=>item.serviceId)); const pending=history.filter(item=>item.status==="awaiting_approval"); const receipts=history.filter(item=>item.receipt);
-  const pageTitle: Record<Exclude<View, "home">, string> = { tasks:"All Tasks", "task-detail":delegation||routePlan?.discovery||routePlan?.execution?"Results":"Conversations", services:"Connect Apps", approvals:"Approvals", receipts:"Results", profile:"Settings" };
+  const pageTitle: Record<Exclude<View, "home">, string> = { tasks:"All Tasks", "task-detail":"Results", services:"Connect Apps", approvals:"Approvals", receipts:"Results", profile:"Settings" };
   return <><main className="workspace">
     {view==="home"&&<header className="workspaceHeader">
       <div className="headerSide"><button className="iconButton" onClick={()=>setMenuOpen(true)} aria-label="Open menu"><Icon name="menu"/></button><button className="headerBrand" onClick={()=>navigate("home")}><BrandLogo/><div><strong>SMAJ AI</strong><small>VERIFIED DELEGATION</small></div></button></div>
