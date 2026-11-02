@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import LiveTaskResult from "@/components/LiveTaskResult";
 import type { AiTask } from "@/src/server/ai-tasks";
 
-const renderResult = (record: Record<string, unknown>) => {
+const renderResult = (record: Record<string, unknown>, additionalRecords: Record<string, unknown>[] = []) => {
   const task: AiTask = {
     id: "store-result",
     task: "Find a product",
@@ -19,7 +19,7 @@ const renderResult = (record: Record<string, unknown>) => {
       discovery: {
         approvedAt: new Date(0).toISOString(),
         completedAt: new Date(0).toISOString(),
-        results: [{ serviceId: "store", source: "fixture", status: "read", records: [record] }],
+        results: [{ serviceId: "store", source: "fixture", status: "read", records: [record, ...additionalRecords] }],
         proofHash: "fixture",
       },
     },
@@ -62,4 +62,15 @@ test("Store result labels missing seller, location and price instead of filling 
   assert.match(html, /Price not listed/);
   assert.match(html, /Seller: Not listed/);
   assert.match(html, /Location: Not listed/);
+  assert.match(html, /class="taskResultCards taskResultCarousel taskResultCarouselSingle"/);
+  assert.doesNotMatch(html, /role="region"/);
+});
+
+test("multiple connected-service results render in a keyboard-accessible horizontal carousel region", () => {
+  const html = renderResult(
+    { id: "product-1", title: "First product" },
+    [{ id: "product-2", title: "Second product" }],
+  );
+  assert.match(html, /class="taskResultCards taskResultCarousel" role="region" aria-label="store results" tabindex="0"/);
+  assert.ok(html.indexOf("First product") < html.indexOf("Second product"));
 });

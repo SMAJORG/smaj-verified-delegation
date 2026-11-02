@@ -40,7 +40,12 @@ export default function LiveTaskResult({ task, busy, sandbox, discover, approve,
         const records = plan.summaryAi ? result.records.filter(value => plan.matches?.some(match => match.serviceId === result.serviceId && match.id === String((value as {id?:unknown}).id))) : result.records;
         const employerBacked = result.serviceId === "jobs" ? records.filter(value => (value as { listingProvenance?: string }).listingProvenance === "employer_backed") : [];
         const sampleJobs = result.serviceId === "jobs" ? records.filter(value => (value as { listingProvenance?: string }).listingProvenance !== "employer_backed") : [];
-        const renderCards = (items: unknown[], sample = false) => <div className="taskResultCards">{items.map((value, index) => {
+        const renderCards = (items: unknown[], sample = false) => <div
+          className={`taskResultCards taskResultCarousel${items.length === 1 ? " taskResultCarouselSingle" : ""}`}
+          role={items.length > 1 ? "region" : undefined}
+          aria-label={items.length > 1 ? `${result.serviceId} results` : undefined}
+          tabIndex={items.length > 1 ? 0 : undefined}
+        >{items.map((value, index) => {
           const record = value as Record<string, unknown>;
           const id = typeof record.id === "string" ? record.id : "";
           const url = result.serviceId === "store" && id ? `https://smajpihub.com/product/${encodeURIComponent(id)}` : result.serviceId === "jobs" && id ? `https://smajpihub.com/services/jobs/job/${encodeURIComponent(id)}` : typeof record.url === "string" && /^https:\/\/smajpihub\.com\/app\/services\/stream\/(?:title|series|watch)\/[a-zA-Z0-9_-]+$/.test(record.url) ? record.url : undefined;

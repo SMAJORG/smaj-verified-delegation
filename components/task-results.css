@@ -15,6 +15,11 @@
 .tasksView .taskDots i{width:7px;height:7px;border-radius:50%;background:#8759da;animation:taskBounce 1s infinite}
 .tasksView .taskDots i:nth-child(2){animation-delay:.15s}.tasksView .taskDots i:nth-child(3){animation-delay:.3s}
 .tasksView .taskResultCards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));align-items:stretch;gap:10px;margin:15px 0}
+.tasksView .taskResultCarousel{display:flex;align-items:stretch;width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scroll-behavior:smooth;scroll-snap-type:x mandatory;scrollbar-width:none}
+.tasksView .taskResultCarousel::-webkit-scrollbar{display:none}
+.tasksView .taskResultCarousel:focus-visible{outline:2px solid #8657d8;outline-offset:3px}
+.tasksView .taskResultCarousel .taskResultCard{flex:0 0 88%;scroll-snap-align:start}
+.tasksView .taskResultCarouselSingle .taskResultCard{flex-basis:100%}
 .tasksView .taskResultCard{border:1px solid #ece7f3;border-radius:15px;padding:9px;display:flex;flex-direction:column;gap:0;box-shadow:0 3px 12px #20132a06;min-width:0}
 .tasksView .taskThumb{width:100%;height:auto;aspect-ratio:16/9;max-height:148px;border-radius:10px;background:#f1eef7;flex:none;overflow:hidden;display:grid;place-items:center;font-size:10px;color:#827a90}
 .tasksView .taskThumb img{width:100%;height:100%;object-fit:cover}
@@ -39,7 +44,7 @@
 .workspace .tasksView .taskList>button{padding:12px;border-radius:14px;box-shadow:none}.tasksView .taskControls{margin:18px 0 10px}
 @keyframes taskBounce{50%{opacity:.25;transform:translateY(-4px)}}@keyframes taskBlink{50%{opacity:0}}
 @media(max-width:370px){.tasksView .taskThumb{width:66px;height:66px}.workspace .tasksView>h1{font-size:24px}.tasksView .taskResultCard{gap:9px}}
-@media(prefers-reduced-motion:reduce){.tasksView .taskDots i,.tasksView .taskCursor:after{animation:none}}
+@media(prefers-reduced-motion:reduce){.tasksView .taskDots i,.tasksView .taskCursor:after{animation:none}.tasksView .taskResultCarousel{scroll-behavior:auto}}
 /* Unique root and higher specificity keep the approved layout independent of legacy page rules. */
 .workspace .workspaceBody .compactResults{max-width:426px;margin:0 auto;min-width:0;color:#20192f;overflow-wrap:anywhere}
 .workspace .compactResults .resultsEyebrow{font-size:11px;letter-spacing:1.6px;font-weight:750;color:#8a75b5;margin:0 0 7px}
