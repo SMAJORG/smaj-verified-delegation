@@ -8,6 +8,15 @@ function ResultImage({ src, alt }: { src?: string; alt: string }) {
   return <div className="taskThumb">{src && !failed ? <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} /> : <span>{src ? "Image unavailable" : "No image provided"}</span>}</div>;
 }
 
+function ResultDescription({ children }: { children: string }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!children) return null;
+  return <div className="taskDescription">
+    <p className={expanded ? "" : "taskDescriptionClamp"}>{children}</p>
+    {children.length > 120 && <button type="button" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? "Read less" : "Read more"}</button>}
+  </div>;
+}
+
 export default function LiveTaskResult({ task, busy, sandbox, discover, approve, retry, reportError }: { task: AiTask; busy: boolean; sandbox: boolean; discover: () => void; approve: (ids: string[]) => void; retry: () => void; reportError: (message: string) => void }) {
   const plan = task.plan;
   const [dismissed, setDismissed] = useState(false);
@@ -40,18 +49,20 @@ export default function LiveTaskResult({ task, busy, sandbox, discover, approve,
           const matchReason = plan.matches?.find(match => match.serviceId === result.serviceId && match.id === id)?.reason;
           const details = [text("overview"), text("description"), text("summary")].find(Boolean);
           const skills = Array.isArray(record.skills) ? record.skills.filter((skill): skill is string => typeof skill === "string" && !!skill).join(", ") : "";
+          const storeResult = result.serviceId === "store";
           return <article className="taskResultCard" key={id || index}>
             <ResultImage src={image} alt={text("title") || "Catalog result"} />
             <div className="taskResultInfo"><h3>{text("title") || "Title unavailable"}</h3>
-            {record.price != null && String(record.price) !== "" && <p className="taskPrice">{String(record.price)}</p>}
+            {storeResult && <p className="taskPrice">{record.price != null && String(record.price) !== "" ? String(record.price) : "Price not listed"}</p>}
+            {!storeResult && record.price != null && String(record.price) !== "" && <p className="taskPrice">{String(record.price)}</p>}
             {record.salary != null && String(record.salary) !== "" && <p className="taskPrice">{String(record.salary)}</p>}
-            {(text("company") || text("creatorName") || text("sellerName")) && <p className="taskResultMeta">{text("company") || text("creatorName") || text("sellerName")}</p>}
-            {(text("location") || text("category")) && <p className="taskResultMeta">{[text("location"), text("category")].filter(Boolean).join(" · ")}</p>}
+            {(storeResult || text("company") || text("creatorName") || text("sellerName")) && <p className="taskResultMeta">{storeResult ? `Seller: ${text("sellerName") || "Not listed"}` : text("company") || text("creatorName") || text("sellerName")}</p>}
+            {(storeResult || text("location") || text("category")) && <p className="taskResultMeta">{storeResult ? `Location: ${text("location") || "Not listed"}` : [text("location"), text("category")].filter(Boolean).join(" · ")}</p>}
             {typeof record.quantity === "number" && Number.isFinite(record.quantity) && <p className="taskResultMeta">Quantity listed: {record.quantity}</p>}
             {(text("mode") || text("type")) && <p className="taskResultMeta">{[text("mode"), text("type")].filter(Boolean).join(" · ")}</p>}
             {skills && <p className="taskResultMeta">Skills: {skills}</p>}
             {(text("releaseDate") || typeof record.rating === "number") && <p className="taskResultMeta">{[text("releaseDate"), typeof record.rating === "number" ? `Rating ${record.rating}` : ""].filter(Boolean).join(" · ")}</p>}
-            {details && <p>{details}</p>}
+            {details && <ResultDescription>{details}</ResultDescription>}
             {typeof matchReason === "string" && matchReason && <p className="taskResultMeta"><strong>Why it matches:</strong> {matchReason}</p>}
             {result.serviceId === "jobs" && !sample && <p className="taskResultMeta"><strong>{record.employerVerified === true ? "Verified employer" : "Employer not verified — applications unavailable"}</strong></p>}
             {sample && <p className="taskResultMeta"><strong>Sample Listing — Not Verified</strong><br />Applications are disabled for sample listings.</p>}

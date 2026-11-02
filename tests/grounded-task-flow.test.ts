@@ -34,8 +34,13 @@ test("authenticated natural request routes through provider, approved live catal
     const prompt = JSON.parse(String(init?.body)).input as string;
     const answer = modelCalls === 1
       ? {summary:"Review Store discovery for cars within the specified budget",services:["store"],steps:[{id:"search",serviceId:"store",title:"Search cars",capability:"product discovery",query:{search:"car",maxPrice:30000,currency:"USD"}}],warnings:[]}
-      : {summary:"One car is in the returned catalog within the 30,000 USDT reference budget.",matches:[{serviceId:"store",id:"product-one",reason:"Within budget"},{serviceId:"store",id:"invented",reason:"Must be dropped"}],actions:[{serviceId:"store",recordId:"product-one",kind:"save_product",title:"Save available car"},{serviceId:"store",recordId:"invented",kind:"save_product",title:"Must be dropped"}]};
-    if (modelCalls === 2) { assert.match(prompt,/product-one/); assert.doesNotMatch(prompt,/Expensive car/); }
+      : {summary:"I found one car within your budget. It is listed for $25,000 USDT.",matches:[{serviceId:"store",id:"product-one",reason:"Within budget"},{serviceId:"store",id:"invented",reason:"Must be dropped"}],actions:[{serviceId:"store",recordId:"product-one",kind:"save_product",title:"Save available car"},{serviceId:"store",recordId:"invented",kind:"save_product",title:"Must be dropped"}]};
+    if (modelCalls === 2) {
+      assert.match(prompt,/product-one/);
+      assert.doesNotMatch(prompt,/Expensive car/);
+      assert.match(prompt,/1–3 short sentences/);
+      assert.match(prompt,/Do not copy or repeat long database descriptions/);
+    }
     return Response.json({ id:`fixture-${modelCalls}`, model:"fixture-model", status:"completed", output:[{content:[{type:"output_text",text:JSON.stringify(answer)}]}] });
   };
   try {
@@ -46,6 +51,7 @@ test("authenticated natural request routes through provider, approved live catal
     const db = workspaceDatabase(request({})); const connections = new ServiceConnectionStore(db); connections.list(identity.sub,"sso"); connections.set(identity.sub,"store",true);
     const discovered = await discover(request({approved:true}),context); assert.equal(discovered.status,200);
     const grounded = (await discovered.json()).task;
+    assert.equal(grounded.plan.summary,"I found one car within your budget. It is listed for $25,000 USDT.");
     assert.equal(grounded.plan.summaryAi.responseId,"fixture-2"); assert.equal(grounded.plan.proposedActions.length,1); assert.equal(grounded.plan.matches.length,1); assert.equal(writes,0);
     assert.match(grounded.plan.matches[0].reason, /25,?000 USDT reference.*30,?000 USDT limit/);
     assert.equal((await approve(request({approved:true,actionIds:["action-1"],reviewHash:"stale"}),context)).status,409);
