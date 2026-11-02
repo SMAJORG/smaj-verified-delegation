@@ -1,0 +1,290 @@
+.page {
+  min-height: 100dvh;
+  padding: 0 24px 44px;
+  color: #20192f;
+  background: #faf7f4;
+  font-family: "DM Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(100%, 1120px);
+  min-height: 76px;
+  margin: 0 auto;
+  padding: 12px 4px;
+  background: #faf7f4ed;
+  backdrop-filter: blur(12px);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #20192f;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -.4px;
+  text-decoration: none;
+}
+
+.brand img {
+  display: block;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.backLink {
+  color: #6034bd;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: #402085;
+}
+
+.intro {
+  width: min(100%, 760px);
+  margin: 46px auto 28px;
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: #7856ad;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+}
+
+.intro h1 {
+  margin: 0;
+  font-size: clamp(29px, 5vw, 46px);
+  font-weight: 800;
+  letter-spacing: -1.7px;
+  line-height: 1.13;
+}
+
+.intro h1 span {
+  display: inline-block;
+  color: #81798d;
+  font-weight: 600;
+}
+
+.vision {
+  margin: 17px 0 0;
+  color: #5e4b7f;
+  font-size: clamp(15px, 2.4vw, 19px);
+  font-weight: 700;
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 23px;
+  color: #71697d;
+  font-size: 11px;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.availableDot {
+  background: #3a9c70;
+}
+
+.plannedDot {
+  background: #a894c9;
+}
+
+.timeline {
+  position: relative;
+  display: grid;
+  gap: 13px;
+  width: min(100%, 740px);
+  margin: 0 auto;
+  padding: 2px 0 2px 48px;
+  list-style: none;
+}
+
+.timeline::before {
+  position: absolute;
+  top: 23px;
+  bottom: 23px;
+  left: 17px;
+  width: 2px;
+  background: linear-gradient(#58ab85, #c8bbdd 40%, #e9e3ee);
+  content: "";
+}
+
+.phase {
+  position: relative;
+  min-width: 0;
+}
+
+.marker {
+  position: absolute;
+  top: 17px;
+  left: -48px;
+  z-index: 1;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #3a9c70;
+  box-shadow: 0 0 0 1px #dcebe3;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.futureMarker {
+  background: #947bb9;
+  box-shadow: 0 0 0 1px #e6deef;
+}
+
+.card {
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid #eee8f1;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 4px 16px #30204c08;
+}
+
+.cardHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card h2 {
+  min-width: 0;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: -.2px;
+}
+
+.card p {
+  margin: 7px 0 0;
+  color: #71697d;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.status {
+  flex: none;
+  padding: 5px 8px;
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.available {
+  background: #edf7f1;
+  color: #27764f;
+}
+
+.planned {
+  background: #f3eff8;
+  color: #71578e;
+}
+
+.footer {
+  width: min(100%, 740px);
+  margin: 24px auto 0;
+  color: #898291;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .page {
+    padding: 0 16px 32px;
+  }
+
+  .header {
+    min-height: 66px;
+  }
+
+  .brand {
+    gap: 7px;
+    font-size: 15px;
+  }
+
+  .brand img {
+    width: 36px;
+    height: 36px;
+  }
+
+  .backLink {
+    font-size: 12px;
+  }
+
+  .intro {
+    margin: 34px auto 24px;
+  }
+
+  .intro h1 {
+    letter-spacing: -1px;
+  }
+
+  .vision {
+    line-height: 1.4;
+  }
+
+  .timeline {
+    gap: 11px;
+    padding-left: 40px;
+  }
+
+  .timeline::before {
+    left: 14px;
+  }
+
+  .marker {
+    left: -40px;
+    width: 31px;
+    height: 31px;
+    font-size: 9px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .cardHeading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page {
+    scroll-behavior: auto;
+  }
+}

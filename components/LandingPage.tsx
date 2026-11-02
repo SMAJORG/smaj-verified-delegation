@@ -55,6 +55,7 @@ export default function LandingPage({ authenticated, ssoEnabled, demoEnabled, st
           <a href="#how">How it works</a>
           <a href="#features">Capabilities</a>
           <a href="#compare">Why SMAJ AI</a>
+          <a href="/roadmap">Roadmap</a>
           <a href="#demo">Live demo</a>
           <button type="button" onClick={() => setAuthOpen(true)}>Workspace sign-in</button>
         </nav>
