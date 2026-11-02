@@ -99,7 +99,6 @@ export default function Dashboard() {
     const service=conversationId||retryPending?undefined:SMAJ_SERVICES.find(item=>item.id===selectedService);
     const requestTask=retryPending?retryPending.text:service?`${service.name}: ${message.trim()}`:message.trim();
     const optimistic=retryPending||{id:`pending-${crypto.randomUUID()}`,text:requestTask,conversationId:conversationId||crypto.randomUUID(),persistedConversation:Boolean(conversationId),requestKey:crypto.randomUUID(),status:"sending" as const};
-    let discoveryTask:AiTask|undefined;
     setPendingMessage({...optimistic,status:"sending",error:undefined});
     setTask(requestTask);setBusy("routing");setError("");
     if(!conversationId){setDelegation(null);setRoutePlan(null);if(viewRef.current!=="task-detail")navigate("task-detail");}
@@ -110,16 +109,18 @@ export default function Dashboard() {
       setAiTasks(items=>[payload.task!,...items.filter(item=>item.id!==payload.task!.id)]);
       const id=payload.task.conversationId||payload.task.id;
       setThreadTaskIds(current=>conversationId&&threadConversationId===conversationId?[...current,payload.task!.id]:[payload.task!.id]);
-      setThreadConversationId(id);loadedConversations.current.add(id);setPendingMessage(null);
+      setThreadConversationId(id);loadedConversations.current.add(id);
+      setPendingMessage({...optimistic,id:payload.task.id,conversationId:id,persistedConversation:true,status:"sending",error:undefined});
       setDelegation(null);setRoutePlan(payload.plan);updateRoute({view:"task-detail",taskId:payload.task.id},true);
-      if(!sandbox&&payload.task&&payload.plan.steps.some(step=>["store","jobs","stream"].includes(step.serviceId)))discoveryTask=payload.task;
+      if(!sandbox&&payload.task.plan.services.some(serviceId=>["store","jobs","stream"].includes(serviceId)))await runDiscovery(payload.task);
+      setPendingMessage(null);
       return true;
     }catch(routeError){
       const message=routeError instanceof Error?routeError.message:"SMAJ AI could not answer. Please try again.";
       setPendingMessage(current=>current?.id===optimistic.id?{...current,status:"failed",error:message}:current);
       notifyError(routeError,"SMAJ AI could not answer. Please retry.");
     }
-    finally{setBusy(null);if(discoveryTask)void runDiscovery(discoveryTask);}
+    finally{setBusy(null);}
     return false;
   };
   const retryPendingMessage=()=>{if(!pendingMessage)return;void submitTask(pendingMessage.text,pendingMessage.persistedConversation?pendingMessage.conversationId:undefined,pendingMessage);};
@@ -204,7 +205,8 @@ export default function Dashboard() {
     }).catch(failure=>{loadedConversations.current.delete(conversationId);if(!controller.signal.aborted)notifyError(failure,"Conversation could not be restored.");});
     return()=>controller.abort();
   },[authenticated,route.view,route.taskId,aiTasks,threadConversationId]);
-  const activeTask = aiTasks.find(item => item.plan === routePlan || JSON.stringify(item.plan) === JSON.stringify(routePlan));
+  const activeTask = aiTasks.find(item => route.taskId ? item.id === route.taskId : item.plan === routePlan || JSON.stringify(item.plan) === JSON.stringify(routePlan));
+  const currentRoutePlan = activeTask?.plan || routePlan;
   const conversationTasks = threadConversationId===activeTask?.conversationId ? threadTaskIds.map(id=>aiTasks.find(item=>item.id===id)).filter((item):item is AiTask=>item!==undefined&&item.plan.generationStatus!=="pending"&&item.plan.generationStatus!=="failed") : activeTask&&activeTask.plan.generationStatus!=="pending"&&activeTask.plan.generationStatus!=="failed"?[activeTask]:[];
   const approveLive = async (taskId:string,actionIds: string[]) => {
     const target=aiTasks.find(item=>item.id===taskId);if(!target)return;
@@ -293,7 +295,7 @@ export default function Dashboard() {
       {view==="home"&&<HomeWorkspace task={task} setTask={setTask} selectedService={selectedService} selectService={setSelectedService} routeTask={routeTask} busy={busy} connectedIds={connectedIds}/>}
       {view==="services"&&<Services connections={connections} setConnection={setConnection} busy={busy}/>}
       {view==="tasks"&&<TaskHistory tasks={aiTasks} delegations={sampleTasksEnabled?history:[]} busy={busy} openAiTask={saved=>{setDelegation(null);setTask(saved.task);setRoutePlan(saved.plan);navigate("task-detail",{taskId:saved.id});}} deleteAiTask={deleteAiTask} openDelegation={openTask} deleteDelegation={deleteDelegation}/>}
-      {view==="task-detail"&&<Tasks messages={conversationTasks} pendingMessage={pendingMessage&&(!pendingMessage.persistedConversation?!route.taskId:activeTask?.conversationId===pendingMessage.conversationId)?pendingMessage:null} retryPendingMessage={retryPendingMessage} routePlan={routePlan} task={task} busy={busy} conversationId={activeTask?.conversationId} onFollowUp={(message:string,id:string)=>submitTask(message,id)} discover={discover} approveLive={approveLive} retryLive={retryLive} refreshActionUpdates={refreshActionUpdates} sandbox={sandbox} reportError={(message:string)=>notifyError(message,"The task reported an error.")} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
+      {view==="task-detail"&&<Tasks messages={conversationTasks} pendingMessage={pendingMessage&&(!pendingMessage.persistedConversation?!route.taskId:(activeTask?.conversationId||activeTask?.id)===pendingMessage.conversationId)?pendingMessage:null} retryPendingMessage={retryPendingMessage} routePlan={currentRoutePlan} task={task} busy={busy} conversationId={activeTask?.conversationId||activeTask?.id} onFollowUp={(message:string,id:string)=>submitTask(message,id)} discover={discover} approveLive={approveLive} retryLive={retryLive} refreshActionUpdates={refreshActionUpdates} sandbox={sandbox} reportError={(message:string)=>notifyError(message,"The task reported an error.")} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
       {view==="approvals"&&aiTasks.filter(t=>t.plan.proposedActions?.length&&!t.plan.execution).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Review live actions: {t.task}</button>)}
       {view==="approvals"&&<Approvals items={pending} openTask={openTask}/>}
       {view==="receipts"&&aiTasks.filter(t=>t.plan.execution?.receipt).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Live verified receipt: {t.task}</button>)}
@@ -320,12 +322,14 @@ export function Tasks(props:any){
     {(props.messages?.length>0||props.pendingMessage)&&<div className="chatThread" aria-label="Conversation messages">
       {(props.messages||[]).map((message:AiTask,index:number)=><article className="chatTurn" key={message.id}>
         <div className="chatUserMessage">{message.task}</div>
-        <section className="chatAssistantMessage"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><p className="taskAnswer">{message.plan.summary}</p>
-          <LiveTaskResult key={message.id} task={message} busy={Boolean(props.busy)} sandbox={props.sandbox} discover={props.discover} approve={props.approveLive} retry={props.retryLive} refreshActionUpdates={props.refreshActionUpdates} reportError={props.reportError}/>
-        </div></section>
+        <section className="chatAssistantMessage">{props.pendingMessage?.id===message.id
+          ? <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><span className="taskDots" role="status" aria-label="SMAJ AI is responding"><i/><i/><i/></span></>
+          : <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><p className="taskAnswer">{message.plan.summary}</p>
+            <LiveTaskResult key={message.id} task={message} busy={Boolean(props.busy)} sandbox={props.sandbox} discover={props.discover} approve={props.approveLive} retry={props.retryLive} refreshActionUpdates={props.refreshActionUpdates} reportError={props.reportError}/>
+          </div></>}</section>
         {index===props.messages.length-1&&<div ref={lastTurn} aria-hidden="true"/>}
       </article>)}
-      {props.pendingMessage&&<article className="chatTurn" key={props.pendingMessage.id}>
+      {props.pendingMessage&&!props.messages.some((message:AiTask)=>message.id===props.pendingMessage.id)&&<article className="chatTurn" key={props.pendingMessage.id}>
         <div className="chatUserMessage">{props.pendingMessage.text}</div>
         {props.pendingMessage.status==="sending"
           ? <section className="chatAssistantMessage chatTyping" role="status" aria-label="SMAJ AI is responding"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><span className="taskDots" aria-hidden="true"><i/><i/><i/></span></section>
