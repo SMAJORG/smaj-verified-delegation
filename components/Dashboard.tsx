@@ -153,6 +153,32 @@ export default function Dashboard() {
     if (authenticated !== true || routeRestored.current) return;
     const params = new URLSearchParams(window.location.search);
     const pendingSearchId = params.has("sso") ? window.sessionStorage.getItem("smaj_pending_search") : null;
+    if(route.legacyConversationList){
+      routeRestored.current=true;
+      updateRoute({view:"tasks"},true);
+      return;
+    }
+    if(route.conversationId){
+      routeRestored.current=true;
+      const controller=new AbortController();
+      void fetch(`/api/conversations/${encodeURIComponent(route.conversationId)}`,{cache:"no-store",signal:controller.signal}).then(async response=>{
+        const payload=await response.json() as ApiResponse;
+        if(!response.ok||!Array.isArray(payload.tasks))throw new Error(payload.message||"Saved task could not be restored.");
+        const turns=payload.tasks as AiTask[];
+        const latest=turns.at(-1);
+        if(!latest){updateRoute({view:"tasks"},true);return;}
+        setAiTasks(current=>{const byId=new Map(current.map(item=>[item.id,item]));for(const item of turns)byId.set(item.id,item);return [...byId.values()];});
+        setTask(latest.task);setRoutePlan(latest.plan);setDelegation(null);
+        const conversationId=latest.conversationId||latest.id;
+        const unfinished=turns.at(-1);const requestKey=unfinished?.requestKey;
+        if(unfinished&&requestKey&&(unfinished.plan.generationStatus==="pending"||unfinished.plan.generationStatus==="failed"))setPendingMessage({id:unfinished.id,text:unfinished.task,conversationId:unfinished.conversationId||unfinished.id,persistedConversation:true,requestKey,status:"failed",error:unfinished.plan.generationError||"Your message is saved. Retry to get the AI response."});
+        setThreadTaskIds(turns.filter(item=>item.plan.generationStatus!=="pending"&&item.plan.generationStatus!=="failed").map(item=>item.id));setThreadConversationId(conversationId);loadedConversations.current.add(conversationId);
+        updateRoute({view:"task-detail",taskId:latest.id},true);
+      }).catch(failure=>{
+        if(!controller.signal.aborted){notifyError(failure,"Saved task could not be restored.");updateRoute({view:"tasks"},true);}
+      });
+      return()=>controller.abort();
+    }
     if (route.view !== "task-detail" && pendingSearchId) {
       const saved = aiTasks.find(item => item.id === pendingSearchId);
       if (saved) {
@@ -295,7 +321,7 @@ export default function Dashboard() {
       {view==="home"&&<HomeWorkspace task={task} setTask={setTask} selectedService={selectedService} selectService={setSelectedService} routeTask={routeTask} busy={busy} connectedIds={connectedIds}/>}
       {view==="services"&&<Services connections={connections} setConnection={setConnection} busy={busy}/>}
       {view==="tasks"&&<TaskHistory tasks={aiTasks} delegations={sampleTasksEnabled?history:[]} busy={busy} openAiTask={saved=>{setDelegation(null);setTask(saved.task);setRoutePlan(saved.plan);navigate("task-detail",{taskId:saved.id});}} deleteAiTask={deleteAiTask} openDelegation={openTask} deleteDelegation={deleteDelegation}/>}
-      {view==="task-detail"&&<Tasks messages={conversationTasks} pendingMessage={pendingMessage&&(!pendingMessage.persistedConversation?!route.taskId:(activeTask?.conversationId||activeTask?.id)===pendingMessage.conversationId)?pendingMessage:null} retryPendingMessage={retryPendingMessage} routePlan={currentRoutePlan} task={task} busy={busy} conversationId={activeTask?.conversationId||activeTask?.id} onFollowUp={(message:string,id:string)=>submitTask(message,id)} discover={discover} approveLive={approveLive} retryLive={retryLive} refreshActionUpdates={refreshActionUpdates} sandbox={sandbox} reportError={(message:string)=>notifyError(message,"The task reported an error.")} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
+      {view==="task-detail"&&<Tasks messages={conversationTasks} pendingMessage={pendingMessage&&(!pendingMessage.persistedConversation?!route.taskId:(activeTask?.conversationId||activeTask?.id)===pendingMessage.conversationId)?pendingMessage:null} retryPendingMessage={retryPendingMessage} routePlan={currentRoutePlan} task={task} busy={busy} conversationId={activeTask?.conversationId||activeTask?.id||(!pendingMessage?.persistedConversation?pendingMessage?.conversationId:undefined)} onFollowUp={(message:string,id:string)=>submitTask(message,id)} discover={discover} approveLive={approveLive} retryLive={retryLive} refreshActionUpdates={refreshActionUpdates} sandbox={sandbox} reportError={(message:string)=>notifyError(message,"The task reported an error.")} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
       {view==="approvals"&&aiTasks.filter(t=>t.plan.proposedActions?.length&&!t.plan.execution).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Review live actions: {t.task}</button>)}
       {view==="approvals"&&<Approvals items={pending} openTask={openTask}/>}
       {view==="receipts"&&aiTasks.filter(t=>t.plan.execution?.receipt).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Live verified receipt: {t.task}</button>)}
@@ -341,7 +367,7 @@ export function Tasks(props:any){
     {!props.messages?.length&&!props.pendingMessage&&(props.routePlan||props.busy)&&<section className="resultsResponse"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent">
       {props.busy?<span className="taskDots" role="status" aria-label="SMAJ AI is responding"><i/><i/><i/></span>:props.routePlan&&<TypedResponse text={props.routePlan.summary}/>}
     </div></section>}
-    {props.routePlan&&props.conversationId&&<ChatComposer key={props.conversationId} busy={Boolean(props.busy)||Boolean(props.pendingMessage)} onSubmit={(message:string)=>props.onFollowUp(message,props.conversationId)}/>}
+    {props.conversationId&&<ChatComposer key={props.conversationId} busy={Boolean(props.busy)||Boolean(props.pendingMessage)} onSubmit={(message:string)=>props.onFollowUp(message,props.conversationId)}/>}
     {props.delegation&&<DelegationDetail {...props}/>}
   </section>;
 }
