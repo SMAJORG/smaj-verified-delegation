@@ -15,7 +15,7 @@ const initialize = (database: AppDatabase) => {
   database.exec(`
     CREATE TABLE IF NOT EXISTS ai_tasks (
       id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, task TEXT NOT NULL,
-      plan_json TEXT NOT NULL, created_at TEXT NOT NULL
+      plan_json TEXT NOT NULL, created_at TEXT NOT NULL, conversation_id TEXT NOT NULL DEFAULT ''
     );
     CREATE INDEX IF NOT EXISTS ai_tasks_owner ON ai_tasks(owner_id, created_at DESC);
     CREATE TABLE IF NOT EXISTS live_action_runs (
@@ -60,8 +60,13 @@ const initialize = (database: AppDatabase) => {
       owner_id TEXT NOT NULL, service_id TEXT NOT NULL, connected INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL, PRIMARY KEY (owner_id, service_id)
     );
+    CREATE TABLE IF NOT EXISTS ai_user_preferences (
+      owner_id TEXT PRIMARY KEY, preferences_json TEXT NOT NULL, updated_at TEXT NOT NULL
+    );
   `);
 
+  if (!hasColumn(database, "ai_tasks", "conversation_id")) database.exec("ALTER TABLE ai_tasks ADD COLUMN conversation_id TEXT NOT NULL DEFAULT ''");
+  database.exec("UPDATE ai_tasks SET conversation_id = id WHERE conversation_id = ''");
   if (!hasColumn(database, "delegations", "owner_id")) database.exec("ALTER TABLE delegations ADD COLUMN owner_id TEXT NOT NULL DEFAULT 'legacy-demo'");
   if (!hasColumn(database, "delegations", "create_key")) database.exec("ALTER TABLE delegations ADD COLUMN create_key TEXT");
   if (!hasColumn(database, "delegations", "run_started_at")) database.exec("ALTER TABLE delegations ADD COLUMN run_started_at TEXT");

@@ -22,7 +22,7 @@ export function issuePublicSession(request: Request, db = getDatabase(), now = D
  tables(db);
  return db.transaction(()=>{
   const expired = db.prepare("SELECT actor_id FROM public_sessions WHERE expires_at <= ?").all(now) as {actor_id:string}[];
-  for(const row of expired) {db.prepare("DELETE FROM ai_tasks WHERE owner_id = ?").run(row.actor_id);db.prepare("DELETE FROM service_connections WHERE owner_id = ?").run(row.actor_id);}
+  for(const row of expired) {db.prepare("DELETE FROM ai_tasks WHERE owner_id = ?").run(row.actor_id);db.prepare("DELETE FROM service_connections WHERE owner_id = ?").run(row.actor_id);db.prepare("DELETE FROM ai_user_preferences WHERE owner_id = ?").run(row.actor_id);}
   db.prepare("DELETE FROM public_sessions WHERE expires_at <= ?").run(now);
   db.prepare("DELETE FROM public_limits WHERE expires_at <= ?").run(now);
   limit(db,`sessions:${clientKey(request)}`,40,3600000,now);
@@ -45,7 +45,7 @@ export function revokePublicSession(token: string, db = getDatabase()) {
  tables(db);
  const row=db.prepare("SELECT actor_id FROM public_sessions WHERE token_hash = ?").get(digest(token)) as {actor_id:string}|undefined;
  if(!row)return;
- db.transaction(()=>{db.prepare("DELETE FROM ai_tasks WHERE owner_id = ?").run(row.actor_id);db.prepare("DELETE FROM service_connections WHERE owner_id = ?").run(row.actor_id);db.prepare("DELETE FROM public_sessions WHERE token_hash = ?").run(digest(token));})();
+ db.transaction(()=>{db.prepare("DELETE FROM ai_tasks WHERE owner_id = ?").run(row.actor_id);db.prepare("DELETE FROM service_connections WHERE owner_id = ?").run(row.actor_id);db.prepare("DELETE FROM ai_user_preferences WHERE owner_id = ?").run(row.actor_id);db.prepare("DELETE FROM public_sessions WHERE token_hash = ?").run(digest(token));})();
 }
 // Persistent budgets and expiring concurrency leases apply before every guest provider call.
 export function beginPublicWork(request: Request, session: {authType:string;actorId:string}, db = getDatabase(), now = Date.now()) {

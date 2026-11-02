@@ -60,6 +60,15 @@
 .compactResults .resultsApproval p{font-size:12px;color:#665d74;line-height:1.5;margin:7px 0 13px}
 .compactResults .resultsActions{display:flex;flex-wrap:wrap;gap:8px}
 .compactResults .taskAnalyzing{display:block;margin:0}.compactResults .taskAnalyzing>span:last-child{display:block;margin-top:6px}
+.compactResults .followUpComposer{display:grid;gap:8px;margin:18px 0 0;padding:12px;border:1px solid #ece7f3;border-radius:14px;background:#fff}
+.compactResults .followUpComposer label{font-size:12px;font-weight:750;color:#625b6c}
+.compactResults .followUpComposer textarea{width:100%;min-width:0;resize:vertical;border:1px solid #e6e1eb;border-radius:10px;padding:10px;background:#fff;color:#20192f;font:inherit;font-size:13px}
+.compactResults .followUpComposer .primaryButton{justify-self:end}
+.aiPreferences{display:grid;gap:8px;margin-top:18px;padding:14px;border:1px solid #ece7f3;border-radius:14px;background:#fff}
+.aiPreferences h2{margin:0;font-size:15px}.aiPreferences p{margin:0;color:#827a90;font-size:12px;line-height:1.5}
+.aiPreferences label,.aiPreferences small{font-size:11px;color:#625b6c}
+.aiPreferences textarea{width:100%;min-width:0;resize:vertical;border:1px solid #e6e1eb;border-radius:10px;padding:10px;background:#fff;color:#20192f;font:inherit;font-size:13px}
+.aiPreferences .primaryButton{justify-self:start}
 .workspace .compactResults .taskDetail{padding:14px;border-radius:17px;box-shadow:none}.compactResults .taskDetail .detailHead>small{display:none}
 @media(max-width:370px){.workspace .workspaceBody .compactResults>h1{font-size:24px}.compactResults .taskThumb{width:66px;height:66px}.compactResults .taskResultCard{gap:9px}}
 .workspace .workspaceBody:has(>.compactResults){background:#fff}

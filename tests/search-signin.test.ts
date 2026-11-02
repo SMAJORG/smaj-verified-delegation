@@ -73,7 +73,7 @@ test("approved search requires verified SSO, transfers only the approved request
  }finally{globalThis.fetch=fetcher;process.env=old;}
 });
 
-test("Jobs uses the same explicit approval, authentication and connected live-discovery path, including empty results",async()=>{
+test("Jobs public listing discovery needs no extra approval, remains authenticated, and handles empty results",async()=>{
  const old={...process.env},fetcher=globalThis.fetch;
  process.env.SMAJ_DELEGATION_DB_PATH=":memory:";process.env.SMAJ_AI_SESSION_SECRET="test-only-session-secret-at-least-32";delete process.env.META_API_KEY;delete process.env.MODEL_API_KEY;delete process.env.SMAJ_AI_PUBLIC_URL;delete process.env.RENDER_EXTERNAL_URL;
  const {createUserSession}=await import("@/src/server/auth");const session=createUserSession({sub:"jobs-verified-owner",uid:"jobs-pi-owner"});
@@ -84,8 +84,8 @@ test("Jobs uses the same explicit approval, authentication and connected live-di
  globalThis.fetch=async(input,init)=>{calls++;const url=new URL(String(input));assert.equal(url.pathname,"/jobs/jobs");assert.equal(url.searchParams.has("catalog_read"),false);assert.equal(url.searchParams.has("search"),false);assert.equal(init?.method,"GET");return Response.json({jobs:empty?[]:[{id:"real-employer-job",title:"Engineer",employerId:"employer"},{id:"seed",title:"Unbacked seed"},{id:"demo",title:"Demo",employerId:"employer",isDemo:true}]});};
  try{
   const task=new AiTaskStore(db).create("jobs-verified-owner","Find current jobs",jobsPlan);const context={params:Promise.resolve({id:task.id})};
-  assert.equal((await discover(req({approved:true},""),context)).status,401);assert.equal((await discover(req({approved:true},cookie,"https://evil.example"),context)).status,403);assert.equal((await discover(req({approved:false}),context)).status,400);assert.equal(calls,0);
-  const found=await discover(req({approved:true}),context);assert.equal(found.status,200);const results=(await found.json()).plan.discovery.results;assert.deepEqual(results[0].records.map((r:any)=>r.id),["real-employer-job","seed"]);assert.equal(calls,1);
-  empty=true;const next=new AiTaskStore(db).create("jobs-verified-owner","Find current jobs",jobsPlan);const none=await discover(req({approved:true}),{params:Promise.resolve({id:next.id})});assert.equal(none.status,200);const payload=await none.json();assert.equal(payload.plan.discovery.results[0].records.length,0);assert.match(payload.plan.summary,/No matching listings/);
+  assert.equal((await discover(req({},""),context)).status,401);assert.equal((await discover(req({},cookie,"https://evil.example"),context)).status,403);assert.equal(calls,0);
+  const found=await discover(req({}),context);assert.equal(found.status,200);const results=(await found.json()).plan.discovery.results;assert.deepEqual(results[0].records.map((r:any)=>r.id),["real-employer-job","seed"]);assert.equal(calls,1);
+  empty=true;const next=new AiTaskStore(db).create("jobs-verified-owner","Find current jobs",jobsPlan);const none=await discover(req({}),{params:Promise.resolve({id:next.id})});assert.equal(none.status,200);const payload=await none.json();assert.equal(payload.plan.discovery.results[0].records.length,0);assert.match(payload.plan.summary,/No matching listings/);
  }finally{globalThis.fetch=fetcher;process.env=old;}
 });

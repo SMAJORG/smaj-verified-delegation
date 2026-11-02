@@ -8,6 +8,7 @@ import { GET as tasks, POST as ask } from "@/app/api/tasks/route";
 import { GET as taskDetail } from "@/app/api/tasks/[id]/route";
 import { POST as discover } from "@/app/api/tasks/[id]/discover/route";
 import { POST as protectedApproval } from "@/app/api/tasks/[id]/approve/route";
+import { GET as getPreferences, PUT as savePreferences } from "@/app/api/preferences/route";
 import { GET as delegations, POST as protectedPlan } from "@/app/api/delegations/route";
 import { GET as privateDetail } from "@/app/api/delegations/[id]/route";
 import { POST as privateExecute } from "@/app/api/delegations/[id]/execute/route";
@@ -40,11 +41,15 @@ test("public workspace needs no account or signing secret, isolates visitors, an
   assert.deepEqual((await (await delegations(req("/api/delegations",cookie))).json()).delegations,[]);
   assert.equal((await protectedPlan(req("/api/delegations",cookie,{}))).status,401);assert.equal((await privateDetail(req("/api/delegations/id",cookie),context)).status,401);assert.equal((await privateExecute(req("/api/delegations/id/execute",cookie,{}),context)).status,401);
   assert.equal((await protectedApproval(req("/api/tasks/id/approve",cookie,{approved:true,actionIds:["buy","apply","save"]}),context)).status,401);
-  assert.equal((await logout(new NextRequest("https://public.example/api/auth/session",{method:"DELETE",headers:{cookie}}))).status,200);assert.throws(()=>requireActorSession(req("/",cookie)));assert.equal(new AiTaskStore(db).list(actor.actorId).length,0);assert.equal(new AiTaskStore(db).get("private-pi-account",privateTask.id).task,"Private account request");
+  assert.equal((await savePreferences(req("/api/preferences",cookie,{preferences:["Remote work","Budget under $500"]}))).status,200);
+  assert.deepEqual((await (await getPreferences(req("/api/preferences",cookie))).json()).preferences,["Remote work","Budget under $500"]);
+  assert.deepEqual((await (await getPreferences(req("/api/preferences",otherCookie))).json()).preferences,[]);
+  assert.equal((await savePreferences(req("/api/preferences",cookie,{preferences:["x".repeat(121)]}))).status,400);
+  assert.equal((await logout(new NextRequest("https://public.example/api/auth/session",{method:"DELETE",headers:{cookie}}))).status,200);assert.throws(()=>requireActorSession(req("/",cookie)));assert.equal(new AiTaskStore(db).list(actor.actorId).length,0);assert.equal(db.prepare("SELECT owner_id FROM ai_user_preferences WHERE owner_id = ?").get(actor.actorId),undefined);assert.equal(new AiTaskStore(db).get("private-pi-account",privateTask.id).task,"Private account request");
  }finally{process.env=old;}
 });
 
-test("public car, software Jobs, services and Hub questions use Meta without SSO; catalog consent and grounded IDs remain enforced",async()=>{
+test("public car, software Jobs, services and Hub questions use Meta without SSO; published catalog reads are automatic and IDs remain grounded",async()=>{
  const old={...process.env},original=globalThis.fetch;setup();process.env.META_API_KEY="test-only-provider-secret";process.env.META_MODEL="test-only-public-model";
  let reads=0,modelCalls=0;
  globalThis.fetch=async(input,init)=>{
@@ -55,7 +60,8 @@ test("public car, software Jobs, services and Hub questions use Meta without SSO
   assert.equal(url.origin,"https://api.meta.ai");assert.equal((init?.headers as Record<string,string>).Authorization,"Bearer test-only-provider-secret");modelCalls++;
   const prompt=JSON.parse(String(init?.body)).input as string;let answer:any;
   if(prompt.startsWith("Analyze the user request"))answer=prompt.includes('"public-car"')?{summary:"The returned Lexus is within the budget.",matches:[{serviceId:"store",id:"public-car",reason:"Within budget"},{serviceId:"store",id:"invented",reason:"Must be rejected"}],actions:[]}:{summary:"React Frontend Engineer is available as an unverified sample listing.",matches:[{serviceId:"jobs",id:"react-sample",reason:"Frontend engineering title and React skills match."}],actions:[{serviceId:"jobs",recordId:"react-sample",kind:"apply",title:"Apply to React Frontend Engineer",coverNote:"I am interested."}]};
-  else {assert.match(prompt,/Public visitors may/);answer=prompt.includes("User task: Find cars")?{summary:"Search Store for cars",steps:[{serviceId:"store",query:{search:"cars",maxPrice:30000,currency:"USD"}}]}:prompt.includes("User task: Find software")?{summary:"Search published software engineering jobs",steps:[{serviceId:"jobs",query:{search:"software engineer"}}]}:prompt.includes("User task: Search available")?{summary:"Store, Jobs and Stream have public catalogs; other services may still be planned.",steps:[]}:{summary:"SMAJ PI HUB connects Pi community services. Account actions require sign-in.",steps:[]};}
+  else if(prompt.includes("User task: Follow up on that search")){assert.match(prompt,/Find cars under \$30,000/);answer={summary:"I can refine the car search using your earlier budget.",steps:[{serviceId:"store",query:{search:"Lexus",maxPrice:30000,currency:"USD"}}]};}
+  else {assert.match(prompt,/Public visitors may search published Store, Jobs and Stream catalogs automatically/);answer=prompt.includes("User task: Find cars")?{summary:"Search Store for cars",steps:[{serviceId:"store",query:{search:"cars",maxPrice:30000,currency:"USD"}}]}:prompt.includes("User task: Find software")?{summary:"Search published software engineering jobs",steps:[{serviceId:"jobs",query:{search:"software engineer"}}]}:prompt.includes("User task: Search available")?{summary:"Store, Jobs and Stream have public catalogs; other services may still be planned.",steps:[]}:{summary:"SMAJ PI HUB connects Pi community services. Account actions require sign-in.",steps:[]};}
   return Response.json({id:`test-meta-${modelCalls}`,model:"test-only-public-model",status:"completed",output:[{content:[{type:"output_text",text:JSON.stringify(answer)}]}]});
  };
  try{
@@ -63,13 +69,18 @@ test("public car, software Jobs, services and Hub questions use Meta without SSO
   const queries=["Find cars under $30,000.","Find software engineering jobs.","Search available SMAJ PI HUB services.","What is SMAJ PI HUB?"];
   for(let index=0;index<queries.length;index++){
    const created=await ask(req("/api/tasks",cookie,{task:queries[index]}));assert.equal(created.status,201);const result=await created.json();assert.equal(result.plan.ai.provider,"meta");assert.equal(JSON.stringify(result).includes("test-only-provider-secret"),false);
-   if(index<2){const before=reads;const context={params:Promise.resolve({id:result.task.id})};assert.equal((await discover(req("/api/tasks/id/discover",cookie,{approved:false}),context)).status,400);assert.equal((await discover(req("/api/tasks/id/discover",cookie,{approved:true},"https://evil.example"),context)).status,403);assert.equal(reads,before);
-    const found=await discover(req("/api/tasks/id/discover",cookie,{approved:true}),context);assert.equal(found.status,200);const plan=(await found.json()).plan;assert.equal(plan.summaryAi.provider,"meta");
+   if(index<2){const context={params:Promise.resolve({id:result.task.id})};assert.equal((await discover(req("/api/tasks/id/discover",cookie,{approved:true},"https://evil.example"),context)).status,403);
+    const found=await discover(req("/api/tasks/id/discover",cookie,{}),context);assert.equal(found.status,200);const plan=(await found.json()).plan;assert.equal(plan.summaryAi.provider,"meta");
     if(index===0){assert.deepEqual(plan.discovery.results[0].records.map((r:any)=>r.id),["public-car"]);assert.equal(plan.discovery.results[0].records[0].price,"$22,500 USDT");assert.equal(plan.matches.length,1);}else{assert.deepEqual(plan.discovery.results[0].records.map((r:any)=>r.id),["react-sample"]);assert.equal(plan.discovery.results[0].records[0].listingProvenance,"sample_unverified");assert.equal(plan.matches.length,1);assert.equal(plan.proposedActions.length,0);assert.match(plan.summary,/unverified sample/i);}
    }else{assert.equal(result.plan.steps.length,0);assert.ok(result.plan.summary.length>20);}
   }
-  assert.equal(reads,2);assert.equal(modelCalls,6);assert.equal((await (await sessionInfo(req("/api/auth/session",cookie))).json()).authenticated,false);
-  const huge=await ask(req("/api/tasks",cookie,{task:"x".repeat(17000)}));assert.equal(huge.status,413);assert.equal(modelCalls,6);
+  const first=(await (await tasks(req("/api/tasks",cookie))).json()).tasks.find((item:any)=>item.task==="Find cars under $30,000.");
+  const followUp=await ask(req("/api/tasks",cookie,{task:"Follow up on that search",conversationId:first.conversationId}));
+  assert.equal(followUp.status,201);assert.equal((await followUp.json()).task.conversationId,first.conversationId);
+  const stranger=await open(req("/api/public/session","",{}));const strangerCookie=`${SESSION_COOKIE}=${stranger.cookies.get(SESSION_COOKIE)!.value}`;
+  assert.equal((await ask(req("/api/tasks",strangerCookie,{task:"Follow up on that search",conversationId:first.conversationId}))).status,404);
+  assert.equal(reads,2);assert.equal(modelCalls,7);assert.equal((await (await sessionInfo(req("/api/auth/session",cookie))).json()).authenticated,false);
+  const huge=await ask(req("/api/tasks",cookie,{task:"x".repeat(17000)}));assert.equal(huge.status,413);assert.equal(modelCalls,7);
  }finally{globalThis.fetch=original;process.env=old;}
 });
 

@@ -47,9 +47,8 @@ test("authenticated natural request routes through provider, approved live catal
     const response = await create(request({task:"Find cars available for $30,000 and save a shortlist."})); assert.equal(response.status,201);
     const task = (await response.json()).task; assert.equal(task.plan.ai.responseId,"fixture-1"); assert.equal(catalogCalls,0); assert.equal(writes,0);
     const context = {params:Promise.resolve({id:task.id})};
-    assert.equal((await discover(request({approved:false}),context)).status,400);
     const db = workspaceDatabase(request({})); const connections = new ServiceConnectionStore(db); connections.list(identity.sub,"sso"); connections.set(identity.sub,"store",true);
-    const discovered = await discover(request({approved:true}),context); assert.equal(discovered.status,200);
+    const discovered = await discover(request({}),context); assert.equal(discovered.status,200);
     const grounded = (await discovered.json()).task;
     assert.equal(grounded.plan.summary,"I found one car within your budget. It is listed for $25,000 USDT.");
     assert.equal(grounded.plan.summaryAi.responseId,"fixture-2"); assert.equal(grounded.plan.proposedActions.length,1); assert.equal(grounded.plan.matches.length,1); assert.equal(writes,0);

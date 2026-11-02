@@ -51,7 +51,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     if (session.sandbox) throw new AppError("demo_only", "Live catalog discovery is disabled in the fictional demo workspace", 409);
     const consent = await (session.authType === "public" ? publicJson(request) : request.json());
     resuming = consent.resume === true;
-    if (consent.approved !== true && consent.resume !== true) throw new AppError("approval_required", "Approve read-only discovery and sharing catalog metadata with Meta", 400);
     const db = workspaceDatabase(request); const store = new AiTaskStore(db);
     const task = store.get(session.actorId, (await context.params).id);
     if (task.plan.execution) throw new AppError("execution_exists", "An approved action contract already exists. Start a new request to change discovery or actions.", 409);

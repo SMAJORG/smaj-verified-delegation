@@ -64,6 +64,34 @@ test("planning-only services give a truthful live-availability answer", async ()
   }
 });
 
+test("connected catalog requests are read-only by default and recommendations use saved context", async () => {
+  const previous = { ...process.env };
+  process.env.META_API_KEY = "test-only-secret";
+  process.env.META_MODEL = "test-account-model";
+  let prompt = "";
+  const fetcher = async (_url: string | URL | Request, init?: RequestInit) => {
+    if (String(_url).endsWith("/models")) return Response.json({ data: [{ id: "test-account-model" }] });
+    prompt = String(JSON.parse(String(init?.body)).input);
+    return Response.json({ status: "completed", output: [{ content: [{ type: "output_text", text: JSON.stringify({ summary: "I can search the connected catalog.", steps: [{ id: "store", serviceId: "store", title: "Search products", capability: "product discovery" }], services: ["store"], warnings: [] }) }] }] });
+  };
+  try {
+    const plan = await new MetaServiceRouter(fetcher as typeof fetch).plan(
+      "Find a smaller one",
+      ["store"],
+      [{ task: "Find a desk lamp", summary: "A lamp is listed for $25.", services: ["store"] }],
+      ["Prefer adjustable lamps"],
+    );
+    assert.equal(plan.steps[0].status, "ready");
+    assert.equal(plan.steps[0].approvalRequired, false);
+    assert.match(prompt, /Prefer adjustable lamps/);
+    assert.match(prompt, /Find a desk lamp/);
+    assert.match(prompt, /Rank live matches by explicit constraints/);
+  } finally {
+    for (const name of Object.keys(process.env)) if (!(name in previous)) delete process.env[name];
+    Object.assign(process.env, previous);
+  }
+});
+
 test("AI rejects missing credentials and blank models, uses the default model, and reports upstream failures", async () => {
   const previous = { ...process.env };
   try {

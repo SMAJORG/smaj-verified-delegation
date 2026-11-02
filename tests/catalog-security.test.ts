@@ -52,7 +52,7 @@ test("approval endpoints reject missing or cross-site origin", () => {
   assert.throws(() => requireSameOrigin(new Request("https://ai.example/api/tasks", { headers: { origin: "https://evil.example" } })), /Same-origin/);
 });
 
-test("discovery HTTP requires approval and task ownership, persists receipts despite Meta failure", async () => {
+test("public catalog reads need no separate approval, enforce task ownership, and persist evidence despite Meta failure", async () => {
   const { POST } = await import("@/app/api/tasks/[id]/discover/route");
   const { NextRequest } = await import("next/server");
   const { createUserSession, SESSION_COOKIE } = await import("@/src/server/auth");
@@ -71,9 +71,8 @@ test("discovery HTTP requires approval and task ownership, persists receipts des
     new ServiceConnectionStore(db).set("catalog-alice", "store", true);
     const context = { params: Promise.resolve({ id: task.id }) };
     assert.equal((await POST(request(bob.value, true), context)).status, 404);
-    assert.equal((await POST(request(alice.value, false), context)).status, 400);
     globalThis.fetch = async () => Response.json({ products: [{ id: "real-id", title: "Catalog product" }] });
-    const response = await POST(request(alice.value, true), context);
+    const response = await POST(request(alice.value, false), context);
     assert.equal(response.status, 200);
     const saved = tasks.get("catalog-alice", task.id);
     assert.equal(saved.plan.discovery?.results[0].records.length, 1);
