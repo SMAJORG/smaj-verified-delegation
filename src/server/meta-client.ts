@@ -114,15 +114,25 @@ export async function metaResponse(input: string, maxTokens: number, fetcher: ty
   }
 
   const safeMaxTokens = Number(maxTokens) > 0 ? Math.max(MIN_OUTPUT_TOKENS, Number(maxTokens)) : MIN_OUTPUT_TOKENS;
-  const payload = await request("responses", apiKey, fetcher, {
+  let outputTokens = safeMaxTokens;
+  let payload = await request("responses", apiKey, fetcher, {
     model,
     input,
-    max_output_tokens: safeMaxTokens,
+    max_output_tokens: outputTokens,
     store: false,
   });
-
+  const reason = typeof payload?.incomplete_details?.reason === "string" ? payload.incomplete_details.reason : "";
+  if (payload?.status === "incomplete" && reason === "max_output_tokens") {
+    outputTokens = Math.min(outputTokens * 2, 6000);
+    payload = await request("responses", apiKey, fetcher, { model, input, max_output_tokens: outputTokens, store: false });
+  }
   if (payload?.status !== "completed") {
-    throw new AppError("meta_incomplete", "The AI response did not complete. Please retry.", 502);
+    const status = typeof payload?.status === "string" && /^[a-z_]{1,32}$/.test(payload.status) ? payload.status : "unknown";
+    const failureReason = typeof payload?.incomplete_details?.reason === "string" && /^[a-z_]{1,64}$/.test(payload.incomplete_details.reason)
+      ? payload.incomplete_details.reason
+      : "unknown";
+    console.error(JSON.stringify({ provider: "meta", event: "response_not_completed", status, reason: failureReason, requestId: typeof payload?.id === "string" ? payload.id : null }));
+    throw new AppError("meta_incomplete", `Meta returned an incomplete response (${status}${failureReason !== "unknown" ? `: ${failureReason}` : ""}). Please retry.`, 502);
   }
 
   if (!extractMetaOutputText(payload)) throw new AppError("meta_empty_response", "Meta returned no answer text. Please retry.", 502);

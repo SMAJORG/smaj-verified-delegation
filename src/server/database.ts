@@ -15,7 +15,8 @@ const initialize = (database: AppDatabase) => {
   database.exec(`
     CREATE TABLE IF NOT EXISTS ai_tasks (
       id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, task TEXT NOT NULL,
-      plan_json TEXT NOT NULL, created_at TEXT NOT NULL, conversation_id TEXT NOT NULL DEFAULT ''
+      plan_json TEXT NOT NULL, created_at TEXT NOT NULL, conversation_id TEXT NOT NULL DEFAULT '',
+      request_key TEXT
     );
     CREATE INDEX IF NOT EXISTS ai_tasks_owner ON ai_tasks(owner_id, created_at DESC);
     CREATE TABLE IF NOT EXISTS ai_conversations (
@@ -71,8 +72,9 @@ const initialize = (database: AppDatabase) => {
   `);
 
   if (!hasColumn(database, "ai_tasks", "conversation_id")) database.exec("ALTER TABLE ai_tasks ADD COLUMN conversation_id TEXT NOT NULL DEFAULT ''");
+  if (!hasColumn(database, "ai_tasks", "request_key")) database.exec("ALTER TABLE ai_tasks ADD COLUMN request_key TEXT");
   database.exec("UPDATE ai_tasks SET conversation_id = id WHERE conversation_id = ''");
-  database.exec("CREATE INDEX IF NOT EXISTS ai_tasks_owner_conversation ON ai_tasks(owner_id, conversation_id, created_at DESC)");
+  database.exec("CREATE INDEX IF NOT EXISTS ai_tasks_owner_conversation ON ai_tasks(owner_id, conversation_id, created_at DESC); CREATE UNIQUE INDEX IF NOT EXISTS ai_tasks_owner_request_key ON ai_tasks(owner_id, request_key) WHERE request_key IS NOT NULL");
   database.exec(`
     INSERT OR IGNORE INTO ai_conversations (id, owner_id, title, created_at, updated_at)
     SELECT task.conversation_id, task.owner_id,

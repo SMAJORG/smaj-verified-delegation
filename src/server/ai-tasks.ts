@@ -3,21 +3,21 @@ import type { ServiceRoutePlan } from "@/src/domain/services";
 import type { AppDatabase } from "@/src/server/database";
 import { AppError } from "@/src/server/http";
 
-export type AiTask = { id: string; task: string; plan: ServiceRoutePlan; createdAt: string; conversationId?: string };
+export type AiTask = { id: string; task: string; plan: ServiceRoutePlan; createdAt: string; conversationId?: string; requestKey?: string };
 export type AiConversation = { id: string; title: string; createdAt: string; updatedAt: string; taskCount: number; latestTaskId: string; lastMessage: string };
 export class AiTaskStore {
   constructor(private database: AppDatabase) {}
   list(owner: string): AiTask[] {
-    return (this.database.prepare("SELECT id, task, plan_json, created_at, conversation_id FROM ai_tasks WHERE owner_id = ? ORDER BY created_at DESC LIMIT 100").all(owner) as Array<{ id: string; task: string; plan_json: string; created_at: string; conversation_id: string }>).map(row => ({ id: row.id, task: row.task, plan: JSON.parse(row.plan_json), createdAt: row.created_at, conversationId: row.conversation_id || row.id }));
+    return (this.database.prepare("SELECT id, task, plan_json, created_at, conversation_id, request_key FROM ai_tasks WHERE owner_id = ? ORDER BY created_at DESC LIMIT 100").all(owner) as Array<{ id: string; task: string; plan_json: string; created_at: string; conversation_id: string; request_key: string | null }>).map(row => ({ id: row.id, task: row.task, plan: JSON.parse(row.plan_json), createdAt: row.created_at, conversationId: row.conversation_id || row.id, ...(row.request_key ? { requestKey: row.request_key } : {}) }));
   }
   conversation(owner: string, conversationId: string): AiTask[] {
     const rows = this.database.prepare("SELECT id, task, plan_json, created_at, conversation_id FROM ai_tasks WHERE owner_id = ? AND conversation_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 10").all(owner, conversationId) as Array<{ id: string; task: string; plan_json: string; created_at: string; conversation_id: string }>;
     return rows.reverse().map(row => ({ id: row.id, task: row.task, plan: JSON.parse(row.plan_json), createdAt: row.created_at, conversationId: row.conversation_id || row.id }));
   }
   conversationHistory(owner: string, conversationId: string): AiTask[] {
-    const rows = this.database.prepare("SELECT id, task, plan_json, created_at, conversation_id FROM ai_tasks WHERE owner_id = ? AND conversation_id = ? ORDER BY created_at ASC, rowid ASC").all(owner, conversationId) as Array<{ id: string; task: string; plan_json: string; created_at: string; conversation_id: string }>;
+    const rows = this.database.prepare("SELECT id, task, plan_json, created_at, conversation_id, request_key FROM ai_tasks WHERE owner_id = ? AND conversation_id = ? ORDER BY created_at ASC, rowid ASC").all(owner, conversationId) as Array<{ id: string; task: string; plan_json: string; created_at: string; conversation_id: string; request_key: string | null }>;
     if (!rows.length) throw new AppError("conversation_not_found", "Conversation not found", 404);
-    return rows.map(row => ({ id: row.id, task: row.task, plan: JSON.parse(row.plan_json), createdAt: row.created_at, conversationId: row.conversation_id || row.id }));
+    return rows.map(row => ({ id: row.id, task: row.task, plan: JSON.parse(row.plan_json), createdAt: row.created_at, conversationId: row.conversation_id || row.id, ...(row.request_key ? { requestKey: row.request_key } : {}) }));
   }
   conversations(owner: string): AiConversation[] {
     return this.database.prepare(`
@@ -32,11 +32,15 @@ export class AiTaskStore {
       LIMIT 100
     `).all(owner) as AiConversation[];
   }
-  create(owner: string, task: string, plan: ServiceRoutePlan, conversationId: string = randomUUID()): AiTask {
-    const result = { id: randomUUID(), task, plan, createdAt: new Date().toISOString(), conversationId };
+  byRequestKey(owner: string, requestKey: string): AiTask | undefined {
+    const row = this.database.prepare("SELECT id, task, plan_json, created_at, conversation_id, request_key FROM ai_tasks WHERE owner_id = ? AND request_key = ?").get(owner, requestKey) as { id: string; task: string; plan_json: string; created_at: string; conversation_id: string; request_key: string } | undefined;
+    return row ? { id: row.id, task: row.task, plan: JSON.parse(row.plan_json), createdAt: row.created_at, conversationId: row.conversation_id || row.id, requestKey: row.request_key } : undefined;
+  }
+  create(owner: string, task: string, plan: ServiceRoutePlan, conversationId: string = randomUUID(), requestKey?: string): AiTask {
+    const result = { id: randomUUID(), task, plan, createdAt: new Date().toISOString(), conversationId, ...(requestKey ? { requestKey } : {}) };
     const save = this.database.transaction(() => {
       this.database.prepare("INSERT OR IGNORE INTO ai_conversations (id, owner_id, title, created_at, updated_at) VALUES (?, ?, ?, ?, ?)").run(result.conversationId, owner, task.slice(0, 120), result.createdAt, result.createdAt);
-      this.database.prepare("INSERT INTO ai_tasks (id, owner_id, task, plan_json, created_at, conversation_id) VALUES (?, ?, ?, ?, ?, ?)").run(result.id, owner, task, JSON.stringify(plan), result.createdAt, result.conversationId);
+      this.database.prepare("INSERT INTO ai_tasks (id, owner_id, task, plan_json, created_at, conversation_id, request_key) VALUES (?, ?, ?, ?, ?, ?, ?)").run(result.id, owner, task, JSON.stringify(plan), result.createdAt, result.conversationId, requestKey || null);
       this.database.prepare("UPDATE ai_conversations SET updated_at = ? WHERE owner_id = ? AND id = ?").run(result.createdAt, owner, result.conversationId);
     });
     save();
@@ -60,9 +64,9 @@ export class AiTaskStore {
     remove();
   }
   get(owner: string, id: string): AiTask {
-    const row = this.database.prepare("SELECT id, task, plan_json, created_at, conversation_id FROM ai_tasks WHERE owner_id = ? AND id = ?").get(owner, id) as { id: string; task: string; plan_json: string; created_at: string; conversation_id: string } | undefined;
+    const row = this.database.prepare("SELECT id, task, plan_json, created_at, conversation_id, request_key FROM ai_tasks WHERE owner_id = ? AND id = ?").get(owner, id) as { id: string; task: string; plan_json: string; created_at: string; conversation_id: string; request_key: string | null } | undefined;
     if (!row) throw new AppError("task_not_found", "Task not found", 404);
-    return { id: row.id, task: row.task, plan: JSON.parse(row.plan_json), createdAt: row.created_at, conversationId: row.conversation_id || row.id };
+    return { id: row.id, task: row.task, plan: JSON.parse(row.plan_json), createdAt: row.created_at, conversationId: row.conversation_id || row.id, ...(row.request_key ? { requestKey: row.request_key } : {}) };
   }
   savePlan(owner: string, id: string, plan: ServiceRoutePlan) {
     this.get(owner, id);

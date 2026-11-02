@@ -72,6 +72,8 @@ export type ServicePlanStep = {
 };
 
 export type ServiceRoutePlan = {
+  generationStatus?: "pending" | "failed" | "complete";
+  generationError?: string;
   ai?: ModelEvidence;
   summaryAi?: ModelEvidence;
   summaryError?: { code: string; message: string };

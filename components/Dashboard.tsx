@@ -22,7 +22,7 @@ import type { ServiceConnection } from "@/src/server/service-connections";
 
 type View = "home" | "tasks" | "task-detail" | "services" | "approvals" | "receipts" | "profile";
 type ApiResponse = { tasks?: AiTask[]; task?: AiTask; delegation?: DelegationView; delegations?: DelegationView[]; plan?: ServiceRoutePlan; connections?: ServiceConnection[]; message?: string; storageScope?: string };
-type PendingMessage = { id: string; text: string; conversationId: string; persistedConversation: boolean; status: "sending" | "failed"; error?: string };
+type PendingMessage = { id: string; text: string; conversationId: string; persistedConversation: boolean; requestKey: string; status: "sending" | "failed"; error?: string };
 const statusLabels: Record<string, string> = { awaiting_approval: "Awaiting approval", approved: "Approved", executing: "Executing", retrying: "Recovering", verifying: "Verifying", verified: "Verified", failed: "Needs attention" };
 const time = (value: string) => new Intl.DateTimeFormat("en", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 
@@ -63,7 +63,7 @@ export default function Dashboard() {
   const streamRef=useRef<EventSource|null>(null); const jobsById=useMemo(()=>new Map((delegation?.jobs||[]).map(job=>[job.id,job])),[delegation]);
   const updateRoute=(next:DashboardRoute,replace=false)=>{routeRestored.current=true;setRoute(next);setView(next.view);const url=dashboardRouteUrl(window.location.href,next);if(replace)window.history.replaceState({smajDashboard:true},"",url);else window.history.pushState({smajDashboard:true},"",url);};
   const updateDelegation=(next:DelegationView)=>{setDelegation(next);setHistory(current=>[next,...current.filter(item=>item.id!==next.id)]);};
-  const loadWorkspace=async(signal?:AbortSignal)=>{const [tasksResponse,connectionsResponse,aiTasksResponse]=await Promise.all([fetch("/api/delegations",{cache:"no-store",signal}),fetch("/api/connections",{cache:"no-store",signal}),fetch("/api/tasks",{cache:"no-store",signal})]);const unauthorized=[tasksResponse,connectionsResponse,aiTasksResponse].find(response=>response.status===401);if(unauthorized){setAuthenticated(false);return false;}if(!tasksResponse.ok||!connectionsResponse.ok||!aiTasksResponse.ok)throw new Error(`Workspace could not be loaded (HTTP ${[tasksResponse,connectionsResponse,aiTasksResponse].find(response=>!response.ok)?.status}).`);const tasksPayload=await tasksResponse.json() as ApiResponse;const connectionsPayload=await connectionsResponse.json() as ApiResponse;setAiTasks((await aiTasksResponse.json()).tasks||[]);setHistory(tasksPayload.delegations||[]);setConnections(connectionsPayload.connections||[]);setAuthenticated(true);return true;};
+  const loadWorkspace=async(signal?:AbortSignal)=>{const [tasksResponse,connectionsResponse,aiTasksResponse]=await Promise.all([fetch("/api/delegations",{cache:"no-store",signal}),fetch("/api/connections",{cache:"no-store",signal}),fetch("/api/tasks",{cache:"no-store",signal})]);const unauthorized=[tasksResponse,connectionsResponse,aiTasksResponse].find(response=>response.status===401);if(unauthorized){setAuthenticated(false);return false;}if(!tasksResponse.ok||!connectionsResponse.ok||!aiTasksResponse.ok)throw new Error(`Workspace could not be loaded (HTTP ${[tasksResponse,connectionsResponse,aiTasksResponse].find(response=>!response.ok)?.status}).`);const tasksPayload=await tasksResponse.json() as ApiResponse;const connectionsPayload=await connectionsResponse.json() as ApiResponse;const savedTasks=((await aiTasksResponse.json()) as ApiResponse).tasks||[];setAiTasks(savedTasks);const latest=savedTasks[0];if(latest?.requestKey&&(latest.plan.generationStatus==="pending"||latest.plan.generationStatus==="failed"))setPendingMessage({id:latest.id,text:latest.task,conversationId:latest.conversationId||latest.id,persistedConversation:true,requestKey:latest.requestKey,status:"failed",error:latest.plan.generationError||"Your message is saved. Retry to get the AI response."});setHistory(tasksPayload.delegations||[]);setConnections(connectionsPayload.connections||[]);setAuthenticated(true);return true;};
   useEffect(()=>{
     const restoreFromUrl=()=>{const next=parseDashboardRoute(window.location.search);setRoute(next);setView(next.view);};
     restoreFromUrl();
@@ -98,13 +98,13 @@ export default function Dashboard() {
     if(busy==="routing")return false;
     const service=conversationId||retryPending?undefined:SMAJ_SERVICES.find(item=>item.id===selectedService);
     const requestTask=retryPending?retryPending.text:service?`${service.name}: ${message.trim()}`:message.trim();
-    const optimistic=retryPending||{id:`pending-${crypto.randomUUID()}`,text:requestTask,conversationId:conversationId||crypto.randomUUID(),persistedConversation:Boolean(conversationId),status:"sending" as const};
+    const optimistic=retryPending||{id:`pending-${crypto.randomUUID()}`,text:requestTask,conversationId:conversationId||crypto.randomUUID(),persistedConversation:Boolean(conversationId),requestKey:crypto.randomUUID(),status:"sending" as const};
     let discoveryTask:AiTask|undefined;
     setPendingMessage({...optimistic,status:"sending",error:undefined});
     setTask(requestTask);setBusy("routing");setError("");
     if(!conversationId){setDelegation(null);setRoutePlan(null);if(viewRef.current!=="task-detail")navigate("task-detail");}
     try{
-      const response=await fetch("/api/tasks",{signal:AbortSignal.timeout(135000),method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({task:requestTask,...(conversationId?{conversationId}:{})})});
+      const response=await fetch("/api/tasks",{signal:AbortSignal.timeout(135000),method:"POST",headers:{"Content-Type":"application/json","Idempotency-Key":optimistic.requestKey},body:JSON.stringify({task:requestTask,...(conversationId?{conversationId}:{})})});
       const payload=await response.json().catch(()=>({})) as ApiResponse;
       if(!response.ok||!payload.plan||!payload.task)throw new Error((payload.message||"SMAJ AI could not answer. Please try again.")+(response.status===429&&response.headers.get("Retry-After")?` Try again in ${response.headers.get("Retry-After")} seconds.`:""));
       setAiTasks(items=>[payload.task!,...items.filter(item=>item.id!==payload.task!.id)]);
@@ -199,12 +199,13 @@ export default function Dashboard() {
       if(!response.ok||!Array.isArray(payload.tasks))throw new Error(payload.message||"Conversation could not be restored.");
       const turns=payload.tasks as AiTask[];
       setAiTasks(current=>{const byId=new Map(current.map(item=>[item.id,item]));for(const item of turns)byId.set(item.id,item);return [...byId.values()];});
-      setThreadTaskIds(turns.map(item=>item.id));setThreadConversationId(conversationId);
+      const unfinished=turns.at(-1);const requestKey=unfinished?.requestKey;if(unfinished&&requestKey&&(unfinished.plan.generationStatus==="pending"||unfinished.plan.generationStatus==="failed"))setPendingMessage(current=>current||{id:unfinished.id,text:unfinished.task,conversationId:unfinished.conversationId||unfinished.id,persistedConversation:true,requestKey,status:"failed",error:unfinished.plan.generationError||"Your message is saved. Retry to get the AI response."});
+      setThreadTaskIds(turns.filter(item=>item.plan.generationStatus!=="pending"&&item.plan.generationStatus!=="failed").map(item=>item.id));setThreadConversationId(conversationId);
     }).catch(failure=>{loadedConversations.current.delete(conversationId);if(!controller.signal.aborted)notifyError(failure,"Conversation could not be restored.");});
     return()=>controller.abort();
   },[authenticated,route.view,route.taskId,aiTasks,threadConversationId]);
   const activeTask = aiTasks.find(item => item.plan === routePlan || JSON.stringify(item.plan) === JSON.stringify(routePlan));
-  const conversationTasks = threadConversationId===activeTask?.conversationId ? threadTaskIds.map(id=>aiTasks.find(item=>item.id===id)).filter((item):item is AiTask=>Boolean(item)) : activeTask?[activeTask]:[];
+  const conversationTasks = threadConversationId===activeTask?.conversationId ? threadTaskIds.map(id=>aiTasks.find(item=>item.id===id)).filter((item):item is AiTask=>item!==undefined&&item.plan.generationStatus!=="pending"&&item.plan.generationStatus!=="failed") : activeTask&&activeTask.plan.generationStatus!=="pending"&&activeTask.plan.generationStatus!=="failed"?[activeTask]:[];
   const approveLive = async (taskId:string,actionIds: string[]) => {
     const target=aiTasks.find(item=>item.id===taskId);if(!target)return;
     if (publicAccess) {
