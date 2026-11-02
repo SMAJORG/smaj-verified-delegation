@@ -41,3 +41,12 @@ test("SSO actors start with no services connected until they opt in", () => {
     assert.equal(store.list("sso-user-1", "sso").find(item => item.serviceId === "jobs")?.connected, true);
   } finally { database.close(); }
 });
+
+test("the first SSO connection changes only the selected app", () => {
+  const database = createDatabase(":memory:");
+  try {
+    const store = new ServiceConnectionStore(database);
+    const connections = store.set("sso-user-first-toggle", "store", true, "sso");
+    assert.deepEqual(connections.filter(item => item.connected).map(item => item.serviceId), ["store"]);
+  } finally { database.close(); }
+});

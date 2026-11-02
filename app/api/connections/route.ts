@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     requireSameOrigin(request);
     const session = requireActorSession(request);
     const body = await (session.authType === "public" ? publicJson(request) : request.json()) as { serviceId?: unknown; connected?: unknown };
-    const connections = new ServiceConnectionStore(workspaceDatabase(request)).set(session.actorId, String(body.serviceId || ""), body.connected === true);
+    const connections = new ServiceConnectionStore(workspaceDatabase(request)).set(session.actorId, String(body.serviceId || ""), body.connected === true, session.authType);
     return NextResponse.json({ connections });
   } catch (error) { return apiError(error); }
 }

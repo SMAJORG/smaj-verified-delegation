@@ -30,13 +30,13 @@ export class ServiceConnectionStore {
     return SMAJ_SERVICES.map(service => ({ serviceId: service.id, connected: states.get(service.id) || false, available: service.adapterMode === "connected", adapterMode: service.adapterMode }));
   }
 
-  set(ownerId: string, serviceId: string, connected: boolean): ServiceConnection[] {
+  set(ownerId: string, serviceId: string, connected: boolean, authType: "demo" | "sso" | "public" = "demo"): ServiceConnection[] {
     if (!SERVICE_IDS.has(serviceId as ServiceId)) throw new AppError("unknown_service", "Unknown SMAJ service", 404);
     const service = SMAJ_SERVICES.find(item => item.id === serviceId)!;
     if (service.adapterMode !== "connected") throw new AppError("integration_unavailable", `${service.name} does not have an authorized API connection yet`, 409);
-    this.initialize(ownerId);
+    this.initialize(ownerId, authType);
     this.database.prepare("UPDATE service_connections SET connected = ?, updated_at = ? WHERE owner_id = ? AND service_id = ?")
       .run(connected ? 1 : 0, this.now().toISOString(), ownerId, serviceId);
-    return this.list(ownerId);
+    return this.list(ownerId, authType);
   }
 }
