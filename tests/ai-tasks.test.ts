@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import Database from "better-sqlite3";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { metaResponse } from "@/src/server/meta-client";
 import { MetaServiceRouter } from "@/src/server/service-router";
 import { AiTaskStore } from "@/src/server/ai-tasks";
@@ -7,8 +11,11 @@ import { createDatabase } from "@/src/server/database";
 import { NextRequest } from "next/server";
 import { POST, GET } from "@/app/api/tasks/route";
 import { GET as detail, DELETE as remove } from "@/app/api/tasks/[id]/route";
+import { GET as listConversations } from "@/app/api/conversations/route";
+import { PATCH as renameConversation, DELETE as deleteConversation } from "@/app/api/conversations/[id]/route";
 import { issueDemoSession } from "@/src/server/demo-sessions";
 import { SESSION_COOKIE } from "@/src/server/auth";
+import { workspaceDatabase } from "@/src/server/demo-workspace";
 
 test("short messages produce a provider answer and tasks remain owner-scoped through deletion", async () => {
   const previous = { ...process.env };
@@ -147,6 +154,93 @@ test("task HTTP routes authenticate, save a short answer, list, open, and enforc
     assert.equal((await detail(request(alice), context)).status, 404);
   } finally {
     globalThis.fetch = originalFetch;
+    for (const name of Object.keys(process.env)) if (!(name in previous)) delete process.env[name];
+    Object.assign(process.env, previous);
+  }
+});
+
+test("conversation threads keep saved turns, owner-scoped names, and deletion safeguards", async () => {
+  const database = createDatabase(":memory:");
+  try {
+    const store = new AiTaskStore(database);
+    const first = store.create("alice", "Find remote design jobs", { summary: "Found remote jobs.", model: "fixture", services: ["jobs"], steps: [], warnings: [] });
+    const followUp = store.create("alice", "Only senior roles", { summary: "Filtered to senior roles.", model: "fixture", services: ["jobs"], steps: [], warnings: [] }, first.conversationId);
+    const privateTask = store.create("bob", "My private request", { summary: "Private.", model: "fixture", services: [], steps: [], warnings: [] });
+    const conversation = store.conversations("alice")[0];
+    assert.equal(conversation.id, first.conversationId);
+    assert.equal(conversation.title, "Find remote design jobs");
+    assert.equal(conversation.taskCount, 2);
+    assert.equal(conversation.latestTaskId, followUp.id);
+    assert.deepEqual(store.conversation("alice", first.conversationId!).map(task => task.task), ["Find remote design jobs", "Only senior roles"]);
+    assert.equal(store.conversations("bob")[0].title, "My private request");
+
+    store.renameConversation("alice", first.conversationId!, "Senior design search");
+    assert.equal(new AiTaskStore(database).conversations("alice")[0].title, "Senior design search");
+    assert.throws(() => store.renameConversation("bob", first.conversationId!, "Leaked"), /not found/);
+    store.deleteConversation("alice", first.conversationId!);
+    assert.equal(store.list("alice").length, 0);
+    assert.equal(store.conversations("alice").length, 0);
+    assert.equal(store.get("bob", privateTask.id).task, "My private request");
+
+    const active = store.create("alice", "Application running", {
+      summary: "Running.", model: "fixture", services: [], steps: [], warnings: [], execution: { status: "running", approvedAt: "", expiresAt: "", actions: [], attempts: 0 },
+    });
+    assert.throws(() => store.deleteConversation("alice", active.conversationId!), /Wait for live actions/);
+    assert.equal(store.get("alice", active.id).task, "Application running");
+  } finally {
+    database.close();
+  }
+});
+
+test("existing saved task threads migrate to searchable conversations without losing turns", () => {
+  const directory = mkdtempSync(join(tmpdir(), "smaj-ai-conversations-"));
+  const path = join(directory, "legacy.sqlite");
+  const legacy = new Database(path);
+  legacy.exec("CREATE TABLE ai_tasks (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, task TEXT NOT NULL, plan_json TEXT NOT NULL, created_at TEXT NOT NULL, conversation_id TEXT NOT NULL DEFAULT '')");
+  const plan = JSON.stringify({ summary: "Saved response", model: "fixture", services: [], steps: [], warnings: [] });
+  legacy.prepare("INSERT INTO ai_tasks (id, owner_id, task, plan_json, created_at, conversation_id) VALUES (?, ?, ?, ?, ?, ?)").run("turn-1", "alice", "Original saved request", plan, "2026-01-01T10:00:00.000Z", "thread-1");
+  legacy.prepare("INSERT INTO ai_tasks (id, owner_id, task, plan_json, created_at, conversation_id) VALUES (?, ?, ?, ?, ?, ?)").run("turn-2", "alice", "Saved follow-up", plan, "2026-01-01T10:05:00.000Z", "thread-1");
+  legacy.close();
+  const migrated = createDatabase(path);
+  try {
+    const store = new AiTaskStore(migrated);
+    assert.equal(store.list("alice").length, 2);
+    assert.equal(store.conversations("alice")[0].title, "Original saved request");
+    assert.equal(store.conversations("alice")[0].taskCount, 2);
+  } finally {
+    migrated.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("conversation HTTP routes authenticate and enforce owner-scoped rename and deletion", async () => {
+  const previous = { ...process.env };
+  process.env.SMAJ_HACKATHON_DB_PATH = ":memory:";
+  process.env.SMAJ_DEMO_AUTH_ENABLED = "true";
+  const aliceSession = issueDemoSession(), bobSession = issueDemoSession();
+  const alice = `${SESSION_COOKIE}=${aliceSession.value}`;
+  const bob = `${SESSION_COOKIE}=${bobSession.value}`;
+  const request = (cookie: string, method = "GET", body?: unknown, origin = "https://test.example") => new NextRequest("https://test.example/api/conversations", {
+    method,
+    headers: { cookie, origin, "Content-Type": "application/json" },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  });
+  try {
+    const seedRequest = request(alice);
+    const seed = new AiTaskStore(workspaceDatabase(seedRequest)).create(aliceSession.actorId, "Saved question", { summary: "Saved answer.", model: "fixture", services: [], steps: [], warnings: [] });
+    const context = { params: Promise.resolve({ id: seed.conversationId! }) };
+    assert.equal((await listConversations(request(""))).status, 401);
+    const listed = await listConversations(request(alice));
+    assert.equal(listed.status, 200);
+    assert.equal((await listed.json()).conversations[0].title, "Saved question");
+    assert.equal((await renameConversation(request(bob, "PATCH", { title: "Not yours" }), context)).status, 404);
+    assert.equal((await renameConversation(request(alice, "PATCH", { title: "  Named chat  " }), context)).status, 200);
+    assert.equal((await listConversations(request(alice)).then(response => response.json())).conversations[0].title, "Named chat");
+    assert.equal((await renameConversation(request(alice, "PATCH", { title: " " }), context)).status, 400);
+    assert.equal((await deleteConversation(request(alice, "DELETE", undefined, "https://other.example"), context)).status, 403);
+    assert.equal((await deleteConversation(request(bob, "DELETE"), context)).status, 404);
+    assert.equal((await deleteConversation(request(alice, "DELETE"), context)).status, 204);
+  } finally {
     for (const name of Object.keys(process.env)) if (!(name in previous)) delete process.env[name];
     Object.assign(process.env, previous);
   }

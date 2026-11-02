@@ -18,6 +18,11 @@ const initialize = (database: AppDatabase) => {
       plan_json TEXT NOT NULL, created_at TEXT NOT NULL, conversation_id TEXT NOT NULL DEFAULT ''
     );
     CREATE INDEX IF NOT EXISTS ai_tasks_owner ON ai_tasks(owner_id, created_at DESC);
+    CREATE TABLE IF NOT EXISTS ai_conversations (
+      id TEXT NOT NULL, owner_id TEXT NOT NULL, title TEXT NOT NULL,
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+      PRIMARY KEY (owner_id, id)
+    );
     CREATE TABLE IF NOT EXISTS live_action_runs (
       task_id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, uid TEXT NOT NULL,
       state TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, next_at TEXT NOT NULL,
@@ -67,6 +72,15 @@ const initialize = (database: AppDatabase) => {
 
   if (!hasColumn(database, "ai_tasks", "conversation_id")) database.exec("ALTER TABLE ai_tasks ADD COLUMN conversation_id TEXT NOT NULL DEFAULT ''");
   database.exec("UPDATE ai_tasks SET conversation_id = id WHERE conversation_id = ''");
+  database.exec("CREATE INDEX IF NOT EXISTS ai_tasks_owner_conversation ON ai_tasks(owner_id, conversation_id, created_at DESC)");
+  database.exec(`
+    INSERT OR IGNORE INTO ai_conversations (id, owner_id, title, created_at, updated_at)
+    SELECT task.conversation_id, task.owner_id,
+      substr((SELECT first_turn.task FROM ai_tasks AS first_turn WHERE first_turn.owner_id = task.owner_id AND first_turn.conversation_id = task.conversation_id ORDER BY first_turn.created_at ASC, first_turn.rowid ASC LIMIT 1), 1, 120),
+      MIN(task.created_at), MAX(task.created_at)
+    FROM ai_tasks AS task
+    GROUP BY task.owner_id, task.conversation_id
+  `);
   if (!hasColumn(database, "delegations", "owner_id")) database.exec("ALTER TABLE delegations ADD COLUMN owner_id TEXT NOT NULL DEFAULT 'legacy-demo'");
   if (!hasColumn(database, "delegations", "create_key")) database.exec("ALTER TABLE delegations ADD COLUMN create_key TEXT");
   if (!hasColumn(database, "delegations", "run_started_at")) database.exec("ALTER TABLE delegations ADD COLUMN run_started_at TEXT");
