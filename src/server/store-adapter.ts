@@ -44,6 +44,7 @@ export class SmajStoreReadAdapter {
       const usdt = numeric(product.priceUsdt);
       return {
         id: text(product._id, text(product.id, text(product.slug))),
+        sellerId: text(product.sellerId) || undefined,
         title: text(product.title, text(product.name)),
         category: text(product.category),
         price: query.currency === "USD" ? usdt !== undefined && usdt > 0 ? `$${usdt.toLocaleString("en-US")} USDT` : "" : price(product),

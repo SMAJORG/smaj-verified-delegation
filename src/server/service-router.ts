@@ -13,7 +13,13 @@ export class MetaServiceRouter {
   async plan(
     task: string,
     connectedServiceIds: ServiceId[] = ["jobs"],
-    context: Array<{ task: string; summary: string; services: ServiceId[]; sellerMessages?: Array<{ productId: string; message: string; createdAt: string }> }> = [],
+    context: Array<{
+      task: string;
+      summary: string;
+      services: ServiceId[];
+      storeListings?: Array<{ id: string; sellerId?: string; title: string; sellerName?: string; pricePi?: number; priceUsdt?: number; quantity?: number; summary?: string; matched?: boolean }>;
+      sellerMessages?: Array<{ productId: string; message: string; createdAt: string }>;
+    }> = [],
     preferences: string[] = [],
   ): Promise<ServiceRoutePlan> {
     const request = task.trim();
@@ -39,6 +45,7 @@ export class MetaServiceRouter {
         task: turn.task.slice(0, 2000),
         summary: turn.summary.slice(0, 1200),
         services: turn.services,
+        ...(turn.storeListings?.length ? { storeListings: turn.storeListings.slice(0, 12) } : {}),
         ...(turn.sellerMessages?.length ? {
           sellerMessages: turn.sellerMessages.slice(-8).map(message => ({ ...message, message: message.message.slice(0, 500) })),
         } : {}),
@@ -47,6 +54,64 @@ export class MetaServiceRouter {
       if (contextSize + size > 26000) break;
       recentContext.unshift(boundedTurn);
       contextSize += size;
+    }
+
+    const lastStoreTurn = [...recentContext].reverse().find(turn => turn.storeListings?.length);
+    const listings = lastStoreTurn?.storeListings || [];
+    const explicitContact = /\b(?:contact|message|write|ask)\b.{0,80}\b(?:seller|owner)\b|\b(?:seller|owner)\b.{0,80}\b(?:contact|message|write|ask)\b/i.test(request);
+    const affirmative = /^\s*(?:yes|yeah|yep|sure|please do|go ahead|do it|okay|ok)\b/i.test(request);
+    const declinedContact = /\b(?:don't|do not|not|never|avoid|cancel|stop)\b.{0,60}\b(?:contact|message|seller|owner)\b/i.test(request);
+    const lastConversationTurn = recentContext.at(-1);
+    const priorAskedToContact = Boolean(lastConversationTurn && /\b(?:would you like|want to|shall i|should i)\b.{0,100}\b(?:contact|message|ask).{0,40}\b(?:seller|owner)\b/i.test(lastConversationTurn.summary));
+    const contactFollowUp = listings.length > 0 && !declinedContact && (explicitContact || (affirmative && priorAskedToContact));
+    const mentionedListings = listings.filter(product => request.toLowerCase().includes(product.id.toLowerCase()) || request.toLowerCase().includes(product.title.toLowerCase()));
+    const preferredListings = listings.filter(product => product.matched);
+    const candidates = mentionedListings.length ? mentionedListings : preferredListings.length ? preferredListings : listings;
+    if (contactFollowUp && candidates.length !== 1) {
+      const choices = candidates.slice(0, 6).map(product => product.title).filter(Boolean);
+      return {
+        summary: choices.length
+          ? `Which product would you like me to contact the seller about? Please choose one: ${choices.join("; ")}.`
+          : "Which product would you like me to contact the seller about? Please name the product from your previous results.",
+        model: "Meta AI",
+        services: [],
+        steps: [],
+        warnings: [],
+        sources: hubKnowledgeContext(request).sources,
+      };
+    }
+
+    if (contactFollowUp && candidates.length === 1) {
+      const product = candidates[0];
+      const connected = connectedIds.has("store");
+      return {
+        summary: `I’ll prepare a message to ${product.sellerName || "the seller"} about ${product.title} for your review. Nothing will be sent until you approve the exact message.`,
+        model: "Meta AI",
+        services: ["store"],
+        steps: [{
+          id: "store-contact-follow-up",
+          serviceId: "store",
+          title: `Prepare a message about ${product.title}`.slice(0, 120),
+          description: "I’ll verify the product and seller through SMAJ Store and prepare a message for your approval.",
+          capability: "contact a seller with approval",
+          status: connected ? "ready" : "unavailable",
+          approvalRequired: true,
+          reason: connected ? "The exact product from your saved results will be revalidated by SMAJ Store." : "Connect SMAJ Store before preparing a seller message.",
+          query: { search: product.title.slice(0, 80) },
+        }],
+        warnings: ["The seller message will not be sent unless you approve the exact draft."],
+        sources: hubKnowledgeContext(request).sources,
+        selectedStoreProduct: {
+          id: product.id,
+          ...(product.sellerId ? { sellerId: product.sellerId } : {}),
+          title: product.title,
+          ...(product.sellerName ? { sellerName: product.sellerName } : {}),
+          ...(product.pricePi !== undefined ? { pricePi: product.pricePi } : {}),
+          ...(product.priceUsdt !== undefined ? { priceUsdt: product.priceUsdt } : {}),
+          ...(product.quantity !== undefined ? { quantity: product.quantity } : {}),
+          ...(product.summary ? { summary: product.summary } : {}),
+        },
+      };
     }
 
     const knowledge = hubKnowledgeContext(request);

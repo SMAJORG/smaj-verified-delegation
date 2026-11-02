@@ -43,7 +43,7 @@ export class HubActionAdapter implements ActionAdapter {
     if (action.serviceId === "store" && (action.kind === "contact_seller" || action.kind === "create_order")) {
       const body = await this.request(contract, action, "prepare");
       const preview = body.preview as StoreActionPreview | undefined;
-      if (!preview?.product || preview.product.recordId !== action.recordId || !preview.product.title || !preview.product.sellerName || !Number.isFinite(preview.product.pricePi) || preview.product.pricePi <= 0 || !Number.isInteger(preview.product.quantityAvailable) || preview.product.quantityAvailable < 0) {
+      if (!preview?.product || preview.product.recordId !== action.recordId || !preview.product.sellerId || !preview.product.title || !preview.product.sellerName || !Number.isFinite(preview.product.pricePi) || preview.product.pricePi <= 0 || !Number.isInteger(preview.product.quantityAvailable) || preview.product.quantityAvailable < 0) {
         throw new AppError("invalid_store_action_preview", "Hub did not return a complete product and seller review", 502);
       }
       return preview;
@@ -65,7 +65,7 @@ export class HubActionAdapter implements ActionAdapter {
       : action.kind === "apply"
         ? ["submitted", "reviewing", "shortlisted", "hired", "rejected"].includes(String(evidence?.status)) && typeof evidence?.createdAt === "string" && evidence.applicationDetailsHash === action.applicationPreview?.detailsHash && typeof evidence.idempotencyKey === "string" && !!evidence.idempotencyKey
         : action.kind === "contact_seller"
-          ? evidence?.status === "sent" && typeof evidence.conversationId === "string" && typeof evidence.messageId === "string" && typeof evidence.createdAt === "string" && Array.isArray(evidence.messages) && evidence.messages.every((message: StoreMessageEvidence) => message && typeof message.id === "string" && typeof message.senderId === "string" && typeof message.message === "string" && typeof message.createdAt === "string")
+          ? evidence?.status === "sent" && typeof evidence.sellerId === "string" && typeof evidence.conversationId === "string" && typeof evidence.messageId === "string" && typeof evidence.createdAt === "string" && Array.isArray(evidence.messages) && evidence.messages.every((message: StoreMessageEvidence) => message && typeof message.id === "string" && typeof message.senderId === "string" && typeof message.message === "string" && typeof message.createdAt === "string")
           : typeof evidence?.status === "string" && typeof evidence.paymentStatus === "string" && evidence.orderId === evidence.backendId && evidence.quantity === action.quantity && typeof evidence.totalPricePi === "number" && Number.isFinite(evidence.totalPricePi) && typeof evidence.createdAt === "string";
     if (!validEvidence || !validKind) throw new AppError("verification_mismatch", "Backend evidence did not match the approved action", 409);
     return evidence as Record<string, unknown>;

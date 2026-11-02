@@ -43,7 +43,7 @@ export type JobApplicationPreview = {
   cv: { attached: boolean; name?: string; size?: number; visibility?: string };
 };
 export type StoreActionPreview = {
-  product: { recordId: string; title: string; sellerName: string; pricePi: number; quantityAvailable: number };
+  product: { recordId: string; sellerId: string; title: string; sellerName: string; pricePi: number; quantityAvailable: number };
 };
 export type StoreMessageEvidence = {
   id: string;
@@ -77,6 +77,7 @@ export type ServiceRoutePlan = {
   ai?: ModelEvidence;
   summaryAi?: ModelEvidence;
   summaryError?: { code: string; message: string };
+  selectedStoreProduct?: { id: string; sellerId?: string; title: string; sellerName?: string; pricePi?: number; priceUsdt?: number; quantity?: number; summary?: string };
   matches?: Array<{ serviceId: string; id: string; reason: string }>;
   proposedActions?: LiveAction[];
   actionReviewHash?: string;

@@ -10,7 +10,7 @@ import { UserPreferencesStore } from "@/src/server/user-preferences";
 
 import { beginPublicWork, publicJson } from "@/src/server/public-access";
 export const runtime = "nodejs";
-export const maxDuration = 180;
+export const maxDuration = 240;
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
@@ -52,6 +52,31 @@ export async function POST(request: NextRequest) {
       task: turn.task.slice(0, 2000),
       summary: turn.plan.summary.slice(0, 1200),
       services: turn.plan.services,
+      ...(session.authType === "sso" ? {
+        storeListings: (() => {
+          const result = turn.plan.discovery?.results.find(item => item.serviceId === "store" && item.status === "read");
+          const products = (result?.records || []).filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object");
+          const discussedIds = products
+            .filter(product => typeof product.title === "string" && product.title && turn.plan.summary.toLowerCase().includes(product.title.toLowerCase()))
+            .map(product => String(product.id || ""));
+          const matchedIds = new Set([
+            ...(turn.plan.matches || []).filter(match => match.serviceId === "store").map(match => match.id),
+            ...discussedIds,
+          ]);
+          const prioritized = matchedIds.size ? products.filter(product => matchedIds.has(String(product.id || ""))) : products;
+          return prioritized.slice(0, 12).map(product => ({
+            id: String(product.id || ""),
+            ...(typeof product.sellerId === "string" ? { sellerId: product.sellerId } : {}),
+            title: String(product.title || "").slice(0, 180),
+            ...(typeof product.sellerName === "string" ? { sellerName: product.sellerName.slice(0, 120) } : {}),
+            ...(typeof product.pricePi === "number" ? { pricePi: product.pricePi } : {}),
+            ...(typeof product.priceUsdt === "number" ? { priceUsdt: product.priceUsdt } : {}),
+            ...(typeof product.quantity === "number" ? { quantity: product.quantity } : {}),
+            ...(typeof product.summary === "string" ? { summary: product.summary.slice(0, 300) } : {}),
+            matched: matchedIds.has(String(product.id || "")),
+          })).filter(product => product.id && product.title);
+        })(),
+      } : {}),
       sellerMessages: (turn.plan.execution?.evidence || []).flatMap(item => {
         if (!item || typeof item !== "object") return [];
         const evidence = item as Record<string, unknown>;

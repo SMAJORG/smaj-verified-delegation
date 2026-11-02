@@ -106,6 +106,7 @@ export type CreateDelegationInput = {
 };
 
 export type StoreApiProduct = {
+  sellerId?: string;
   imageUrl?: string;
   pricePi?: number;
   priceUsdt?: number;

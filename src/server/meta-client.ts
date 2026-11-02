@@ -3,6 +3,7 @@ import { AppError } from "@/src/server/http";
 const BASE = "https://api.meta.ai/v1";
 const DEFAULT_META_MODEL = "muse-spark-1.3";
 const MIN_OUTPUT_TOKENS = 64;
+const MAX_OUTPUT_TOKENS = 8192;
 
 const normalizeModelId = (value: string) => value.trim().replace(/^meta\//i, "");
 
@@ -113,18 +114,14 @@ export async function metaResponse(input: string, maxTokens: number, fetcher: ty
     }));
   }
 
-  const safeMaxTokens = Number(maxTokens) > 0 ? Math.max(MIN_OUTPUT_TOKENS, Number(maxTokens)) : MIN_OUTPUT_TOKENS;
-  let outputTokens = safeMaxTokens;
-  let payload = await request("responses", apiKey, fetcher, {
-    model,
-    input,
-    max_output_tokens: outputTokens,
-    store: false,
-  });
-  const reason = typeof payload?.incomplete_details?.reason === "string" ? payload.incomplete_details.reason : "";
-  if (payload?.status === "incomplete" && reason === "max_output_tokens") {
-    outputTokens = Math.min(outputTokens * 2, 6000);
+  const requestedTokens = Number(maxTokens) > 0 ? Math.max(MIN_OUTPUT_TOKENS, Number(maxTokens)) : MIN_OUTPUT_TOKENS;
+  let outputTokens = Math.min(requestedTokens, MAX_OUTPUT_TOKENS);
+  let payload: any;
+  while (true) {
     payload = await request("responses", apiKey, fetcher, { model, input, max_output_tokens: outputTokens, store: false });
+    const reason = typeof payload?.incomplete_details?.reason === "string" ? payload.incomplete_details.reason : "";
+    if (payload?.status !== "incomplete" || reason !== "max_output_tokens" || outputTokens >= MAX_OUTPUT_TOKENS) break;
+    outputTokens = Math.min(outputTokens * 2, MAX_OUTPUT_TOKENS);
   }
   if (payload?.status !== "completed") {
     const status = typeof payload?.status === "string" && /^[a-z_]{1,32}$/.test(payload.status) ? payload.status : "unknown";
