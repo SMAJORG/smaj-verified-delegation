@@ -18,6 +18,7 @@ type Props = {
 export default function HomeWorkspace({ task, setTask, selectedService, selectService, routeTask, busy, connectedIds }: Props) {
   const input = useRef<HTMLTextAreaElement>(null);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [showAllServices, setShowAllServices] = useState(false);
   useEffect(() => {
     if (task.length > 0) return;
     const timer = window.setInterval(() => {
@@ -27,6 +28,9 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
   }, [task.length]);
   const selected = SMAJ_SERVICES.find(service => service.id === selectedService);
   const connectedServices = SMAJ_SERVICES.filter(service => service.adapterMode === "connected" && connectedIds.has(service.id));
+  const connectedServiceIds = new Set(connectedServices.map(service => service.id));
+  const orderedServices = [...connectedServices, ...SMAJ_SERVICES.filter(service => !connectedServiceIds.has(service.id))];
+  const visibleServices = showAllServices ? orderedServices : orderedServices.slice(0, 5);
   const status = (id: ServiceId) => {
     const service = SMAJ_SERVICES.find(item => item.id === id)!;
     return service.adapterMode === "planning_only" ? "Planned" : connectedIds.has(id) ? "Connected" : "Not connected";
@@ -53,14 +57,11 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
     <div className={styles.servicesHeading}>
       <div className={styles.servicesHeadingContent}>
         <h2>Connected services</h2>
-        {!!connectedServices.length && <div className={styles.connectedIcons} aria-label="Connected apps">
-          {connectedServices.map(service => <span key={service.id} title={service.name}><ServiceIcon serviceId={service.id}/></span>)}
-        </div>}
       </div>
     </div>
     <div className={`launcherLegend ${styles.legend}`} aria-label="Service status legend"><span><i className="statusDot connected"/>Connected</span><span><i className="statusDot disconnected"/>Not connected</span><span><i className="statusDot unavailable"/>Planned</span></div>
-    <div className={styles.services} aria-label="Choose a service">
-      {SMAJ_SERVICES.map(service => {
+    <div id="home-services-list" className={styles.services} aria-label="Choose a service">
+      {visibleServices.map(service => {
         const state = status(service.id);
         return <button key={service.id} type="button" className={styles.service} aria-pressed={selectedService === service.id} aria-label={`${service.shortName}, ${state}`} onClick={() => { selectService(service.id); setTask(service.example); input.current?.focus({ preventScroll: true }); }}>
           <span className={styles.art}><ServiceIcon serviceId={service.id}/></span>
@@ -68,5 +69,7 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
         </button>;
       })}
     </div>
+    {!showAllServices && orderedServices.length > 5 && <button type="button" className={styles.showAll} aria-expanded={showAllServices} aria-controls="home-services-list" onClick={() => setShowAllServices(true)}>Show all services</button>}
+    {showAllServices && <button type="button" className={styles.showAll} aria-expanded={showAllServices} aria-controls="home-services-list" onClick={() => setShowAllServices(false)}>Show fewer services</button>}
   </section>;
 }
