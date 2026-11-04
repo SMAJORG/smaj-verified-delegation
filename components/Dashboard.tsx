@@ -348,19 +348,19 @@ function DrawerItem({icon,label,badge,active,onClick}:{icon:string;label:string;
 export function Tasks(props:any){
   const lastTurn=useRef<HTMLDivElement|null>(null);
   const messageKey=[...(props.messages as AiTask[]).map(item=>item.id),props.pendingMessage?.id||""].join(",");
+  const voiceText=(props.messages as AiTask[]).at(-1)?.plan.summary||props.routePlan?.summary||"";
   useEffect(()=>{
     const frame=requestAnimationFrame(()=>lastTurn.current?.scrollIntoView({behavior:"smooth",block:"end"}));
     return()=>cancelAnimationFrame(frame);
   },[messageKey]);
   return <section className={`tasksView compactResults${props.conversationId||props.pendingMessage?" hasChatComposer":""}`} data-results-design="approved-compact-v2">
-    <p className="resultsEyebrow">AI TASK RESULTS</p>
+    <div className="resultsPageToolbar"><p className="resultsEyebrow">AI TASK RESULTS</p><ResultsVoiceMenu text={voiceText}/></div>
     {(props.messages?.length>0||props.pendingMessage)&&<div className="chatThread" aria-label="Conversation messages">
       {(props.messages||[]).map((message:AiTask,index:number)=><article className="chatTurn" key={message.id}>
         <div className="chatUserMessage">{message.task}{props.messageImages?.[message.id]&&<span className="chatImagePreview"><img src={`data:${props.messageImages[message.id].mimeType};base64,${props.messageImages[message.id].data}`} alt="Attached image"/></span>}{message.task.includes("[Image attached for this turn; image is not saved in conversation history.]")&&<small className="chatAttachmentNote">Image used for this message only; it is not saved in history.</small>}</div>
         <section className={`chatAssistantMessage${props.pendingMessage?.id===message.id&&!message.plan.summary?" chatTyping":""}`}>{props.pendingMessage?.id===message.id&&!message.plan.summary
           ? <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><span className="taskDots" role="status" aria-label="SMAJ AI is responding"><i/><i/><i/></span></>
           : <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><TypedResponse text={message.plan.summary}/>
-            <SpeechControls text={message.plan.summary}/>
             <LiveTaskResult key={message.id} task={message} busy={Boolean(props.busy)} sandbox={props.sandbox} approve={props.approveLive} retry={props.retryLive} refreshActionUpdates={props.refreshActionUpdates} reportError={props.reportError}/>
           </div></>}</section>
         {index===props.messages.length-1&&<div ref={lastTurn} aria-hidden="true"/>}
@@ -376,7 +376,6 @@ export function Tasks(props:any){
     {!props.messages?.length&&!props.pendingMessage&&props.task&&props.routePlan&&<div className="taskRequest">{props.task}</div>}
     {!props.messages?.length&&!props.pendingMessage&&(props.routePlan||props.busy)&&<section className="resultsResponse"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent">
       {props.routePlan?.summary?<TypedResponse text={props.routePlan.summary}/>:props.busy&&<span className="taskDots taskDotsInline" role="status" aria-label="SMAJ AI is responding"><i/><i/><i/></span>}
-      {props.routePlan?.summary&&<SpeechControls text={props.routePlan.summary}/>}
     </div></section>}
     {props.conversationId&&<ChatComposer key={props.conversationId} busy={Boolean(props.busy)||Boolean(props.pendingMessage)} onSubmit={(message:string,image?:{mimeType:string;data:string})=>props.onFollowUp(message,props.conversationId,undefined,image)}/>}
     {props.delegation&&<DelegationDetail {...props}/>}
@@ -427,12 +426,12 @@ function ChatComposer({busy,onSubmit}:{busy:boolean;onSubmit:(message:string,ima
           {attachmentMenuOpen&&<div className="chatAttachmentMenu" role="menu" aria-label="Add an attachment">
             <button type="button" role="menuitem" onClick={()=>{setAttachmentMenuOpen(false);galleryRef.current?.click();}}>Upload image</button>
             <button type="button" role="menuitem" onClick={()=>{setAttachmentMenuOpen(false);cameraRef.current?.click();}}>Camera</button>
+            <button type="button" role="menuitem" onClick={()=>{setAttachmentMenuOpen(false);startVoice();}}>Microphone</button>
           </div>}
         </div>
         <textarea id="ai-chat-message" value={message} onChange={event=>setMessage(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();event.currentTarget.form?.requestSubmit();}}} maxLength={2000} rows={1} placeholder="Message SMAJ AI"/>
         <div className="chatComposerActions">
-          <button className="chatMediaButton" type="button" aria-label="Speak a message" title="Speak a message" disabled={busy||sending||mediaState==="Listening…"} onClick={startVoice}>Mic</button>
-          <button className="primaryButton" type="submit" aria-label="Send message" disabled={busy||sending||(!message.trim()&&!image)}>{busy||sending?"…":"Send"}</button>
+          <button className="chatSendButton" type="submit" aria-label="Send message" disabled={busy||sending||(!message.trim()&&!image)}>{busy||sending?<span aria-hidden="true">…</span>:<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>}</button>
         </div>
       </div>
       {(mediaState||mediaError)&&<p className={`chatMediaStatus${mediaError?" isError":""}`} role={mediaError?"alert":"status"}>{mediaError||mediaState}</p>}
@@ -440,20 +439,29 @@ function ChatComposer({busy,onSubmit}:{busy:boolean;onSubmit:(message:string,ima
   </form>;
 }
 
-function SpeechControls({text}:{text:string}) {
+function ResultsVoiceMenu({text}:{text:string}) {
   const [mounted,setMounted]=useState(false);
   const [state,setState]=useState<"idle"|"speaking"|"paused">("idle");
   const [muted,setMuted]=useState(false);
+  const [open,setOpen]=useState(false);
+  const menuRef=useRef<HTMLDivElement>(null);
   const utterance=useRef<SpeechSynthesisUtterance|null>(null);
   useEffect(()=>setMounted(true),[]);
   const stop=()=>{window.speechSynthesis?.cancel();utterance.current=null;setState("idle");};
-  const play=()=>{if(!("speechSynthesis" in window)){return;}if(state==="paused"){window.speechSynthesis.resume();setState("speaking");return;}stop();const next=new SpeechSynthesisUtterance(text);next.volume=muted?0:1;next.onend=()=>setState("idle");next.onerror=()=>setState("idle");utterance.current=next;window.speechSynthesis.speak(next);setState("speaking");};
-  if(!text||!mounted||!("speechSynthesis" in window))return null;
-  return <div className="chatSpeechControls" aria-label="Spoken response controls">
-    <button type="button" onClick={play}>{state==="paused"?"Resume voice":"Play voice"}</button>
-    <button type="button" onClick={()=>{window.speechSynthesis.pause();setState("paused");}} disabled={state!=="speaking"}>Pause</button>
-    <button type="button" onClick={stop} disabled={state==="idle"}>Stop</button>
-    <button type="button" onClick={()=>{setMuted(value=>!value);if(!muted&&state!=="idle")stop();}}>{muted?"Unmute":"Mute"}</button>
+  useEffect(()=>{if(!open)return;const closeOnOutsideClick=(event:PointerEvent)=>{if(!menuRef.current?.contains(event.target as Node))setOpen(false);};const closeOnEscape=(event:KeyboardEvent)=>{if(event.key==="Escape")setOpen(false);};document.addEventListener("pointerdown",closeOnOutsideClick);document.addEventListener("keydown",closeOnEscape);return()=>{document.removeEventListener("pointerdown",closeOnOutsideClick);document.removeEventListener("keydown",closeOnEscape);};},[open]);
+  useEffect(()=>()=>{window.speechSynthesis?.cancel();},[]);
+  useEffect(()=>{stop();},[text]);
+  const play=()=>{if(!text||!mounted||!("speechSynthesis" in window))return;if(state==="paused"){window.speechSynthesis.resume();setState("speaking");return;}stop();const next=new SpeechSynthesisUtterance(text);next.volume=muted?0:1;next.onend=()=>setState("idle");next.onerror=()=>setState("idle");utterance.current=next;window.speechSynthesis.speak(next);setState("speaking");setOpen(false);};
+  const toggleMute=()=>{const nextMuted=!muted;setMuted(nextMuted);if(utterance.current)utterance.current.volume=nextMuted?0:1;setOpen(false);};
+  const supported=mounted&&"speechSynthesis" in window;
+  return <div className="resultsVoiceMenuWrap" ref={menuRef}>
+    <button type="button" className="resultsVoiceMenuButton" aria-label="Voice options" aria-haspopup="menu" aria-expanded={open} onClick={()=>setOpen(value=>!value)}>⋮</button>
+    {open&&<div className="resultsVoiceMenu" role="menu" aria-label="Voice controls">
+      <button type="button" role="menuitem" disabled={!supported||!text} onClick={play}>Play Voice</button>
+      <button type="button" role="menuitem" disabled={!supported||state!=="speaking"} onClick={()=>{window.speechSynthesis.pause();setState("paused");setOpen(false);}}>Pause</button>
+      <button type="button" role="menuitem" disabled={!supported||state==="idle"} onClick={()=>{stop();setOpen(false);}}>Stop</button>
+      <button type="button" role="menuitem" disabled={!supported} onClick={toggleMute}>{muted?"Unmute":"Mute"}</button>
+    </div>}
   </div>;
 }
 
