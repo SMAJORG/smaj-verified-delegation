@@ -62,7 +62,6 @@
 .tasksView .taskAnswer{font-size:14px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;min-height:38px}
 .tasksView .taskSrOnly{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .tasksView .taskCursor:after{content:'▍';color:#8657d8;animation:taskBlink .7s infinite}
-.tasksView .taskAnalyzing{font-size:12px;font-weight:650;color:#827a90;margin:15px 0}
 .tasksView .taskDots{display:inline-flex;gap:5px;padding:13px;background:#f5f1fc;border-radius:13px}
 .tasksView .taskDots i{width:7px;height:7px;border-radius:50%;background:#8759da;animation:taskBounce 1s infinite}
 .tasksView .taskDots i:nth-child(2){animation-delay:.15s}.tasksView .taskDots i:nth-child(3){animation-delay:.3s}
@@ -112,9 +111,6 @@
 .compactResults .resultsApproval strong,.workspace .compactResults .approvalBar h3{font-size:13px;margin:0}
 .compactResults .resultsApproval p{font-size:12px;color:#665d74;line-height:1.5;margin:7px 0 13px}
 .compactResults .resultsActions{display:flex;flex-wrap:wrap;gap:8px}
-.compactResults .taskAnalyzing{display:block;margin:0}
-.conversationProgress{display:block;margin:8px 0;color:#827a90;font-size:12px;font-weight:650}
-.chatAssistantMessage.chatTyping .conversationProgress{margin:0}
 .compactResults .followUpComposer{display:grid;gap:8px;margin:18px 0 0;padding:12px;border:1px solid #ece7f3;border-radius:14px;background:#fff}
 .compactResults .followUpComposer label{font-size:12px;font-weight:750;color:#625b6c}
 .compactResults .followUpComposer textarea{width:100%;min-width:0;resize:vertical;border:1px solid #e6e1eb;border-radius:10px;padding:10px;background:#fff;color:#20192f;font:inherit;font-size:13px}

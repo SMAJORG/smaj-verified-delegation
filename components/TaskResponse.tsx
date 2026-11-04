@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 
 export function Analyzing() {
-  return <div className="taskAnalyzing" role="status">Analyzing…</div>;
+  return <span className="taskDots" role="status" aria-label="SMAJ AI is responding"><i/><i/><i/></span>;
 }
 
 export function TypedResponse({ text }: { text: string }) {
