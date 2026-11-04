@@ -115,6 +115,43 @@ test("affirmative seller confirmations continue the uniquely matched saved produ
   assert.match(plan.summary, /Nothing will be sent until you approve/i);
 });
 
+test("Yes contact continues the listed product without depending on the AI question wording", async () => {
+  const router = new MetaServiceRouter(async () => { throw new Error("Contact confirmation must not repeat Meta routing."); });
+  for (const message of ["Yes contact", "Yes, contact", "Okay message", "Please contact"]) {
+    const plan = await router.plan(message, ["store"], [{
+      task: "Find a desk lamp",
+      summary: "Here is an adjustable desk lamp. I can help you reach the seller.",
+      services: ["store"],
+      storeListings: [{ id: "published-product-id", title: "Adjustable desk lamp", sellerId: "seller-id", matched: true }],
+    }]);
+    assert.equal(plan.selectedStoreProduct?.id, "published-product-id");
+    assert.equal(plan.steps[0].approvalRequired, true);
+    assert.match(plan.summary, /Nothing will be sent until you approve/);
+    assert.equal(plan.execution, undefined);
+  }
+});
+
+test("a saved product remains the contact target with other unmatched listings after a short confirmation", async () => {
+  const plan = await new MetaServiceRouter(async () => { throw new Error("Saved product confirmation must not start another search."); }).plan("Yes", ["store"], [{
+    task: "Choose the lamp", summary: "The lamp is selected.", services: ["store"],
+    selectedStoreProduct: { id: "selected-lamp", title: "Adjustable desk lamp", sellerId: "lamp-seller" },
+    storeListings: [{ id: "other-product", title: "Ceramic mug" }, { id: "selected-lamp", title: "Adjustable desk lamp", sellerId: "lamp-seller" }],
+  }]);
+  assert.equal(plan.selectedStoreProduct?.id, "selected-lamp");
+  assert.equal(plan.steps[0].approvalRequired, true);
+});
+
+test("short contact confirmations clarify ambiguous products and never override a cancellation", async () => {
+  const router = new MetaServiceRouter(async () => { throw new Error("Ambiguous contact must not call Meta."); });
+  const context = [{ task: "Find products", summary: "Two products match.", services: ["store" as const], storeListings: [{ id: "lamp", title: "Desk lamp" }, { id: "mug", title: "Ceramic mug" }] }];
+  const ambiguous = await router.plan("Yes contact", ["store"], context);
+  assert.match(ambiguous.summary, /Which product/);
+  assert.deepEqual(ambiguous.steps, []);
+  const cancelled = await router.plan("Yes contact", ["store"], [{ ...context[0], cancelledSellerContact: { recordId: "lamp", productTitle: "Desk lamp" } }]);
+  assert.match(cancelled.summary, /was cancelled/);
+  assert.deepEqual(cancelled.steps, []);
+});
+
 test("a persisted selected product continues after refresh and explicit contact wording", async () => {
   const plan = await new MetaServiceRouter(async () => {
     throw new Error("A saved seller selection must not trigger a new routing search.");

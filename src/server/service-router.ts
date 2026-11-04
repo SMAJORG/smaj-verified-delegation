@@ -68,8 +68,9 @@ export class MetaServiceRouter {
 
     const lastStoreTurn = [...recentContext].reverse().find(turn => turn.storeListings?.length);
     const listings = lastStoreTurn?.storeListings || [];
-    const explicitContact = /\b(?:contact|message|write|ask|reach out to)\b.{0,80}\b(?:seller|owner|them|the owner)\b|\b(?:seller|owner)\b.{0,80}\b(?:contact|message|write|ask|reach out)\b/i.test(request);
     const affirmative = /^\s*(?:yes|yeah|yep|sure|please|go ahead|do it|okay|ok|sounds good|that one|do that)\b/i.test(request);
+    const explicitContact = /\b(?:contact|message|write|ask|reach out to)\b.{0,80}\b(?:seller|owner|them|the owner)\b|\b(?:seller|owner)\b.{0,80}\b(?:contact|message|write|ask|reach out)\b/i.test(request)
+      || (affirmative && /\b(?:contact|message|reach out)\b/i.test(request));
     const declinedContact = /\b(?:don't|do not|not|never|avoid|cancel|stop)\b.{0,60}\b(?:contact|message|seller|owner)\b/i.test(request);
     const lastConversationTurn = recentContext.at(-1);
     const priorAskedToContact = [...recentContext].reverse().slice(0, 3).some(turn =>
@@ -123,7 +124,7 @@ export class MetaServiceRouter {
       };
     }
     const candidates = mentionedListings.length ? mentionedListings
-      : persistedProduct && (explicitContact || (affirmative && priorAskedToContact))
+      : persistedProduct && contactFollowUp
         ? listings.filter(product => product.id === persistedProduct.id).length
           ? listings.filter(product => product.id === persistedProduct.id)
           : [{ ...persistedProduct, matched: true }]
