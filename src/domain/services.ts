@@ -74,12 +74,14 @@ export type ServicePlanStep = {
 export type ServiceRoutePlan = {
   generationStatus?: "pending" | "failed" | "complete";
   generationError?: string;
+  progressStage?: "searching" | "analyzing" | "preparing" | "done";
   ai?: ModelEvidence;
   summaryAi?: ModelEvidence;
   summaryError?: { code: string; message: string };
   selectedStoreProduct?: { id: string; sellerId?: string; title: string; sellerName?: string; pricePi?: number; priceUsdt?: number; quantity?: number; summary?: string };
   matches?: Array<{ serviceId: string; id: string; reason: string }>;
   proposedActions?: LiveAction[];
+  cancelledActions?: Array<{ action: LiveAction; cancelledAt: string }>;
   actionReviewHash?: string;
   execution?: LiveExecution;
   sources?: Array<{ id: string; title: string; url: string; file: string }>;

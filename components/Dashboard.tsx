@@ -23,6 +23,7 @@ import type { ServiceConnection } from "@/src/server/service-connections";
 type View = "home" | "tasks" | "task-detail" | "services" | "approvals" | "receipts" | "profile";
 type ApiResponse = { tasks?: AiTask[]; task?: AiTask; delegation?: DelegationView; delegations?: DelegationView[]; plan?: ServiceRoutePlan; connections?: ServiceConnection[]; message?: string; storageScope?: string };
 type PendingMessage = { id: string; text: string; conversationId: string; persistedConversation: boolean; requestKey: string; status: "sending" | "failed"; error?: string; image?: { mimeType: string; data: string } };
+type ProgressStage = "Thinking…" | "Searching…" | "Analyzing…" | "Preparing…" | "Done";
 const statusLabels: Record<string, string> = { awaiting_approval: "Awaiting approval", approved: "Approved", executing: "Executing", retrying: "Recovering", verifying: "Verifying", verified: "Verified", failed: "Needs attention" };
 const time = (value: string) => new Intl.DateTimeFormat("en", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 
@@ -41,6 +42,7 @@ export default function Dashboard() {
   const [threadTaskIds,setThreadTaskIds]=useState<string[]>([]); const [threadConversationId,setThreadConversationId]=useState<string|null>(null); const loadedConversations=useRef(new Set<string>());
   const discoveryInFlight=useRef(new Set<string>()); const automaticDiscoveryStarted=useRef(new Set<string>());
   const [pendingMessage,setPendingMessage]=useState<PendingMessage|null>(null);
+  const [progressStage,setProgressStage]=useState<ProgressStage|null>(null);
   const [messageImages,setMessageImages]=useState<Record<string,{mimeType:string;data:string}>>({});
   const [candidateName,setCandidateName]=useState(""); const [skills,setSkills]=useState(""); const [selectedJobs,setSelectedJobs]=useState<string[]>([]); const [injectFailure,setInjectFailure]=useState(true); const [busy,setBusy]=useState<string|null>(null); const [error,setError]=useState(""); const [storageScope,setStorageScope]=useState<string|null>(null);
   const notifyError=(failure:unknown,fallback:string)=>{console.error("[SMAJ AI] Request failed:",failure);const detail=failure instanceof Error?failure.message:typeof failure==="string"?failure:"";setError(detail&&detail!=="Failed to fetch"?detail:detail==="Failed to fetch"?`${fallback} Check your connection and try again.`:fallback);};
@@ -105,7 +107,7 @@ export default function Dashboard() {
     const requestTask=retryPending?retryPending.text:service?`${service.name}: ${prompt}`:prompt;
     const optimistic=retryPending||{id:`pending-${crypto.randomUUID()}`,text:requestTask,conversationId:conversationId||crypto.randomUUID(),persistedConversation:Boolean(conversationId),requestKey:crypto.randomUUID(),status:"sending" as const,...(attachedImage?{image:attachedImage}:{})};
     setPendingMessage({...optimistic,status:"sending",error:undefined});
-    setTask(requestTask);setBusy("routing");setError("");
+    setProgressStage("Thinking…");setTask(requestTask);setBusy("routing");setError("");
     if(!conversationId){setDelegation(null);setRoutePlan(null);if(viewRef.current!=="task-detail")navigate("task-detail");}
     try{
       const response=await fetch("/api/tasks",{signal:AbortSignal.timeout(135000),method:"POST",headers:{"Content-Type":"application/json","Idempotency-Key":optimistic.requestKey},body:JSON.stringify({task:requestTask,...(conversationId?{conversationId}:{}),...(attachedImage?{image:{mimeType:attachedImage.mimeType,data:attachedImage.data}}:{})})});
@@ -119,10 +121,12 @@ export default function Dashboard() {
       setPendingMessage({...optimistic,id:payload.task.id,conversationId:id,persistedConversation:true,status:"sending",error:undefined});
       setDelegation(null);setRoutePlan(payload.plan);updateRoute({view:"task-detail",taskId:payload.task.id},true);
       if(!sandbox&&payload.task.plan.services.some(serviceId=>["store","jobs","stream"].includes(serviceId)))await runDiscovery(payload.task);
+      else setProgressStage("Done");
       setPendingMessage(null);
       return true;
     }catch(routeError){
       const message=routeError instanceof Error?routeError.message:"SMAJ AI could not answer. Please try again.";
+      setProgressStage(null);
       setPendingMessage(current=>current?.id===optimistic.id?{...current,status:"failed",error:message}:current);
       notifyError(routeError,"SMAJ AI could not answer. Please retry.");
     }
@@ -135,7 +139,23 @@ export default function Dashboard() {
     if(discoveryInFlight.current.has(saved.id))return;
     automaticDiscoveryStarted.current.add(saved.id);
     discoveryInFlight.current.add(saved.id);
+    setProgressStage("Searching…");
     setBusy("discovery"); setError("");
+    const progressController=new AbortController();
+    const progressTimer=window.setInterval(()=>{
+      void fetch(`/api/tasks/${saved.id}`,{cache:"no-store",signal:progressController.signal}).then(async response=>{
+        if(!response.ok)throw new Error(`Task progress could not be refreshed (HTTP ${response.status}).`);
+        const payload=await response.json() as ApiResponse;
+        if(!payload.task)return;
+        setAiTasks(items=>items.map(item=>item.id===saved.id?payload.task!:item));
+        if(route.taskId===saved.id)setRoutePlan(payload.task.plan);
+        const stage=payload.task.plan.progressStage;
+        if(stage==="searching")setProgressStage("Searching…");
+        else if(stage==="analyzing")setProgressStage("Analyzing…");
+        else if(stage==="preparing")setProgressStage("Preparing…");
+        else if(stage==="done")setProgressStage("Done");
+      }).catch(failure=>{if(!progressController.signal.aborted)console.error("[SMAJ AI] Progress refresh failed:",failure);});
+    },700);
     try {
       if (sandbox) {
         const response = await fetch("/api/auth/search", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({taskId:saved.id, approved:true})});
@@ -149,9 +169,10 @@ export default function Dashboard() {
       const payload = await response.json();
       if (!response.ok) throw new Error((payload.message || "Search failed. Please try again.") + (response.status===429&&response.headers.get("Retry-After")?` Try again in ${response.headers.get("Retry-After")} seconds.`:""));
       if(route.taskId===saved.id)setRoutePlan(payload.plan); setAiTasks(items => items.map(item => item.id === saved.id ? payload.task : item));
+      setProgressStage("Done");
       fetch("/api/connections", {cache:"no-store"}).then(async response=>{if(!response.ok)throw new Error(`Connections could not be refreshed (HTTP ${response.status}).`);return response.json();}).then(payload=>{if(payload?.connections)setConnections(payload.connections);}).catch(failure=>notifyError(failure,"Connections could not be refreshed."));
-    } catch (failure) { notifyError(failure,"Search failed. Please try again."); }
-    finally { discoveryInFlight.current.delete(saved.id); setBusy(null); }
+    } catch (failure) { setProgressStage(null); notifyError(failure,"Search failed. Please try again."); }
+    finally { window.clearInterval(progressTimer); progressController.abort(); discoveryInFlight.current.delete(saved.id); setBusy(null); }
   };
   useEffect(() => {
     if (authenticated !== true || routeRestored.current) return;
@@ -264,6 +285,26 @@ export default function Dashboard() {
       if(route.taskId===target.id)setRoutePlan(payload.plan); setAiTasks(items => items.map(item => item.id === target.id ? payload.task : item));
     } catch (failure) { notifyError(failure,"Live approval failed"); } finally { setBusy(null); }
   };
+  const updateSellerMessage = async (taskId:string, actionId:string, message:string) => {
+    const target=aiTasks.find(item=>item.id===taskId);if(!target)return false;
+    setBusy("seller-message-edit");setError("");
+    try {
+      const response=await fetch(`/api/tasks/${target.id}/review`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({actionId,message,reviewHash:target.plan.actionReviewHash})});
+      const payload=await response.json();if(!response.ok||!payload.task)throw new Error(payload.message||"Seller message could not be updated.");
+      if(route.taskId===target.id)setRoutePlan(payload.task.plan);setAiTasks(items=>items.map(item=>item.id===target.id?payload.task:item));return true;
+    } catch(failure) {notifyError(failure,"Seller message could not be updated.");return false;}
+    finally {setBusy(null);}
+  };
+  const cancelSellerAction = async (taskId:string, actionId:string) => {
+    const target=aiTasks.find(item=>item.id===taskId);if(!target)return;
+    setBusy("seller-action-cancel");setError("");
+    try {
+      const response=await fetch(`/api/tasks/${target.id}/cancel`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({actionId,reviewHash:target.plan.actionReviewHash})});
+      const payload=await response.json();if(!response.ok||!payload.task)throw new Error(payload.message||"Seller action could not be cancelled.");
+      if(route.taskId===target.id)setRoutePlan(payload.task.plan);setAiTasks(items=>items.map(item=>item.id===target.id?payload.task:item));
+    } catch(failure) {notifyError(failure,"Seller action could not be cancelled.");}
+    finally {setBusy(null);}
+  };
   const retryLive = async (taskId:string) => {
     const target=aiTasks.find(item=>item.id===taskId);if(!target)return;
     setBusy("live-retry"); setError("");
@@ -328,10 +369,10 @@ export default function Dashboard() {
     </aside>
     <section className={`workspaceBody ${view==="services"?servicesStyles.body:""} ${view==="home"?"homeBody":"internalBody"}`}>
       {sampleTasksEnabled&&sandbox&&<div className="demoNotice" role="status"><strong>Hackathon Demo</strong><span>Sample data. Simulated actions. Expires {expiresAt?time(new Date(expiresAt).toISOString()):"in one hour"}.</span><button className="secondaryButton" onClick={()=>navigate("tasks")}>Sample tasks</button><button className="secondaryButton" onClick={logout}>Exit demo</button></div>}
-      {view==="home"&&<HomeWorkspace task={task} setTask={setTask} selectedService={selectedService} selectService={setSelectedService} routeTask={routeTask} busy={busy} connectedIds={connectedIds} image={homeImage} setImage={setHomeImage}/>}
+      {view==="home"&&<HomeWorkspace task={task} setTask={setTask} selectedService={selectedService} selectService={setSelectedService} routeTask={routeTask} busy={busy} connectedIds={connectedIds} image={homeImage} setImage={setHomeImage} reportError={(message:string)=>notifyError(message,"The attachment could not be processed.")}/>}
       {view==="services"&&<Services connections={connections} setConnection={setConnection} busy={busy}/>}
       {view==="tasks"&&<TaskHistory tasks={aiTasks} delegations={sampleTasksEnabled?history:[]} busy={busy} openAiTask={saved=>{setDelegation(null);setTask(saved.task);setRoutePlan(saved.plan);navigate("task-detail",{taskId:saved.id});}} deleteAiTask={deleteAiTask} openDelegation={openTask} deleteDelegation={deleteDelegation}/>}
-      {view==="task-detail"&&<Tasks messages={conversationTasks} messageImages={messageImages} pendingMessage={pendingMessage&&(!pendingMessage.persistedConversation?!route.taskId:(activeTask?.conversationId||activeTask?.id)===pendingMessage.conversationId)?pendingMessage:null} retryPendingMessage={retryPendingMessage} routePlan={currentRoutePlan} task={task} busy={busy} conversationId={activeTask?.conversationId||activeTask?.id||(!pendingMessage?.persistedConversation?pendingMessage?.conversationId:undefined)} onFollowUp={(message:string,id:string,retry?:PendingMessage,image?:{mimeType:string;data:string})=>submitTask(message,id,retry,image)} approveLive={approveLive} retryLive={retryLive} refreshActionUpdates={refreshActionUpdates} sandbox={sandbox} reportError={(message:string)=>notifyError(message,"The task reported an error.")} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
+      {view==="task-detail"&&<Tasks messages={conversationTasks} progressStage={progressStage} messageImages={messageImages} pendingMessage={pendingMessage&&(!pendingMessage.persistedConversation?!route.taskId:(activeTask?.conversationId||activeTask?.id)===pendingMessage.conversationId)?pendingMessage:null} retryPendingMessage={retryPendingMessage} routePlan={currentRoutePlan} task={task} busy={busy} conversationId={activeTask?.conversationId||activeTask?.id||(!pendingMessage?.persistedConversation?pendingMessage?.conversationId:undefined)} onFollowUp={(message:string,id:string,retry?:PendingMessage,image?:{mimeType:string;data:string})=>submitTask(message,id,retry,image)} approveLive={approveLive} updateSellerMessage={updateSellerMessage} cancelSellerAction={cancelSellerAction} retryLive={retryLive} refreshActionUpdates={refreshActionUpdates} sandbox={sandbox} reportError={(message:string)=>notifyError(message,"The task reported an error.")} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
       {view==="approvals"&&aiTasks.filter(t=>t.plan.proposedActions?.length&&!t.plan.execution).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Review live actions: {t.task}</button>)}
       {view==="approvals"&&<Approvals items={pending} openTask={openTask}/>}
       {view==="receipts"&&aiTasks.filter(t=>t.plan.execution?.receipt).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Live verified receipt: {t.task}</button>)}
@@ -356,28 +397,30 @@ export function Tasks(props:any){
   return <section className={`tasksView compactResults${props.conversationId||props.pendingMessage?" hasChatComposer":""}`} data-results-design="approved-compact-v2">
     <div className="resultsConversation" ref={resultsScrollArea} aria-label="Results conversation">
     {(props.messages?.length>0||props.pendingMessage)&&<div className="chatThread" aria-label="Conversation messages">
-      {(props.messages||[]).map((message:AiTask)=><article className="chatTurn" key={message.id}>
+      {(props.messages||[]).filter((message:AiTask)=>message.plan.generationStatus!=="pending"&&message.plan.generationStatus!=="failed").map((message:AiTask,index:number,visibleMessages:AiTask[])=><article className="chatTurn" key={message.id}>
         <div className="chatUserMessage">{message.task}{props.messageImages?.[message.id]&&<span className="chatImagePreview"><img src={`data:${props.messageImages[message.id].mimeType};base64,${props.messageImages[message.id].data}`} alt="Attached image"/></span>}{message.task.includes("[Image attached for this turn; image is not saved in conversation history.]")&&<small className="chatAttachmentNote">Image used for this message only; it is not saved in history.</small>}</div>
         <section className={`chatAssistantMessage${props.pendingMessage?.id===message.id&&!message.plan.summary?" chatTyping":""}`}>{props.pendingMessage?.id===message.id&&!message.plan.summary
-          ? <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><span className="taskDots" role="status" aria-label="SMAJ AI is responding"><i/><i/><i/></span></>
+          ? <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><span className="conversationProgress" role="status">{props.progressStage||"Thinking…"}</span></>
           : <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><TypedResponse text={message.plan.summary}/>
-            <LiveTaskResult key={message.id} task={message} busy={Boolean(props.busy)} sandbox={props.sandbox} approve={props.approveLive} retry={props.retryLive} refreshActionUpdates={props.refreshActionUpdates} reportError={props.reportError}/>
+            <LiveTaskResult key={message.id} task={message} busy={Boolean(props.busy)} sandbox={props.sandbox} approve={props.approveLive} updateSellerMessage={props.updateSellerMessage} cancelSellerAction={props.cancelSellerAction} retry={props.retryLive} refreshActionUpdates={props.refreshActionUpdates} reportError={props.reportError}/>
+            {index===visibleMessages.length-1&&props.progressStage&&<div className="conversationProgress" role="status">{props.progressStage}</div>}
           </div></>}</section>
       </article>)}
       {props.pendingMessage&&!props.messages.some((message:AiTask)=>message.id===props.pendingMessage.id)&&<article className="chatTurn" key={props.pendingMessage.id}>
         <div className="chatUserMessage">{props.pendingMessage.text}{props.pendingMessage.image&&<span className="chatImagePreview"><img src={`data:${props.pendingMessage.image.mimeType};base64,${props.pendingMessage.image.data}`} alt="Attached image"/></span>}</div>
         {props.pendingMessage.status==="sending"
-          ? <section className="chatAssistantMessage chatTyping" role="status" aria-label="SMAJ AI is responding"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><span className="taskDots" aria-hidden="true"><i/><i/><i/></span></section>
+          ? <section className="chatAssistantMessage chatTyping"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><span className="conversationProgress" role="status">{props.progressStage||"Thinking…"}</span></section>
           : <div className="chatFailure" role="alert"><span>{props.pendingMessage.error||"SMAJ AI could not answer. Please try again."}</span><button type="button" disabled={Boolean(props.busy)} onClick={props.retryPendingMessage}>Retry</button></div>}
       </article>}
     </div>}
     {!props.messages?.length&&!props.pendingMessage&&props.task&&props.routePlan&&<div className="taskRequest">{props.task}</div>}
     {!props.messages?.length&&!props.pendingMessage&&(props.routePlan||props.busy)&&<section className="resultsResponse"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent">
-      {props.routePlan?.summary?<TypedResponse text={props.routePlan.summary}/>:props.busy&&<span className="taskDots taskDotsInline" role="status" aria-label="SMAJ AI is responding"><i/><i/><i/></span>}
+      {props.routePlan?.summary?<TypedResponse text={props.routePlan.summary}/>:props.busy&&<span className="conversationProgress" role="status">{props.progressStage||"Thinking…"}</span>}
+      {props.routePlan?.summary&&props.progressStage&&<span className="conversationProgress" role="status">{props.progressStage}</span>}
     </div></section>}
     {props.delegation&&<DelegationDetail {...props}/>}
     </div>
-    {props.conversationId&&<ChatComposer key={props.conversationId} busy={Boolean(props.busy)||Boolean(props.pendingMessage)} onSubmit={(message:string,image?:{mimeType:string;data:string})=>props.onFollowUp(message,props.conversationId,undefined,image)}/>}
+    {props.conversationId&&<ChatComposer key={props.conversationId} busy={Boolean(props.busy)||Boolean(props.pendingMessage)} reportError={props.reportError} onSubmit={(message:string,image?:{mimeType:string;data:string})=>props.onFollowUp(message,props.conversationId,undefined,image)}/>}
   </section>;
 }
 
@@ -390,20 +433,18 @@ type SpeechRecognitionLike = {
 };
 type SpeechWindow = Window & {SpeechRecognition?:new()=>SpeechRecognitionLike;webkitSpeechRecognition?:new()=>SpeechRecognitionLike};
 
-function ChatComposer({busy,onSubmit}:{busy:boolean;onSubmit:(message:string,image?:{mimeType:string;data:string})=>Promise<boolean>}){
+function ChatComposer({busy,reportError,onSubmit}:{busy:boolean;reportError:(message:string)=>void;onSubmit:(message:string,image?:{mimeType:string;data:string})=>Promise<boolean>}){
   const [message,setMessage]=useState("");
   const [sending,setSending]=useState(false);
   const [image,setImage]=useState<{mimeType:"image/jpeg"|"image/png"|"image/webp";data:string}|null>(null);
   const [attachmentMenuOpen,setAttachmentMenuOpen]=useState(false);
-  const [mediaState,setMediaState]=useState("");
-  const [mediaError,setMediaError]=useState("");
   const galleryRef=useRef<HTMLInputElement>(null);
   const cameraRef=useRef<HTMLInputElement>(null);
   const attachmentMenuRef=useRef<HTMLDivElement>(null);
   const recognitionRef=useRef<SpeechRecognitionLike|null>(null);
-  const submit=async(event?:React.FormEvent,spokenText?:string)=>{event?.preventDefault();const submitted=(spokenText??message).trim();if((!submitted&&!image)||busy||sending)return;const prompt=submitted||"Describe this image and suggest relevant SMAJ Store search terms.";setMessage("");setSending(true);setMediaError("");setMediaState(image?"Uploading image and processing with SMAJ AI…":"Sending to SMAJ AI…");try{await onSubmit(prompt,image?{mimeType:image.mimeType,data:image.data}:undefined);setImage(null);setMediaState("");}finally{setSending(false);if(!spokenText)setMediaState("");}};
-  const selectImage=(file?:File)=>{setAttachmentMenuOpen(false);setMediaError("");if(!file)return;if(!["image/jpeg","image/png","image/webp"].includes(file.type)){setMediaError("Choose a JPEG, PNG, or WebP image.");return;}if(file.size>4*1024*1024){setMediaError("Images must be smaller than 4 MB.");return;}setMediaState("Preparing image…");const reader=new FileReader();reader.onerror=()=>{setMediaState("");setMediaError("The image could not be read. Try another file.");};reader.onload=()=>{if(typeof reader.result!=="string"){setMediaState("");setMediaError("The image could not be read. Try another file.");return;}setImage({mimeType:file.type as "image/jpeg"|"image/png"|"image/webp",data:reader.result.split(",",2)[1]||""});setMediaState("");};reader.readAsDataURL(file);};
-  const startVoice=()=>{setMediaError("");const SpeechRecognition=(window as SpeechWindow).SpeechRecognition||(window as SpeechWindow).webkitSpeechRecognition;if(!SpeechRecognition){setMediaError("Voice input is not supported in this browser. You can type your message instead.");return;}try{let transcript="";let failed=false;const recognition=new SpeechRecognition();recognition.lang=navigator.language||"en-US";recognition.continuous=false;recognition.interimResults=true;recognition.onresult=event=>{transcript=Array.from(event.results).map(result=>result[0]?.transcript||"").join("").trim();setMessage(transcript);};recognition.onerror=event=>{failed=true;setMediaState("");setMediaError(event.error==="not-allowed"||event.error==="service-not-allowed"?"Microphone permission was denied. Allow microphone access or type your message.":"Voice recognition failed. Please try again or type your message.");};recognition.onend=()=>{recognitionRef.current=null;if(failed)return;if(!transcript){setMediaState("");return;}setMediaState("Transcription ready — sending…");void submit(undefined,transcript);};recognitionRef.current=recognition;setMediaState("Listening…");recognition.start();}catch{setMediaState("");setMediaError("The microphone could not be started. Check browser permissions.");}};
+  const submit=async(event?:React.FormEvent,spokenText?:string)=>{event?.preventDefault();const submitted=(spokenText??message).trim();if((!submitted&&!image)||busy||sending)return;const prompt=submitted||"Describe this image and suggest relevant SMAJ Store search terms.";setMessage("");setSending(true);try{await onSubmit(prompt,image?{mimeType:image.mimeType,data:image.data}:undefined);setImage(null);}finally{setSending(false);}};
+  const selectImage=(file?:File)=>{setAttachmentMenuOpen(false);if(!file)return;if(!["image/jpeg","image/png","image/webp"].includes(file.type)){reportError("Choose a JPEG, PNG, or WebP image.");return;}if(file.size>4*1024*1024){reportError("Images must be smaller than 4 MB.");return;}const reader=new FileReader();reader.onerror=()=>reportError("The image could not be read. Try another file.");reader.onload=()=>{if(typeof reader.result!=="string"){reportError("The image could not be read. Try another file.");return;}setImage({mimeType:file.type as "image/jpeg"|"image/png"|"image/webp",data:reader.result.split(",",2)[1]||""});};reader.readAsDataURL(file);};
+  const startVoice=()=>{const SpeechRecognition=(window as SpeechWindow).SpeechRecognition||(window as SpeechWindow).webkitSpeechRecognition;if(!SpeechRecognition){reportError("Voice input is not supported in this browser. You can type your message instead.");return;}try{let transcript="";let failed=false;const recognition=new SpeechRecognition();recognition.lang=navigator.language||"en-US";recognition.continuous=false;recognition.interimResults=true;recognition.onresult=event=>{transcript=Array.from(event.results).map(result=>result[0]?.transcript||"").join("").trim();setMessage(transcript);};recognition.onerror=event=>{failed=true;reportError(event.error==="not-allowed"||event.error==="service-not-allowed"?"Microphone permission was denied. Allow microphone access or type your message.":"Voice recognition failed. Please try again or type your message.");};recognition.onend=()=>{recognitionRef.current=null;if(!failed&&transcript)void submit(undefined,transcript);};recognitionRef.current=recognition;recognition.start();}catch{reportError("The microphone could not be started. Check browser permissions.");}};
   useEffect(()=>()=>{recognitionRef.current?.stop();},[]);
   useEffect(()=>{
     if(!attachmentMenuOpen)return;
@@ -429,10 +470,9 @@ function ChatComposer({busy,onSubmit}:{busy:boolean;onSubmit:(message:string,ima
       </div>
       <textarea id="ai-chat-message" value={message} onChange={event=>setMessage(event.target.value)} onInput={event=>{event.currentTarget.style.height="auto";event.currentTarget.style.height=`${Math.min(event.currentTarget.scrollHeight,120)}px`;}} onKeyDown={event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();event.currentTarget.form?.requestSubmit();}}} maxLength={2000} rows={1} placeholder="Message SMAJ AI"/>
       <div className="chatComposerActions">
-        <button className="chatSendButton" type="submit" aria-label="Send message" disabled={busy||sending||(!message.trim()&&!image)}>{busy||sending?<span aria-hidden="true">…</span>:<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>}</button>
+        <button className="chatSendButton" type="submit" aria-label="Send message" disabled={busy||sending||(!message.trim()&&!image)}><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
       </div>
     </div>
-    {(mediaState||mediaError)&&<p className={`chatMediaStatus${mediaError?" isError":""}`} role={mediaError?"alert":"status"}>{mediaError||mediaState}</p>}
   </form>;
 }
 

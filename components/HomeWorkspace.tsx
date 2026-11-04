@@ -15,6 +15,7 @@ type Props = {
   connectedIds: Set<ServiceId>;
   image: { mimeType: "image/jpeg" | "image/png" | "image/webp"; data: string; name: string } | null;
   setImage: (image: Props["image"]) => void;
+  reportError: (message: string) => void;
 };
 
 type SpeechRecognitionLike = {
@@ -29,15 +30,13 @@ type SpeechRecognitionLike = {
 };
 type SpeechWindow = Window & { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike };
 
-export default function HomeWorkspace({ task, setTask, selectedService, selectService, routeTask, busy, connectedIds, image, setImage }: Props) {
+export default function HomeWorkspace({ task, setTask, selectedService, selectService, routeTask, busy, connectedIds, image, setImage, reportError }: Props) {
   const input = useRef<HTMLTextAreaElement>(null);
   const gallery = useRef<HTMLInputElement>(null);
   const camera = useRef<HTMLInputElement>(null);
   const attachmentMenu = useRef<HTMLDivElement>(null);
   const recognition = useRef<SpeechRecognitionLike | null>(null);
-  const [imageError, setImageError] = useState("");
   const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
-  const [voiceStatus, setVoiceStatus] = useState("");
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [showAllServices, setShowAllServices] = useState(false);
   useEffect(() => {
@@ -59,22 +58,20 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
   const ready = !selected || status(selected.id) === "Connected";
   const chooseImage = (file?: File) => {
     setAttachmentMenuOpen(false);
-    setImageError("");
     if (!file) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) { setImageError("Choose a JPEG, PNG, or WebP image."); return; }
-    if (file.size > 4 * 1024 * 1024) { setImageError("Images must be smaller than 4 MB."); return; }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) { reportError("Choose a JPEG, PNG, or WebP image."); return; }
+    if (file.size > 4 * 1024 * 1024) { reportError("Images must be smaller than 4 MB."); return; }
     const reader = new FileReader();
-    reader.onerror = () => setImageError("The image could not be read. Try another file.");
+    reader.onerror = () => reportError("The image could not be read. Try another file.");
     reader.onload = () => {
-      if (typeof reader.result !== "string") { setImageError("The image could not be read. Try another file."); return; }
+      if (typeof reader.result !== "string") { reportError("The image could not be read. Try another file."); return; }
       setImage({ mimeType: file.type as "image/jpeg" | "image/png" | "image/webp", data: reader.result.split(",", 2)[1] || "", name: file.name });
     };
     reader.readAsDataURL(file);
   };
   const startVoice = () => {
-    setImageError("");
     const SpeechRecognition = (window as SpeechWindow).SpeechRecognition || (window as SpeechWindow).webkitSpeechRecognition;
-    if (!SpeechRecognition) { setImageError("Voice input is not supported in this browser."); return; }
+    if (!SpeechRecognition) { reportError("Voice input is not supported in this browser."); return; }
     try {
       const current = new SpeechRecognition();
       current.lang = navigator.language || "en-US";
@@ -82,14 +79,12 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
       current.interimResults = true;
       current.onresult = event => setTask(Array.from(event.results).map(result => result[0]?.transcript || "").join("").trim());
       current.onerror = event => {
-        setVoiceStatus("");
-        setImageError(event.error === "not-allowed" || event.error === "service-not-allowed" ? "Microphone permission was denied. Allow microphone access or type your message." : "Voice recognition failed. Please try again or type your message.");
+        reportError(event.error === "not-allowed" || event.error === "service-not-allowed" ? "Microphone permission was denied. Allow microphone access or type your message." : "Voice recognition failed. Please try again or type your message.");
       };
-      current.onend = () => { recognition.current = null; setVoiceStatus(""); };
+      current.onend = () => { recognition.current = null; };
       recognition.current = current;
-      setVoiceStatus("Listening…");
       current.start();
-    } catch { setVoiceStatus(""); setImageError("The microphone could not be started. Check browser permissions."); }
+    } catch { reportError("The microphone could not be started. Check browser permissions."); }
   };
   useEffect(() => {
     if (!attachmentMenuOpen) return;
@@ -121,10 +116,8 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
             <button type="button" role="menuitem" onClick={()=>{setAttachmentMenuOpen(false);startVoice();}}>Microphone</button>
           </div>}
         </div>
-        {selected && <button type="button" className={`${styles.tool} ${styles.apps}`} onClick={() => selectService(null)} aria-label={`Clear ${selected.shortName} context`}><ServiceIcon serviceId={selected.id}/><span>{selected.shortName}</span><span className={styles.clear} aria-hidden="true">×</span></button>}
-        <button type="submit" className={styles.submit} aria-label="Send message" disabled={(!task.trim()&&!image) || busy === "routing"}>{busy === "routing" ? <span className="spinner"/> : <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>}</button>
+        <button type="submit" className={styles.submit} aria-label="Send message" disabled={(!task.trim()&&!image) || busy === "routing"}><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
       </div>
-      {(imageError||voiceStatus)&&<p className={styles.imageError} role={imageError?"alert":"status"}>{imageError||voiceStatus}</p>}
     </form>
     {selected && <div className="serviceContext" role="status"><span><strong>{selected.name}</strong> · {status(selected.id)}{status(selected.id) === "Planned" ? " — integration not available yet." : !ready ? " — use Apps in the header to connect this app." : " — task context selected."}</span></div>}
     <div className={styles.suggestions} aria-label="Suggested requests">

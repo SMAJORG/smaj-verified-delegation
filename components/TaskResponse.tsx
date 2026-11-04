@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 
 export function Analyzing() {
-  return <div className="taskAnalyzing" role="status"><span className="taskDots" aria-hidden="true"><i/><i/><i/></span><span>Analyzing your request…</span></div>;
+  return <div className="taskAnalyzing" role="status">Analyzing…</div>;
 }
 
 export function TypedResponse({ text }: { text: string }) {

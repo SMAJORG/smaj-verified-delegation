@@ -54,6 +54,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const db = workspaceDatabase(request); const store = new AiTaskStore(db);
     const task = store.get(session.actorId, (await context.params).id);
     if (task.plan.execution) throw new AppError("execution_exists", "An approved action contract already exists. Start a new request to change discovery or actions.", 409);
+    store.savePlan(session.actorId, task.id, { ...task.plan, progressStage: "searching" });
     if (consent.resume === true) {
       if (session.authType !== "sso") throw new AppError("unauthorized", "Sign in to SMAJ PI HUB to continue.", 401);
       new SearchSignInStore().consume(request.cookies.get(SEARCH_SIGNIN_COOKIE)?.value || "", session.actorId, task.id);
@@ -62,13 +63,23 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const connections = new ServiceConnectionStore(db);
     connections.list(session.actorId, session.authType);
     for (const id of task.plan.services.filter(id => ["store", "jobs", "stream"].includes(id))) connections.set(session.actorId, id, true);
-    const discovery = await discoverCatalogs(task.plan.services, id => connections.list(session.actorId, session.authType).some(c => c.serviceId === id && c.connected), task.plan.steps);
+    const conversationTurns = store.conversationHistory(session.actorId, task.conversationId || task.id);
+    const selectedProduct = session.authType === "sso" ? task.plan.selectedStoreProduct : undefined;
+    const savedProductTurn = selectedProduct && [...conversationTurns].reverse().find(turn =>
+      turn.plan.discovery?.results.some(result => result.serviceId === "store" && result.status === "read"
+        && result.records.some(record => String((record as { id?: unknown }).id) === selectedProduct.id)),
+    );
+    const reusableDiscovery = savedProductTurn?.plan.discovery;
+    const canReuseSelectedDiscovery = Boolean(selectedProduct && reusableDiscovery
+      && Date.parse(reusableDiscovery.completedAt) >= Date.now() - 30 * 60_000);
+    const discovery = canReuseSelectedDiscovery
+      ? reusableDiscovery!
+      : await discoverCatalogs(task.plan.services, id => connections.list(session.actorId, session.authType).some(c => c.serviceId === id && c.connected), task.plan.steps);
     const steps = task.plan.steps.map(step => {
       const result = discovery.results.find(result => result.serviceId === step.serviceId);
-      return result ? { ...step, status: result.status === "read" ? "ready" as const : "unavailable" as const, reason: result.status === "read" ? "Live catalog GET completed. No write action was authorized by discovery." : result.error || "Catalog unavailable" } : step;
+      return result ? { ...step, status: result.status === "read" ? "ready" as const : "unavailable" as const, reason: result.status === "read" ? canReuseSelectedDiscovery && step.serviceId === "store" ? "Using the exact product from your previous results; SMAJ PI HUB revalidates it before action approval." : "Live catalog GET completed. No write action was authorized by discovery." : result.error || "Catalog unavailable" } : step;
     });
-    const plan = { ...task.plan, steps, discovery, summaryAi: undefined, summaryError: undefined, proposedActions: [], actionReviewHash: undefined, matches: [] } as typeof task.plan;
-    const conversationTurns = store.conversationHistory(session.actorId, task.conversationId || task.id);
+    const plan = { ...task.plan, steps, discovery, progressStage: "analyzing" as const, summaryAi: undefined, summaryError: undefined, proposedActions: [], actionReviewHash: undefined, matches: [] } as typeof task.plan;
     db.transaction(() => {
       if (store.get(session.actorId, task.id).plan.execution) throw new AppError("execution_exists", "A live action contract was approved during discovery", 409);
       store.savePlan(session.actorId, task.id, plan); // Preserve evidence even if Meta is unavailable.
@@ -185,6 +196,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     if (session.authType === "sso" && session.uid && plan.proposedActions?.some(action =>
       (action.serviceId === "jobs" && action.kind === "apply")
       || (action.serviceId === "store" && (action.kind === "contact_seller" || action.kind === "create_order")))) {
+      plan.progressStage = "preparing";
+      store.savePlan(session.actorId, task.id, plan);
       const adapter = new HubActionAdapter();
       const preparedActions = [];
       const preparationErrors: string[] = [];
@@ -212,6 +225,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       };
     }
     if (plan.proposedActions?.length) plan.actionReviewHash = createHash("sha256").update(JSON.stringify({ proofHash: discovery.proofHash, actions: plan.proposedActions })).digest("hex");
+    plan.progressStage = "done";
     const current = store.get(session.actorId, task.id);
     if (current.plan.execution) throw new AppError("execution_exists", "An action approval was recorded during discovery; its contract was preserved", 409);
     return finish(NextResponse.json({ task: store.savePlan(session.actorId, task.id, plan), plan }, { headers: { "Cache-Control": "no-store" } }));

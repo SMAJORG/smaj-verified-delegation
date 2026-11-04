@@ -48,8 +48,6 @@
 .chatSendButton{display:grid;place-items:center;width:38px;height:38px;padding:0;border:0;border-radius:50%;background:#7544d0;color:#fff;box-shadow:0 3px 9px #7544d033}
 .chatSendButton svg{width:19px;height:19px}
 .chatSendButton:disabled{background:#c9bddb;box-shadow:none;cursor:not-allowed}
-.chatMediaStatus{margin:0;color:#6b5388;font-size:12px}
-.chatMediaStatus.isError{color:#a5364b}
 .chatImagePreview{display:block;width:96px;height:96px;margin-top:8px}
 .chatImagePreview img{display:block;width:100%;height:100%;object-fit:cover;border-radius:11px}
 .chatAttachmentNote{display:block;margin-top:6px;color:#7a7184;font-size:11px}
@@ -64,7 +62,7 @@
 .tasksView .taskAnswer{font-size:14px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;min-height:38px}
 .tasksView .taskSrOnly{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .tasksView .taskCursor:after{content:'▍';color:#8657d8;animation:taskBlink .7s infinite}
-.tasksView .taskAnalyzing{display:flex;gap:10px;align-items:center;font-size:12px;color:#827a90;margin:15px 0}
+.tasksView .taskAnalyzing{font-size:12px;font-weight:650;color:#827a90;margin:15px 0}
 .tasksView .taskDots{display:inline-flex;gap:5px;padding:13px;background:#f5f1fc;border-radius:13px}
 .tasksView .taskDots i{width:7px;height:7px;border-radius:50%;background:#8759da;animation:taskBounce 1s infinite}
 .tasksView .taskDots i:nth-child(2){animation-delay:.15s}.tasksView .taskDots i:nth-child(3){animation-delay:.3s}
@@ -114,7 +112,9 @@
 .compactResults .resultsApproval strong,.workspace .compactResults .approvalBar h3{font-size:13px;margin:0}
 .compactResults .resultsApproval p{font-size:12px;color:#665d74;line-height:1.5;margin:7px 0 13px}
 .compactResults .resultsActions{display:flex;flex-wrap:wrap;gap:8px}
-.compactResults .taskAnalyzing{display:block;margin:0}.compactResults .taskAnalyzing>span:last-child{display:block;margin-top:6px}
+.compactResults .taskAnalyzing{display:block;margin:0}
+.conversationProgress{display:block;margin:8px 0;color:#827a90;font-size:12px;font-weight:650}
+.chatAssistantMessage.chatTyping .conversationProgress{margin:0}
 .compactResults .followUpComposer{display:grid;gap:8px;margin:18px 0 0;padding:12px;border:1px solid #ece7f3;border-radius:14px;background:#fff}
 .compactResults .followUpComposer label{font-size:12px;font-weight:750;color:#625b6c}
 .compactResults .followUpComposer textarea{width:100%;min-width:0;resize:vertical;border:1px solid #e6e1eb;border-radius:10px;padding:10px;background:#fff;color:#20192f;font:inherit;font-size:13px}
@@ -181,4 +181,42 @@
   .taskHistoryStatus{grid-column:1;grid-row:2;justify-self:start;margin:0 9px 6px}
   .taskHistoryMenu{grid-column:2;grid-row:1;align-self:start}
   .taskHistoryMenuPopover{right:0}
+}
+.compactResults .sellerApprovalCard{margin:18px 0 8px;padding:17px;border:1px solid #e8def8;border-radius:20px;background:linear-gradient(180deg,#fcfaff 0%,#fff 45%);box-shadow:0 8px 26px #49349c0d}
+.sellerApprovalHeading{display:flex;align-items:center;gap:11px;min-width:0}
+.sellerApprovalCheck{display:grid;flex:none;place-items:center;width:34px;height:34px;border-radius:50%;background:#eee8fb;color:#6941b6;font-size:17px;font-weight:800}
+.sellerApprovalHeading>div{flex:1;min-width:0}
+.sellerApprovalHeading h3{margin:0;color:#29213a;font-size:15px}
+.sellerApprovalHeading p{margin:4px 0 0;color:#81798d;font-size:11px;line-height:1.4}
+.sellerApprovalStatus{flex:none;padding:6px 9px;border:1px solid #f1dfb8;border-radius:20px;background:#fff9ed;color:#8b6527;font-size:10px;font-weight:700}
+.sellerApprovalProduct{display:flex;gap:13px;align-items:center;min-width:0;margin:17px 0 14px;padding:12px;border:1px solid #eee9f4;border-radius:15px;background:#fff}
+.sellerApprovalProduct .taskThumb{flex:none;width:76px;height:76px;margin:0;border-radius:12px}
+.sellerApprovalProduct>div:last-child{min-width:0}
+.sellerApprovalEyebrow{display:block;margin-bottom:4px;color:#8a75b5;font-size:9px;font-weight:800;letter-spacing:.8px;text-transform:uppercase}
+.sellerApprovalProduct h4{margin:0 0 5px;color:#29213a;font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+.sellerApprovalProduct p{margin:3px 0;color:#777082;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+.sellerApprovalProduct .taskViewLink{margin-top:5px;padding:0;border:0;background:transparent;font-size:10px}
+.sellerApprovalMessage{min-width:0;padding:13px;border:1px solid #eae5f0;border-radius:14px;background:#fff}
+.sellerApprovalMessageHeading{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#342b43;font-size:11px}
+.sellerApprovalMessageHeading span{color:#857b91;font-size:10px}
+.sellerApprovalMessage blockquote{margin:9px 0 0;padding-left:10px;border-left:2px solid #b9a2e8;color:#554d61;font-size:12px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.sellerApprovalMessage textarea{display:block;width:100%;min-height:86px;margin-top:9px;padding:10px;border:1px solid #dcd1ee;border-radius:10px;background:#fff;color:#302740;font:inherit;font-size:12px;line-height:1.5;resize:vertical}
+.sellerApprovalMessage textarea:focus{outline:2px solid #c8b5ed;outline-offset:1px}
+.sellerApprovalNotice{margin:11px 1px 13px;color:#756b82;font-size:10px;line-height:1.5}
+.compactResults .sellerApprovalCard .resultsActions{align-items:center}
+.compactResults .sellerApprovalCard .primaryButton,.compactResults .sellerApprovalCard .secondaryButton{min-height:38px;padding:9px 12px}
+.compactResults .sellerApprovalCard .primaryButton{background:#7547d5}
+.compactResults .sellerApprovalCard button:disabled{cursor:not-allowed;opacity:.56}
+.sellerCancelledNotice{margin:16px 0 8px;padding:13px 15px;border:1px solid #e8e4ed;border-radius:14px;background:#faf9fb;color:#51495d}
+.sellerCancelledNotice strong{font-size:12px}
+.sellerCancelledNotice p{margin:5px 0;color:#756e80;font-size:11px;line-height:1.45}
+.sellerCancelledNotice small{color:#918a9c;font-size:9px}
+@media(max-width:480px){
+  .compactResults .sellerApprovalCard{padding:14px;border-radius:17px}
+  .sellerApprovalHeading{align-items:flex-start;flex-wrap:wrap}
+  .sellerApprovalHeading>div{padding-top:2px}
+  .sellerApprovalStatus{margin-left:45px}
+  .sellerApprovalProduct{gap:10px;padding:10px}
+  .sellerApprovalProduct .taskThumb{width:64px;height:64px}
+  .compactResults .sellerApprovalCard .resultsActions>*{flex:1 1 43%;text-align:center}
 }
