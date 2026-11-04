@@ -8,7 +8,7 @@ Our key innovation is Verified Delegation: users review and approve proposed act
 
 Developed by SMAJ Ecosystem for SMAJ PI HUB.
 
-**[Try the public SMAJ AI demo](https://smaj-verified-delegation.onrender.com)** · [Judge walkthrough](DEMO.md) · [Official hackathon video](https://youtube.com/shorts/CmbXa1IvJS4)
+**[Try the public SMAJ AI demo](https://smaj-verified-delegation.onrender.com)** · [Screenshots & demonstration](#screenshots--demonstration) · [Judge walkthrough](DEMO.md) · [Official hackathon video](https://youtube.com/shorts/CmbXa1IvJS4)
 
 The public visitor workspace is separate from the reproducible Verified Delegation runner. It supports anonymous AI requests without Pi authentication. The delegation demo reads published SMAJ Jobs listings, but its job-application writes are local mock actions only. On the linked public deployment, production writes and real Pi payments are disabled; the CLI demo does not submit real applications or make payments.
 
@@ -71,47 +71,105 @@ In the application workflow, recommendations are bounded to at most three and mu
 
 ## Meta AI integration
 
-Powered by Meta AI
+SMAJ AI uses Meta's Model API for conversation, planning, image understanding, and service discovery. Credentials stay on the server.
 
-SMAJ AI integrates Meta's Model API to deliver intelligent conversations, task planning, multimodal assistance, and AI-powered service discovery across SMAJ PI HUB.
+| Capability | Implementation |
+| --- | --- |
+| Account model discovery | `GET https://api.meta.ai/v1/models` |
+| AI responses | `POST https://api.meta.ai/v1/responses` |
+| Preferred default | `muse-spark-1.3`, only when available to the account |
+| Model selection | Compatible account models, selected in the composer and preserved across messages and refreshes |
+| Image understanding | Image attachments sent to the selected compatible Meta model |
+| Voice input | Browser Web Speech recognition, where supported |
+| Voice output | Browser speech synthesis, where supported |
+| Consequential actions | Exact drafts require separate human approval before execution |
 
-Meta AI Integration
+Open the composer’s model menu, choose an available model, and send the next message. Switching models preserves the conversation and pending approvals. Availability is determined by the account catalog; a screenshot is not a promise that the same models will remain available.
 
-Feature| Integration
-Model discovery| "GET https://api.meta.ai/v1/models"
-AI responses| "POST https://api.meta.ai/v1/responses"
-Default model| "muse-spark-1.3" (subject to availability)
-Model selection| Dynamic selection from supported account models
-Image understanding| Supported multimodal Meta models
-Voice input| Browser Web Speech API
-Voice output| Browser speech synthesis
-Authentication| Secure server-side Meta API key
+## Screenshots & Demonstration
 
-Multiple Meta AI Models
+These are genuine browser captures of SMAJ AI, taken on **4 November 2026**. The public workspace captures show live Meta responses and published Store results. The approval walkthrough uses the application’s **existing isolated hackathon simulation**, with fictional Jobs records and local mock submissions. Its receipts verify that simulation; they do not establish external seller contact, employer submissions, or payments.
 
-SMAJ AI is designed to let users choose their preferred AI model directly from the message composer.
+**[Open the live application](https://smaj-verified-delegation.onrender.com)** · **[Watch the official demonstration](https://youtube.com/shorts/CmbXa1IvJS4)** · [Capture details and reproduction steps](docs/screenshots/README.md)
 
-The model selector retrieves compatible models from the connected Meta account, allowing users to switch models without starting a new conversation.
+### 1. Homepage and AI workspace
 
-How it works:
+The public homepage introduces Verified Delegation. Enter the workspace to compose a request, choose a model, and explore SMAJ PI HUB services. The homepage’s illustrative examples are presentation content, not execution evidence.
 
-1. Open the model dropdown inside the SMAJ AI message input.
-2. View the available Meta AI models.
-3. Select a preferred model.
-4. Send a message using the selected model.
-5. Switch models anytime while keeping conversation history.
+![SMAJ AI public homepage and Verified Delegation introduction](docs/screenshots/01-public-homepage.png)
 
-Model availability depends on the connected Meta API account. Only supported and authorized models should be displayed.
+![Actual SMAJ AI workspace with the compact composer and service launcher](docs/screenshots/02-ai-workspace.png)
 
-Secure and Responsible Integration
+<details>
+<summary>View the mobile workspace</summary>
 
-All Meta API requests are processed through SMAJ AI's secure backend. API credentials are never exposed to users.
+<img src="docs/screenshots/05-mobile-workspace.png" alt="SMAJ AI workspace at a 390-pixel mobile viewport, showing the compact composer and service grid" width="390" />
 
-Model-generated responses are validated by the application, while Verified Delegation maintains explicit human approval for consequential actions.
+</details>
 
-## Screenshots
+### 2. Account-backed Meta model selection
 
-No application screenshots are included yet. A genuine capture could not be made in the current environment because its installed headless Chromium exits before opening a page. No illustrations or fabricated images are presented as functional screenshots. The public demo and [official demonstration video](https://youtube.com/shorts/CmbXa1IvJS4) are available to view the interface.
+The menu displays models returned by the configured Meta account, their descriptions, and the selected model. This capture shows Muse Spark 1.3 selected; available models can change.
+
+![Genuine Meta model selector populated from the configured account catalog](docs/screenshots/03-meta-model-selector.png)
+
+<details>
+<summary>View the model selector inside a conversation</summary>
+
+![Meta model menu in the fixed chat composer](docs/screenshots/09-chat-model-selector.png)
+
+</details>
+
+### 3. Image upload and real AI conversation
+
+A real image file is selected through the attachment input and previewed before sending. The following Results capture shows the public deployment’s actual Meta response describing the uploaded SMAJ logo. Images are used for the current message and are not saved in conversation history.
+
+![Uploaded SMAJ logo preview in the actual message composer](docs/screenshots/07-image-upload-preview.png)
+
+![Actual Meta image description in the SMAJ AI chat and Results interface](docs/screenshots/08-ai-chat-image-response.png)
+
+### 4. Voice and attachment controls
+
+The attachment menu exposes image upload, camera, and microphone options. The Results menu exposes voice playback controls. **Browser support is required:** the capture browser had no speech-recognition API and no installed synthesis voices. These screenshots demonstrate the actual controls; successful dictation and audible playback were not verified in this environment.
+
+![Actual attachment menu with Upload Image, Camera, and Microphone options](docs/screenshots/06-image-voice-attachment-menu.png)
+
+![Actual Results voice menu with Play Voice, Pause, Stop, and Mute controls](docs/screenshots/11-results-voice-controls.png)
+
+### 5. Service discovery and published product results
+
+The launcher distinguishes connected services from planned integrations. The Results page below comes from a real Store search and includes published product images, Pi prices, seller details, and product links. Listed quantities are catalog data, not a seller’s confirmation of availability.
+
+![Expanded SMAJ PI HUB service launcher and connection status legend](docs/screenshots/04-service-discovery.png)
+
+![Actual Store discovery results with published listings and real product details](docs/screenshots/10-store-discovery-results.png)
+
+<details>
+<summary>View Results on mobile</summary>
+
+<img src="docs/screenshots/16-mobile-results.png" alt="Actual Store search results and fixed chat composer at a 390-pixel mobile viewport" width="390" />
+
+</details>
+
+### 6. Verified Delegation: plan → human approval → execution
+
+**Isolated simulation:** these captures use the built-in fictional Jobs opportunities and sample planner, not live Meta-generated job recommendations. The user reviews the prepared cover notes, selects actions, and explicitly approves them. Execution remains a separate step.
+
+![Built-in demo plan with exact application drafts, selected actions, and the human approval gate](docs/screenshots/12-delegation-plan-human-approval.png)
+
+![Approved demo contract with a separate Run approved actions button and retry demonstration option](docs/screenshots/13-delegation-approved-execution.png)
+
+### 7. Independent verification and SHA-256 proof
+
+After running the approved sample actions, the workflow records local mock submissions, demonstrates a controlled failure and retry, and independently checks the persisted outcomes. The actual Results activity and exported receipt are shown below. The exported JSON’s SHA-256 digest was independently recomputed and matched the stored proof hash.
+
+![Actual verified demo Results and activity log showing approval, mock execution, recovery, verification, and receipt issuance](docs/screenshots/14-delegation-verified-results.png)
+
+![Application-exported verification certificate with simulation scope, verification checks, and proof hash](docs/screenshots/15-sha256-proof-receipt.png)
+
+Inspect the actual exported [JSON receipt](docs/demo/verified-delegation-receipt.json) or [PDF certificate](docs/demo/verified-delegation-receipt.pdf). A SHA-256 digest makes changes to this proof detectable; it is not a digital signature or independent proof of an external action.
+
+For live seller workflows, missing authorized delivery configuration preserves the approved draft as **“Approved — delivery unavailable.”** No successful seller delivery is represented by the screenshots above.
 
 ## Installation and local setup
 
@@ -155,7 +213,7 @@ npm test
 npm run typecheck
 npm run build
 ```
-##Future Development
+## Future development
 
 SMAJ AI aims to expand Verified Delegation across SMAJ PI HUB services, including commerce, employment, education, and other digital utilities.
 
@@ -163,4 +221,4 @@ Planned improvements include deeper Meta AI tool integration, expanded service c
 
 Our vision is simple:
 
-Not just AI answers. AI actions you can verify..
+Not just AI answers. AI actions you can verify.

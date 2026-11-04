@@ -1,0 +1,69 @@
+{
+  "proof": {
+    "schemaVersion": "1.0",
+    "receiptId": "18912cdf-8f70-4c13-8905-2dab3b0f4b3a",
+    "delegationId": "6d869d59-8d70-49c0-9130-a8c1b75cf4f7",
+    "outcome": "verified",
+    "verifiedAt": "2026-11-04T06:44:19.056Z",
+    "planner": {
+      "provider": "Hackathon simulation",
+      "model": "sample-data"
+    },
+    "scope": {
+      "action": "mock_job_application",
+      "productionSideEffects": false,
+      "realPiPayment": false
+    },
+    "source": {
+      "system": "SMAJ PI HUB",
+      "mode": "simulated",
+      "endpoint": "demo://fictional-opportunities"
+    },
+    "approval": {
+      "required": true,
+      "approvedAt": "2026-11-04T06:44:13.544Z"
+    },
+    "recovery": {
+      "transientFailures": 1,
+      "retries": 1,
+      "duplicatesPrevented": 0
+    },
+    "checks": [
+      {
+        "name": "explicit_approval",
+        "passed": true,
+        "evidence": "2026-11-04T06:44:13.544Z"
+      },
+      {
+        "name": "all_selected_actions_persisted",
+        "passed": true,
+        "evidence": "2/2 mock submissions found"
+      },
+      {
+        "name": "idempotency_keys_unique",
+        "passed": true,
+        "evidence": "2 unique action keys"
+      },
+      {
+        "name": "production_writes_disabled",
+        "passed": true,
+        "evidence": "Only the local mock_submissions table was mutated"
+      }
+    ],
+    "actions": [
+      {
+        "jobId": "sample-frontend",
+        "mockSubmissionId": "06a53e72-ee77-40cc-933f-3826bc1ab7eb",
+        "status": "verified",
+        "idempotencyKey": "e185a1db9f27a290df61771545415d11e504e792f03952da6a39119d878f0a84"
+      },
+      {
+        "jobId": "sample-platform",
+        "mockSubmissionId": "d61f0687-8ad9-4af7-9f0c-d3c883448345",
+        "status": "verified",
+        "idempotencyKey": "a73d86c19f5819d3853a90dc4a4963d46c874689d5f6f0ee8c88d737a910c6a9"
+      }
+    ]
+  },
+  "proofHash": "8a37a20f4df545c9361dc62372758855f59520b52664349a8486ea7b532bfbf0"
+}

@@ -1,0 +1,60 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 2092 >>
+stream
+BT /F1 18 Tf 54 790.00 Td (SMAJ AI) Tj ET
+BT /F1 15 Tf 54 770.20 Td (VERIFICATION CERTIFICATE) Tj ET
+BT /F1 11 Tf 54 734.60 Td (Receipt ID: 18912cdf-8f70-4c13-8905-2dab3b0f4b3a) Tj ET
+BT /F1 11 Tf 54 717.60 Td (Delegation ID: 6d869d59-8d70-49c0-9130-a8c1b75cf4f7) Tj ET
+BT /F1 11 Tf 54 700.60 Td (Task: N/A) Tj ET
+BT /F1 11 Tf 54 683.60 Td (Model: sample-data) Tj ET
+BT /F1 11 Tf 54 666.60 Td (Status: verified) Tj ET
+BT /F1 11 Tf 54 649.60 Td (Approved At: 2026-11-04T06:44:13.544Z) Tj ET
+BT /F1 11 Tf 54 632.60 Td (Verified At: 2026-11-04T06:44:19.056Z) Tj ET
+BT /F1 11 Tf 54 615.60 Td (Recovery: 1 transient, 1 retries, 0 duplicates prevented) Tj ET
+BT /F1 11 Tf 54 581.60 Td (Scope) Tj ET
+BT /F1 11 Tf 54 564.60 Td (Action: mock_job_application) Tj ET
+BT /F1 11 Tf 54 547.60 Td (Production side effects: false) Tj ET
+BT /F1 11 Tf 54 530.60 Td (Real Pi payment: false) Tj ET
+BT /F1 11 Tf 54 513.60 Td (Mode: simulated) Tj ET
+BT /F1 12 Tf 54 479.60 Td (MOCK ACTIONS ONLY) Tj ET
+BT /F1 11 Tf 54 462.20 Td (No real job applications were submitted.) Tj ET
+BT /F1 11 Tf 54 445.20 Td (No production writes or real Pi payments were executed.) Tj ET
+BT /F1 11 Tf 54 411.20 Td (Verification Checks) Tj ET
+BT /F1 11 Tf 54 394.20 Td (- explicit_approval: PASS — 2026-11-04T06:44:13.544Z) Tj ET
+BT /F1 11 Tf 54 377.20 Td (- all_selected_actions_persisted: PASS — 2/2 mock submissions found) Tj ET
+BT /F1 11 Tf 54 360.20 Td (- idempotency_keys_unique: PASS — 2 unique action keys) Tj ET
+BT /F1 11 Tf 54 343.20 Td (- production_writes_disabled: PASS — Only the local mock_submissions table was mutated) Tj ET
+BT /F1 11 Tf 54 309.20 Td (Submitted Actions) Tj ET
+BT /F1 11 Tf 54 292.20 Td (- sample-frontend: verified) Tj ET
+BT /F1 11 Tf 54 275.20 Td (- sample-platform: verified) Tj ET
+BT /F1 10 Tf 54 241.20 Td (Proof hash: 8a37a20f4df545c9361dc62372758855f59520b52664349a8486ea7b532bfbf0) Tj ET
+BT /F1 11 Tf 54 207.20 Td (This receipt is a tamper-evident verification record.) Tj ET
+BT /F1 11 Tf 54 190.20 Td (It is not a cryptographic digital signature unless signing is separately implemented.) Tj ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000244 00000 n 
+0000000314 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+2458
+%%EOF
