@@ -1,61 +1,110 @@
-> Current repair and live/demo status: [LIVE_INTEGRATION_REPAIR.md](LIVE_INTEGRATION_REPAIR.md). The original mock executor remains; a separately approved Jobs submission and Store saved-product queue is now implemented behind server-side switches.
+# SMAJ AI — Verified Delegation
 
-# SMAJ Verified Delegation
+SMAJ AI uses Meta models to plan bounded work across SMAJ PI HUB services. People review proposed actions before approval; the Verified Delegation demo records only simulated job applications, checks the persisted outcomes, and issues a hash-backed receipt.
 
-An independent Meta-powered AI agent that turns authorized goals into bounded actions, verifies actual outcomes, and issues evidence-backed proof receipts. It complements SMAJ PI HUB without modifying or shipping inside the existing application.
+**Live demo:** [ai.smajpihub.com](https://ai.smajpihub.com) · **Demo instructions:** [DEMO.md](DEMO.md)
 
-## Live Meta configuration
+> **Demo boundary:** The public AI workspace and the Verified Delegation walkthrough use live Meta planning when configured. The delegation walkthrough reads published Jobs listings but writes only local mock submissions. It does not submit real job applications or make Pi payments.
 
-Use the exact model ID returned by your Meta account catalog. The verified live model for this deployment is `muse-spark-1.3`.
+## Hackathon judging flow
 
-- `META_API_KEY`: server-side Meta API key
-- `META_MODEL=muse-spark-1.3`
-- `max_output_tokens`: at least `1500` for live AI responses and task planning
+1. Open the [live demo](https://ai.smajpihub.com) and choose **Try Live Demo** to enter an isolated public workspace without Pi sign-in.
+2. To see the Verified Delegation proof flow locally, follow [DEMO.md](DEMO.md) to start the app and run `npm run demo`. This requires Meta credentials, a supported model ID, and access to the published Jobs endpoint.
+3. Review the generated recommendations and drafts. The script pauses at a human-approval gate; press Enter only when ready to approve the selected **mock** actions.
+4. The runner injects one transient failure, retries idempotently, and checks that every selected mock action was persisted exactly once.
+5. Inspect the event log and final SHA-256 proof digest. The receipt records the approval, recovery, verification checks, source, and that production writes and Pi payments were disabled.
 
-The backend validates the model against `GET https://api.meta.ai/v1/models` and then sends `POST https://api.meta.ai/v1/responses` with the configured model and `max_output_tokens`.
+The public workspace is useful for trying general AI requests and supported read-only catalog searches. It is separate from the CLI delegation demonstration; do not assume public workspace history is seeded with delegation examples.
 
-## Milestone Two
+## Verified Delegation workflow
 
-- Live read-only SMAJ Jobs discovery and Meta account-confirmed models planning
-- Signed HttpOnly sessions, actor-isolated tasks, and mandatory idempotency keys
-- Explicit human approval before every mock execution
-- Real-time server events, persistent task history, and restart-safe run leases
-- Stable `better-sqlite3` persistence with WAL and transactional state changes
-- Controlled failure recovery, duplicate prevention, independent verification, and SHA-256 proof receipts
-
-Production Jobs submissions and real Pi payments remain disabled by design.
-
-## SMAJ PI HUB integration
-
-SMAJ AI provides public Meta AI questions and approved published-catalog searches without a Pi account. Visitors receive isolated, expiring anonymous workspaces with rate and concurrency limits. Protected account actions use SMAJ PI HUB single sign-on: PiHub issues a one-time code, SMAJ AI exchanges it server-to-server for a short-lived signed token, and then creates its own HttpOnly session. Pi access tokens, wallet credentials, and Meta API keys are never sent to SMAJ AI or shared between the two applications.
-
-- Connected read-only services: SMAJ Jobs and SMAJ Store, each behind a user-controlled connection. SSO users start with nothing connected.
-- Task history, approvals, and proof receipts stay isolated per authenticated PiHub user.
-- Real Pi payments and production write operations remain disabled (`SMAJ_REAL_PI_PAYMENTS_ENABLED=false`, `SMAJ_PRODUCTION_WRITES_ENABLED=false`) until separately approved.
-
-## Configure
-
-Copy `.env.example` to `.env.local`. Hackathon sign-in and preloaded sample history need no API key or access token. New AI requests require a server-side Meta API key and an account-confirmed META_MODEL. Keep `SMAJ_DEMO_AUTH_ENABLED=true` and use a writable `SMAJ_HACKATHON_DB_PATH` separate from `SMAJ_DELEGATION_DB_PATH`.
-
-For regular users, retain the SMAJ PI HUB SSO configuration and a strong `SMAJ_AI_SESSION_SECRET`. Live AI planning requires `META_API_KEY` (or `MODEL_API_KEY`) and `META_MODEL`. The model must appear in that key's `GET https://api.meta.ai/v1/models` response. Existing access-token sign-in remains available with a random `SMAJ_DEMO_ACCESS_TOKEN` of at least 16 characters. Secret files are excluded from Git.
-
-## Run
-
-```powershell
-npm.cmd install
-npm.cmd run dev
+```text
+Goal + candidate skills
+        ↓
+Read published SMAJ Jobs listings
+        ↓
+Meta produces bounded job recommendations and draft cover notes
+        ↓
+Person reviews and explicitly approves selected drafts
+        ↓
+Local mock submissions (no production application call)
+        ↓
+Independent check of persisted actions and unique idempotency keys
+        ↓
+Proof receipt + SHA-256 digest
 ```
 
-Open `http://localhost:3000` and select **Try Live Demo**. See `DEMO.md` for the judging flow.
+The plan is limited to at most three recommendations and to IDs from the fetched Jobs data. Execution requires explicit approval and uses idempotency keys to prevent duplicate mock submissions. The verifier compares selected job IDs with persisted submissions and checks key uniqueness before issuing the receipt. A controlled retry is available in the demo; interrupted runs use a short lease and can safely resume. The receipt is evidence of this simulated workflow, not proof of an external job application.
 
-Demo visitors receive a unique, restricted workspace with fictional jobs and three sample tasks (awaiting approval, approved, and verified). The random opaque session credential is stored only in an HttpOnly, SameSite=Strict cookie (Secure on HTTPS); only its SHA-256 hash and one-hour expiry are stored server-side. Logout revokes the session and deletes its sample workspace. Expired workspaces are cleaned up when new demos start. Disabling `SMAJ_DEMO_AUTH_ENABLED` also immediately blocks existing hackathon sessions.
+## Meta integration currently implemented
 
-Demo catalog reads use fictional samples. New AI answers and Jobs plans use the real Meta API; missing or invalid credentials produce an explicit error. Preloaded historical plans are labeled sample data. Execution records local mock submissions only. Demo routes use a separate SQLite database and per-session ownership checks; no demo identity is mapped to a real account or administrative role. Workspaces are capped at 50 tasks, and at most 1,000 demo sessions may be active. Regular SSO and access-token sessions continue to use the existing production database. Deploy with persistent storage; multiple instances must share compatible SQLite storage or use a single application instance for this backend.
+Only the server-side Meta Model API is used:
 
-## Validate
+| Purpose | Implemented request |
+| --- | --- |
+| Account model catalog | `GET https://api.meta.ai/v1/models` |
+| Generate a response | `POST https://api.meta.ai/v1/responses` |
+| Default model ID | `muse-spark-1.3` (overridable with `META_MODEL`) |
 
-```powershell
-npm.cmd test
-npm.cmd run typecheck
-npm.cmd run build
+Each generation first reads the model catalog, then sends the prompt, selected model, `max_output_tokens`, and `store: false` to the Responses endpoint. `META_API_KEY` (or the legacy `MODEL_API_KEY`) is sent only in the server-side Authorization header. The catalog is used to log a mismatch warning; this code does not strictly reject a model before the Responses request. The provider may reject an unsupported ID. The default model ID is a code default, not a claim that a particular account or deployment has been verified.
+
+Meta is asked to return JSON as ordinary response text. The application parses that text and validates/normalizes it; it does **not** send a native JSON Schema/structured-output setting such as `response_format`. The planner expects `{ summary, recommendations: [{ jobId, score, rationale, coverNote }] }`; the service router expects `{ summary, services, steps, warnings }`. There is no Meta tool/function-calling schema or model tool-call dispatch implemented. Routing and execution are handled by SMAJ AI after parsing the model's text.
+
+## Architecture
+
+- **Next.js app and route handlers** provide the browser workspace, sessions, task planning, approvals, and task events.
+- **Meta client and planners** call the two Meta endpoints above and validate generated text into application plans.
+- **SMAJ PI HUB published Jobs endpoint** is read-only for the Verified Delegation planner; the endpoint is configured by `SMAJ_JOBS_API_URL`.
+- **SQLite (`better-sqlite3`, WAL)** persists delegations, events, idempotency records, mock submissions, and receipts. Keep production and hackathon/demo databases separate.
+- **Verifier and receipt exporter** check persisted results and expose the receipt as JSON or PDF in the app. A receipt hash is a tamper-evident digest of the recorded receipt; it does not attest to an external side effect.
+
+Production Jobs submissions and real Pi payments remain disabled by default. See [INTEGRATION.md](INTEGRATION.md) for broader integration status and security boundaries.
+
+## Screenshots
+
+UI screenshots are not currently committed. The repository's existing [service atlas](public/assets/smaj-service-atlas.png) is an illustration, not a screenshot, so it is not presented as an app capture. Use the [live demo](https://ai.smajpihub.com) for the current visual reference.
+
+## Setup
+
+Requirements: Node.js 24 and npm.
+
+```sh
+npm ci
+cp .env.example .env.local
 ```
+
+Set these server-side values in `.env.local` for new live Meta requests:
+
+```dotenv
+META_API_KEY=your_meta_api_key
+META_MODEL=exact_model_id_from_your_account_catalog
+SMAJ_DEMO_ACCESS_TOKEN=generate_a_random_secret_at_least_16_characters
+```
+
+Use an exact model ID available to the configured key from `GET https://api.meta.ai/v1/models`. Keep `.env.local` private and never use a `NEXT_PUBLIC_` prefix for credentials. Do not copy real production secrets into a local judging setup. The `.env.example` contains placeholders and safe demo defaults; SSO and production-write credentials are not needed for the public workspace or the local demo script unless those capabilities are explicitly enabled.
+
+Start the app:
+
+```sh
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). To run the end-to-end delegation demo, keep the app running and, in another terminal, run:
+
+```sh
+npm run demo
+```
+
+The script uses `SMAJ_DEMO_ACCESS_TOKEN` for its local session. Set `DEMO_AUTO_APPROVE=1` only for an unattended run; otherwise it pauses for explicit approval. It reads the live published Jobs catalog and uses Meta for planning, while mock records are written to the configured local SQLite database. See [DEMO.md](DEMO.md) for the full script configuration and limitations.
+
+## Checks
+
+```sh
+npm test
+npm run typecheck
+npm run build
+```
+
+## Suggested next improvement
+
+Prototype one narrowly scoped Meta function call—`search_public_jobs`—backed by the existing read-only Jobs adapter. First confirm tool calling is supported by the selected account/model and Responses API. Keep the tool allowlisted, cap its inputs/results, show the proposed call to the person, and retain the existing explicit approval gate for any simulated action.

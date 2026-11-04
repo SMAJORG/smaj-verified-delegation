@@ -1,45 +1,50 @@
-# Reproducible Hackathon Demo
+# Verified Delegation demo
 
-## Judge walkthrough (no credentials required)
+The reproducible walkthrough uses the real Meta Model API and the read-only published SMAJ Jobs catalog, then writes only local mock application records. It does not submit applications to employers or make Pi payments.
 
-1. Open the application and select **Try Live Demo**.
-2. Select **Sample tasks** to see an awaiting-approval task, an approved task, and a verified result.
-3. Open the awaiting-approval task, review the fictional opportunities and drafts, and approve the selected mock actions.
-4. Execute the approved plan with recovery enabled. Inspect its audit trail, independent checks, and downloadable proof receipt.
-5. Try creating another task, or connect the sample Store catalog. New AI requests use the real Meta API; sensitive actions remain simulated.
-6. Select **Exit demo** to revoke the session and delete its sample workspace. Each new visit gets a fresh workspace; sessions expire after one hour.
+## Judge walkthrough
 
-Sign-in and preloaded sample history require no API key or access token. New AI requests require a server-side META_API_KEY (or MODEL_API_KEY) and META_MODEL confirmed by that account catalog. If unavailable, an explicit error is shown; no replacement AI response is generated. Keep `SMAJ_DEMO_AUTH_ENABLED=true`. Demo data lives in `SMAJ_HACKATHON_DB_PATH` (default `./data/hackathon-demo.sqlite`), which must differ from production storage. The UI and receipts identify simulated data and planning.
+1. Configure the app as described below and start it with `npm run dev`.
+2. In a second terminal, start the runner with `npm run demo`. It creates a signed session, fetches current published Jobs records, and asks Meta to rank up to two matches and draft application notes.
+3. Review the recommendation summary. Unless `DEMO_AUTO_APPROVE=1`, the runner pauses for explicit human approval before continuing.
+4. The runner injects one transient failure, retries with the same idempotency key, and verifies that the approved mock submissions are persisted without duplicates.
+5. Review the event log, verification result, and SHA-256 proof digest. The receipt records the simulation boundary and verification checks.
 
-## Existing live-planning script
-
-The optional script below uses the live read-only SMAJ Jobs endpoint and Meta account-confirmed models, but writes only mock application records to the regular application's local database. It retains the existing access-token authentication and is separate from the judge walkthrough.
+The public browser demo at [ai.smajpihub.com](https://ai.smajpihub.com) is a separate anonymous workspace for trying supported AI requests. Do not assume its task history is preloaded with the CLI workflow's sample records.
 
 ## Configure
 
-Set these values in `.env.local` without committing them:
+Copy `.env.example` to `.env.local` and set server-side values:
 
 ```dotenv
-META_API_KEY=your_meta_key
-META_MODEL=exact_id_from_your_account_catalog
+META_API_KEY=your_meta_api_key
+META_MODEL=exact_model_id_from_your_account_catalog
 SMAJ_DEMO_ACCESS_TOKEN=a_random_secret_at_least_16_characters
 ```
+
+Use an exact model ID available to the configured key from `GET https://api.meta.ai/v1/models`. The application reads that catalog but only logs a mismatch before trying the Responses request; it does not strictly validate the ID locally. Keep credentials out of Git and never add a `NEXT_PUBLIC_` prefix.
+
+For the demonstration, use a writable local SQLite path, keep it separate from production data, and ensure the running app and script use the same `SMAJ_DEMO_ACCESS_TOKEN`. The default Jobs source is the published SMAJ PI HUB endpoint configured by `SMAJ_JOBS_API_URL`.
 
 ## Launch
 
 Terminal one:
 
-```powershell
-npm.cmd run dev
+```sh
+npm ci
+npm run dev
 ```
 
-Terminal two:
+Terminal two, with the same token available in the process environment:
 
-```powershell
-$env:SMAJ_DEMO_ACCESS_TOKEN="the_same_random_secret"
-npm.cmd run demo
+```sh
+SMAJ_DEMO_ACCESS_TOKEN=your_local_demo_token npm run demo
 ```
 
-The script pauses at the human approval gate, injects one controlled transient failure, follows persisted progress, and prints the final SHA-256 proof digest. Set `DEMO_AUTO_APPROVE=1` for an unattended judging run.
+For unattended automation only:
 
-The browser dashboard at `http://localhost:3000` provides the same flow with signed-session login, live server events, persistent history, approval controls, restart recovery, and downloadable proof receipts.
+```sh
+SMAJ_DEMO_ACCESS_TOKEN=your_local_demo_token DEMO_AUTO_APPROVE=1 npm run demo
+```
+
+The browser workspace itself can be opened at [http://localhost:3000](http://localhost:3000). Public AI requests require server-side Meta credentials. Production submissions and real Pi payments remain disabled by default.
