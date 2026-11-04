@@ -1,8 +1,12 @@
 # SMAJ AI — Verified Delegation
 
-**SMAJ AI — Verified Delegation** is a Meta-powered assistant for planning bounded work across the SMAJ ecosystem. It brings together conversational AI, read-only service discovery, explicit human approval, and independently checked records of simulated actions.
+SMAJ AI — Verified Delegation is an AI-powered assistant developed by SMAJ Ecosystem for SMAJ PI HUB, using Meta's Model API to connect natural-language requests with practical digital services.
 
-**Developed by SMAJ Ecosystem for SMAJ PI HUB.**
+Users can discover products, explore job opportunities, and access entertainment recommendations through one intelligent interface.
+
+Our key innovation is Verified Delegation: users review and approve proposed actions before execution, while the system maintains transparent records and verifiable proof of supported actions.
+
+Developed by SMAJ Ecosystem for SMAJ PI HUB.
 
 **[Try the public SMAJ AI demo](https://smaj-verified-delegation.onrender.com)** · [Judge walkthrough](DEMO.md) · [Official hackathon video](https://youtube.com/shorts/CmbXa1IvJS4)
 
