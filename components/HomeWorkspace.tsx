@@ -17,11 +17,27 @@ type Props = {
   setImage: (image: Props["image"]) => void;
 };
 
+type SpeechRecognitionLike = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: Event & { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onerror: ((event: Event & { error: string }) => void) | null;
+  onend: (() => void) | null;
+};
+type SpeechWindow = Window & { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike };
+
 export default function HomeWorkspace({ task, setTask, selectedService, selectService, routeTask, busy, connectedIds, image, setImage }: Props) {
   const input = useRef<HTMLTextAreaElement>(null);
   const gallery = useRef<HTMLInputElement>(null);
   const camera = useRef<HTMLInputElement>(null);
+  const attachmentMenu = useRef<HTMLDivElement>(null);
+  const recognition = useRef<SpeechRecognitionLike | null>(null);
   const [imageError, setImageError] = useState("");
+  const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState("");
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [showAllServices, setShowAllServices] = useState(false);
   useEffect(() => {
@@ -42,6 +58,7 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
   };
   const ready = !selected || status(selected.id) === "Connected";
   const chooseImage = (file?: File) => {
+    setAttachmentMenuOpen(false);
     setImageError("");
     if (!file) return;
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) { setImageError("Choose a JPEG, PNG, or WebP image."); return; }
@@ -54,26 +71,60 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
     };
     reader.readAsDataURL(file);
   };
+  const startVoice = () => {
+    setImageError("");
+    const SpeechRecognition = (window as SpeechWindow).SpeechRecognition || (window as SpeechWindow).webkitSpeechRecognition;
+    if (!SpeechRecognition) { setImageError("Voice input is not supported in this browser."); return; }
+    try {
+      const current = new SpeechRecognition();
+      current.lang = navigator.language || "en-US";
+      current.continuous = false;
+      current.interimResults = true;
+      current.onresult = event => setTask(Array.from(event.results).map(result => result[0]?.transcript || "").join("").trim());
+      current.onerror = event => {
+        setVoiceStatus("");
+        setImageError(event.error === "not-allowed" || event.error === "service-not-allowed" ? "Microphone permission was denied. Allow microphone access or type your message." : "Voice recognition failed. Please try again or type your message.");
+      };
+      current.onend = () => { recognition.current = null; setVoiceStatus(""); };
+      recognition.current = current;
+      setVoiceStatus("Listening…");
+      current.start();
+    } catch { setVoiceStatus(""); setImageError("The microphone could not be started. Check browser permissions."); }
+  };
+  useEffect(() => {
+    if (!attachmentMenuOpen) return;
+    const closeOnOutsideClick = (event: PointerEvent) => { if (!attachmentMenu.current?.contains(event.target as Node)) setAttachmentMenuOpen(false); };
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setAttachmentMenuOpen(false); };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => { document.removeEventListener("pointerdown", closeOnOutsideClick); document.removeEventListener("keydown", closeOnEscape); };
+  }, [attachmentMenuOpen]);
+  useEffect(() => () => recognition.current?.stop(), []);
 
   return <section className={`homeView launcherHome ${styles.root}`}>
     <p className={styles.eyebrow}>YOUR WORKSPACE</p><h1 className={styles.title}>What can I help you do?</h1>
     <form className={`centralComposer compactComposer ${styles.composer}`} onSubmit={routeTask} aria-label="Create an AI task" aria-busy={busy === "routing"}>
       <label className="visuallyHidden" htmlFor="ai-task">Your AI task</label>
       <div className={styles.promptInput}>
-        <textarea ref={input} id="ai-task" value={task} onChange={event => setTask(event.target.value)} placeholder="" maxLength={1900} rows={3} />
+        {image&&<div className={styles.imagePreview}><img src={`data:${image.mimeType};base64,${image.data}`} alt="Attached image preview"/><button type="button" aria-label="Remove attached image" onClick={()=>setImage(null)}>×</button></div>}
+        <textarea ref={input} id="ai-task" value={task} onChange={event => setTask(event.target.value)} onInput={event=>{event.currentTarget.style.height="auto";event.currentTarget.style.height=`${Math.min(event.currentTarget.scrollHeight,240)}px`;}} placeholder="" maxLength={1900} rows={1} />
         {!task && <span className={styles.rotatingPlaceholder} aria-hidden="true"><span key={placeholderIndex}>{SMAJ_SERVICES[placeholderIndex].example}…</span></span>}
       </div>
       <div className={styles.toolbar}>
         <input ref={gallery} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={event => { chooseImage(event.target.files?.[0]); event.target.value = ""; }} />
         <input ref={camera} hidden type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={event => { chooseImage(event.target.files?.[0]); event.target.value = ""; }} />
-        <button type="button" className={styles.mediaButton} aria-label="Attach an image from gallery" onClick={() => gallery.current?.click()}>＋ Image</button>
-        <button type="button" className={styles.mediaButton} aria-label="Take a photo" onClick={() => camera.current?.click()}>Camera</button>
+        <div className={styles.attachmentMenuWrap} ref={attachmentMenu}>
+          <button type="button" className={styles.attachButton} aria-label="Add an attachment" aria-expanded={attachmentMenuOpen} aria-haspopup="menu" disabled={busy==="routing"} onClick={()=>setAttachmentMenuOpen(open=>!open)}>+</button>
+          {attachmentMenuOpen&&<div className={styles.attachmentMenu} role="menu" aria-label="Add an attachment">
+            <button type="button" role="menuitem" onClick={()=>{setAttachmentMenuOpen(false);gallery.current?.click();}}>Upload Image</button>
+            <button type="button" role="menuitem" onClick={()=>{setAttachmentMenuOpen(false);camera.current?.click();}}>Camera</button>
+            <button type="button" role="menuitem" onClick={()=>{setAttachmentMenuOpen(false);startVoice();}}>Microphone</button>
+          </div>}
+        </div>
         {selected && <button type="button" className={`${styles.tool} ${styles.apps}`} onClick={() => selectService(null)} aria-label={`Clear ${selected.shortName} context`}><ServiceIcon serviceId={selected.id}/><span>{selected.shortName}</span><span className={styles.clear} aria-hidden="true">×</span></button>}
-        <button type="submit" className={styles.submit} disabled={(!task.trim()&&!image) || busy === "routing"}>{busy === "routing" ? <><span className="spinner"/>Asking AI…</> : <>Ask SMAJ AI <span aria-hidden="true">↗</span></>}</button>
+        <button type="submit" className={styles.submit} aria-label="Send message" disabled={(!task.trim()&&!image) || busy === "routing"}>{busy === "routing" ? <span className="spinner"/> : <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>}</button>
       </div>
-      {image&&<div className={styles.imagePreview}><img src={`data:${image.mimeType};base64,${image.data}`} alt={`Preview of ${image.name}`}/><span>{image.name}</span><button type="button" aria-label="Remove attached image" onClick={()=>setImage(null)}>×</button></div>}
-      {imageError&&<p className={styles.imageError} role="alert">{imageError}</p>}
-      <small className={styles.mediaDisclosure}>Images are sent to the configured Meta model when you submit them and are not saved in history.</small>
+      {(imageError||voiceStatus)&&<p className={styles.imageError} role={imageError?"alert":"status"}>{imageError||voiceStatus}</p>}
     </form>
     {selected && <div className="serviceContext" role="status"><span><strong>{selected.name}</strong> · {status(selected.id)}{status(selected.id) === "Planned" ? " — integration not available yet." : !ready ? " — use Apps in the header to connect this app." : " — task context selected."}</span></div>}
     <div className={styles.suggestions} aria-label="Suggested requests">

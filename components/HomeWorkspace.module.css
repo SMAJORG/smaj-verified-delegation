@@ -8,31 +8,36 @@
 }
 .root.root > .eyebrow { margin: 0; color: #7951c7; font-size: 12px; letter-spacing: 2px; font-weight: 700; }
 .root.root > .title { text-align: left; font-size: clamp(25px, 6.7vw, 32px); letter-spacing: -1px; line-height: 1.25; margin: 14px 0 26px; font-weight: 600; }
-.root.root .composer { min-width: 0; padding: 17px; border: 1px solid #e9e3f1; border-radius: 23px; background: #fff; box-shadow: 0 8px 25px #3121520a; }
+.root.root .composer { min-width: 0; padding: 10px 12px; border: 1px solid #e9e3f1; border-radius: 21px; background: #fff; box-shadow: 0 8px 25px #3121520a; }
 .root.root .composer:focus-within { border-color: #a98ce4; box-shadow: 0 0 0 3px #7951c714; }
-.root.root .promptInput { position: relative; min-width: 0; }
-.root.root .composer textarea { display: block; width: 100%; min-height: 72px; height: 72px; max-height: 240px; padding: 0; border: 0; outline: 0; resize: vertical; background: transparent; color: #201a2d; font: inherit; font-size: 16px; line-height: 1.5; }
+.root.root .promptInput { position: relative; display: grid; min-width: 0; }
+.root.root .composer textarea { display: block; width: 100%; min-height: 42px; height: 42px; max-height: 240px; padding: 8px 4px; border: 0; outline: 0; resize: none; background: transparent; color: #201a2d; font: inherit; font-size: 15px; line-height: 1.5; }
 .root.root .composer textarea::placeholder { color: #96919f; }
 .rotatingPlaceholder { position: absolute; inset: 0; overflow: hidden; color: #96919f; font-size: 16px; line-height: 1.5; pointer-events: none; }
 .rotatingPlaceholder > span { display: block; animation: placeholderRise .45s cubic-bezier(.2,.7,.25,1) both; }
 @keyframes placeholderRise { from { opacity: 0; transform: translateY(65%); } to { opacity: 1; transform: translateY(0); } }
-.root.root .toolbar { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.root.root .toolbar { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
 .root.root .tool { display: flex; align-items: center; justify-content: center; gap: 6px; height: 42px; min-width: 42px; padding: 0 12px; border: 1px solid #eee9f4; border-radius: 14px; background: #fff; color: #625a70; font-size: 14px; }
 .root.root .apps { background: #f7f3fc; border-color: #f7f3fc; min-width: 0; max-width: 100%; width: fit-content; justify-content: flex-start; }
 .root.root .apps > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .root.root .apps > span:first-child:not(:last-child) { flex: none; }
 .root.root .apps > .clear { flex: none; }
 .root.root .apps :global(.serviceBadge) { width: 22px; height: 22px; margin: 0; border-radius: 6px; flex: none; }
-.root.root .submit { display: flex; min-width: 0; flex: 0 1 auto; align-items: center; justify-content: center; gap: 7px; margin-left: auto; min-height: 44px; padding: 0 17px; border: 0; border-radius: 14px; background: #7951c7; color: #fff; font-size: 14px; font-weight: 750; white-space: nowrap; box-shadow: none; transition: background .15s, box-shadow .15s; }
+.root.root .submit { display: grid; width: 38px; height: 38px; flex:none; place-items:center; margin-left: auto; padding: 0; border: 0; border-radius: 50%; background: #7544d0; color: #fff; box-shadow: 0 3px 9px #7544d033; transition: background .15s, box-shadow .15s; }
+.root.root .submit svg { width: 19px; height: 19px; }
 .root.root .submit:hover:not(:disabled) { background: #6840b6; box-shadow: 0 3px 12px #7951c725; }
 .root.root .submit:disabled { opacity: .5; cursor: not-allowed; }
-.root.root .mediaButton { min-height: 40px; padding: 0 10px; border: 1px solid #eee9f4; border-radius: 12px; background: #fff; color: #625a70; font-size: 12px; white-space: nowrap; }
-.imagePreview { display: flex; align-items: center; gap: 9px; margin-top: 12px; padding: 7px; border: 1px solid #eee8f5; border-radius: 12px; background: #faf8fd; color: #665a73; font-size: 12px; }
-.imagePreview img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; }
-.imagePreview span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.imagePreview button { width: 34px; height: 34px; margin-left: auto; border: 0; border-radius: 50%; background: #eee8f5; color: #50317a; font-size: 20px; }
+.root.root .attachmentMenuWrap { position: relative; flex:none; }
+.root.root .attachButton { display:grid; place-items:center; width:36px; height:36px; padding:0; border:0; border-radius:50%; background:#f1ebfa; color:#623b97; font-size:24px; line-height:1; }
+.root.root .attachButton:disabled { opacity:.55; cursor:not-allowed; }
+.root.root .attachmentMenu { position:absolute; z-index:22; bottom:calc(100% + 9px); left:0; display:grid; gap:3px; width:min(220px,calc(100vw - 36px)); padding:6px; border:1px solid #ece7f3; border-radius:14px; background:#fff; box-shadow:0 12px 32px #21143124; }
+.root.root .attachmentMenu button { min-height:42px; padding:0 12px; border:0; border-radius:9px; background:transparent; color:#30253c; text-align:left; font:inherit; font-size:13px; }
+.root.root .attachmentMenu button:hover,.root.root .attachmentMenu button:focus-visible { background:#f6f1fb; outline:none; }
+.imagePreview { position:relative; width:68px; height:68px; margin:4px 0 2px 3px; }
+.imagePreview img { display:block; width:100%; height:100%; border:1px solid #eee8f5; border-radius:11px; object-fit:cover; }
+.imagePreview button { position:absolute; top:-7px; right:-7px; display:grid; place-items:center; width:22px; height:22px; padding:0; border:2px solid #fff; border-radius:50%; background:#3c3345; color:#fff; font-size:15px; line-height:1; }
 .imageError { margin: 8px 0 0; color: #a5364b; font-size: 12px; }
-.mediaDisclosure { display: block; margin-top: 8px; color: #8a8292; font-size: 10px; line-height: 1.4; }
+.root.root .imageError { margin:6px 4px 2px; }
 .root.root button:focus-visible { outline: 3px solid #a98ce4; outline-offset: 3px; }
 .suggestions { display: flex; width: 100%; gap: 8px; min-width: 0; max-width: 100%; box-sizing: border-box; overflow-x: auto; overscroll-behavior-x: contain; touch-action: pan-x pan-y; padding: 17px 3px 5px; scrollbar-width: none; -ms-overflow-style: none; }
 .suggestions::-webkit-scrollbar { display: none; }
@@ -50,11 +55,9 @@
 .showAll { display: block; min-height: 38px; margin: 10px auto 0; padding: 8px 14px; border: 1px solid #e9e3f1; border-radius: 100px; background: #fff; color: #7951c7; font-size: 12px; font-weight: 700; }
 .showAll:hover { border-color: #cbb9e8; background: #fcfaff; }
 @media (max-width: 360px) {
-  .root.root .composer { padding: 13px; }
-  .root.root .toolbar { flex-wrap: wrap; gap: 6px; }
+  .root.root .composer { padding: 8px 10px; }
+  .root.root .toolbar { gap: 5px; }
   .root.root .tool { padding: 0 9px; }
-  .root.root .mediaButton { padding: 0 8px; }
-  .root.root .submit { gap: 5px; padding: 0 8px; font-size: 11px; }
   .root.root .service { font-size: 9px; }
 }
 
