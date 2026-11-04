@@ -24,7 +24,7 @@ export const apiError = (error: unknown) => {
   return NextResponse.json({ error: "internal_error", message: "The request could not be completed", requestId }, { status: 500 });
 };
 
-export async function readJsonBody(request: Request, maxBytes: number) {
+export async function readJsonBody(request: Request, maxBytes: number, maxBytesWithoutImage?: number) {
   const reader = request.body?.getReader();
   if (!reader) throw new AppError("invalid_request", "A JSON request is required.", 400);
   const chunks: Uint8Array[] = [];
@@ -43,8 +43,13 @@ export async function readJsonBody(request: Request, maxBytes: number) {
   try {
     const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("object required");
+    if (maxBytesWithoutImage !== undefined && size > maxBytesWithoutImage && !Object.hasOwn(body, "image")) {
+      throw new AppError("request_too_large", "The request is too large.", 413);
+    }
     return body as Record<string, unknown>;
-  } catch {
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    if (maxBytesWithoutImage !== undefined && size > maxBytesWithoutImage) throw new AppError("request_too_large", "The request is too large.", 413);
     throw new AppError("invalid_request", "Send a valid JSON request.", 400);
   }
 }

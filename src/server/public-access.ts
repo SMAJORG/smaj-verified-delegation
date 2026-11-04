@@ -63,6 +63,6 @@ export function beginPublicWork(request: Request, session: {authType:string;acto
  })();
  return ()=>{db.prepare("DELETE FROM public_work WHERE id = ?").run(id);};
 }
-export async function publicJson(request: Request, maxBytes = 16000) {
- return readJsonBody(request, maxBytes);
+export async function publicJson(request: Request, maxBytes = 16000, maxBytesWithoutImage?: number) {
+ return readJsonBody(request, maxBytes, maxBytesWithoutImage);
 }

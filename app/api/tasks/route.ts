@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     requireSameOrigin(request);
     const session = requireActorSession(request);
     actorId = session.actorId;
-    const body = await (session.authType === "public" ? publicJson(request, MAX_REQUEST_BYTES) : readJsonBody(request, MAX_REQUEST_BYTES));
+    const body = await (session.authType === "public" ? publicJson(request, MAX_REQUEST_BYTES, 16_000) : readJsonBody(request, MAX_REQUEST_BYTES, 16_000));
     if (typeof body.task !== "string" || !body.task.trim() || body.task.length > 2000) throw new AppError("invalid_task", "Enter a message of 1 to 2,000 characters", 400);
     let image: { mimeType: "image/jpeg" | "image/png" | "image/webp"; data: string } | undefined;
     if (body.image !== undefined) {

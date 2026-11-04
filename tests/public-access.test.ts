@@ -81,6 +81,7 @@ test("public car, software Jobs, services and Hub questions use Meta without SSO
   assert.equal((await ask(req("/api/tasks",strangerCookie,{task:"Follow up on that search",conversationId:first.conversationId}))).status,404);
   assert.equal(reads,2);assert.equal(modelCalls,7);assert.equal((await (await sessionInfo(req("/api/auth/session",cookie))).json()).authenticated,false);
   const huge=await ask(req("/api/tasks",cookie,{task:"x".repeat(17000)}));assert.equal(huge.status,413);assert.equal(modelCalls,7);
+  const invalid=await ask(req("/api/tasks",cookie,{task:17}));assert.equal(invalid.status,400);
  }finally{globalThis.fetch=original;process.env=old;}
 });
 

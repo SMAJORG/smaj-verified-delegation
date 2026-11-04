@@ -12,13 +12,13 @@ for (const service of ["jobs", "store", "stream"] as const) {
     const fetcher = (async (_url, init) => {
       assert.equal(init?.method, "GET"); assert.equal(init?.redirect, "error");
       assert.deepEqual(init?.headers, { Accept: "application/json" });
-      const key = service === "jobs" ? "jobs" : service === "store" ? "products" : "results";
+      const key = service === "jobs" ? "jobs" : service === "store" ? "products" : "videos";
       return Response.json({ [key]: [{ employerId: "real-employer", id: "a", _id: "a", title: "Published item", posterUrl: "https://image.tmdb.org/t/p/w500/poster.jpg", mediaType: "movie", privateEmail: "private" }] });
     }) as typeof fetch;
     const adapter = service === "jobs" ? new SmajJobsReadAdapter(undefined, fetcher) : service === "store" ? new SmajStoreReadAdapter(undefined, fetcher) : new SmajStreamReadAdapter(undefined, fetcher);
     const records = adapter instanceof SmajJobsReadAdapter ? await adapter.listJobs() : adapter instanceof SmajStoreReadAdapter ? await adapter.listProducts() : await adapter.listContent();
     assert.equal(records.length, 1); assert.ok(!JSON.stringify(records).includes("privateEmail"));
-    const bad = (async () => Response.json({ jobs: [{}], products: [{}], results: [{}] })) as typeof fetch;
+    const bad = (async () => Response.json({ jobs: [{}], products: [{}], videos: [{}] })) as typeof fetch;
     await assert.rejects(() => service === "jobs" ? new SmajJobsReadAdapter(undefined, bad).listJobs() : service === "store" ? new SmajStoreReadAdapter(undefined, bad).listProducts() : new SmajStreamReadAdapter(undefined, bad).listContent());
   });
 }
