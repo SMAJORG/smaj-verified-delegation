@@ -23,9 +23,13 @@ The public visitor workspace is separate from the reproducible Verified Delegati
 
 ## The problem and our approach
 
-People increasingly ask AI systems to coordinate multi-step tasks, but a useful recommendation should not silently become an external action. A system also needs to distinguish model-generated suggestions from authoritative records and make it possible to review what actually happened.
+Traditional AI assistants provide answers, but users often must complete actions manually across different applications.
 
-SMAJ AI plans bounded work from a person's request, grounds discovery in allowlisted published catalog data, and presents proposed actions for explicit approval. The hackathon workflow executes only simulated job applications, verifies persisted records independently, and produces a SHA-256 proof receipt. The receipt is evidence of the recorded simulation, not proof of an external side effect.
+SMAJ AI brings AI assistance closer to real-world services by connecting natural-language requests with published SMAJ PI HUB listings.
+
+Our Verified Delegation approach separates recommendations from consequential actions. Users review proposed actions and explicitly approve them before execution.
+
+The hackathon demonstration showcases this approach through a controlled job-application simulation with independent verification and SHA-256 proof receipts.
 
 ## Hackathon judging flow
 
