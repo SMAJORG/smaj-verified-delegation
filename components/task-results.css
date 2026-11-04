@@ -1,11 +1,11 @@
 /* Intentionally scoped to the AI Tasks & Results view. */
 .workspace .tasksView{max-width:620px;margin:auto;color:#20192f}
-.workspace:has(.tasksView.hasChatComposer){height:100dvh;min-height:0;overflow:hidden}
-.workspace .workspaceBody.internalBody:has(.hasChatComposer){height:calc(100dvh - 60px);min-height:0;flex:1;display:flex;overflow:hidden;padding:0 clamp(16px,4vw,48px)}
+.workspace:has(.tasksView.hasChatComposer){height:100dvh;min-height:100dvh;overflow:hidden}
+.workspace .workspaceBody.internalBody:has(.hasChatComposer){height:auto;min-height:0;flex:1 1 0%;display:flex;overflow:hidden;padding:0 clamp(16px,4vw,48px)}
 .workspace .workspaceBody .tasksView.hasChatComposer{max-width:680px}
-.tasksView.hasChatComposer{display:flex;height:100%;min-height:0;flex-direction:column}
-.resultsConversation{min-width:0;max-width:100%;overflow-wrap:anywhere}
-.tasksView.hasChatComposer .resultsConversation{flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:smooth;scrollbar-width:none}
+.tasksView.hasChatComposer{display:flex;width:100%;height:100%;min-height:0;flex:1;flex-direction:column;overflow:hidden}
+.resultsConversation{display:flex;min-width:0;max-width:100%;min-height:0;flex-direction:column;overflow-wrap:anywhere}
+.tasksView.hasChatComposer .resultsConversation{flex:1 1 0%;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:smooth;scrollbar-width:none}
 .tasksView.hasChatComposer .resultsConversation::-webkit-scrollbar{display:none;width:0;height:0}
 .resultsVoiceMenuWrap{position:relative;z-index:22;flex:none;margin-left:auto}
 .resultsVoiceMenuButton{display:grid;place-items:center;width:36px;height:36px;padding:0;border:1px solid #eee8f5;border-radius:50%;background:#fff;color:#5d4382;font-size:23px;line-height:1}
@@ -26,13 +26,14 @@
 .chatFailure{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0 0 43px;padding:10px 12px;border:1px solid #f0c5cc;border-radius:12px;background:#fff2f4;color:#9d3348;font-size:12px;line-height:1.45}
 .chatFailure button{flex:none;padding:7px 12px;border:0;border-radius:9px;background:#7547d5;color:#fff;font-size:11px;font-weight:700}
 .chatFailure button:disabled{opacity:.6}
-.chatComposer{position:sticky;z-index:19;bottom:0;display:grid;flex:none;grid-template-columns:minmax(0,1fr);gap:4px;width:100%;margin:0 auto;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border:1px solid #e6e1eb;border-radius:20px;background:#fff;box-shadow:none}
+.chatComposer{position:relative;z-index:19;bottom:auto;display:grid;flex:none;grid-template-columns:minmax(0,1fr);gap:4px;width:100%;margin:0 auto;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border:1px solid #e6e1eb;border-radius:20px;background:#fff;box-shadow:none}
 .chatComposer textarea{flex:1;width:100%;min-width:0;max-height:120px;min-height:40px;resize:vertical;border:0;border-radius:10px;padding:9px 5px;background:transparent;color:#20192f;font:inherit;font-size:14px;line-height:1.4}
 .chatComposer textarea:focus{outline:2px solid #8657d866;border-color:#8657d8}
 .chatComposer .primaryButton{flex:none;min-width:62px;min-height:44px;border-radius:12px;font-size:12px}
-@media(max-width:760px){.workspace .workspaceBody.internalBody:has(.hasChatComposer){height:calc(100dvh - 56px);padding:0 15px}}
+@media(max-width:760px){.workspace .workspaceBody.internalBody:has(.hasChatComposer){height:auto;min-height:0;padding:0 15px}}
 @media(max-width:480px){.chatThread{gap:20px}.chatUserMessage{max-width:94%;font-size:13px}.chatAssistantMessage{gap:8px}}
-.chatComposerInputRow{display:flex;align-items:flex-end;gap:7px;min-width:0}
+.chatComposerInputRow{display:flex;align-items:flex-end;gap:7px;min-width:0;border:0;background:transparent;box-shadow:none}
+.chatComposerInputRow::before,.chatComposerInputRow::after{display:none;content:none}
 .chatComposerInputRow textarea{width:100%;min-height:40px;max-height:120px;resize:vertical}
 .chatAttachmentMenuWrap{position:relative;flex:none;align-self:flex-end}
 .chatAttachButton{display:grid;place-items:center;width:36px;height:36px;margin:2px 0;border:0;border-radius:50%;background:transparent;color:#623b97;font-size:24px;font-weight:400;line-height:1;cursor:pointer}
@@ -100,7 +101,7 @@
 @media(prefers-reduced-motion:reduce){.tasksView .taskDots i,.tasksView .taskCursor:after{animation:none}.tasksView .taskResultCarousel{scroll-behavior:auto}}
 /* Unique root and higher specificity keep the approved layout independent of legacy page rules. */
 .workspace .workspaceBody .compactResults{max-width:426px;margin:0 auto;min-width:0;color:#20192f;overflow-wrap:anywhere}
-.workspace .workspaceBody .compactResults.hasChatComposer{width:100%;max-width:680px;height:100%;overflow:hidden}
+.workspace .workspaceBody .compactResults.hasChatComposer{width:100%;max-width:680px;height:100%;min-height:0;overflow:hidden}
 .workspace .compactResults .resultsEyebrow{font-size:11px;letter-spacing:1.6px;font-weight:750;color:#8a75b5;margin:0 0 7px}
 .workspace .workspaceBody .compactResults>h1{font-size:27px;line-height:1.15;letter-spacing:-1px;margin:0 0 18px}
 .compactResults .resultsResponse{display:flex;align-items:flex-start;gap:10px;margin-top:22px}

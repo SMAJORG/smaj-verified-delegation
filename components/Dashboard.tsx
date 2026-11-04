@@ -375,9 +375,9 @@ export function Tasks(props:any){
     {!props.messages?.length&&!props.pendingMessage&&(props.routePlan||props.busy)&&<section className="resultsResponse"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent">
       {props.routePlan?.summary?<TypedResponse text={props.routePlan.summary}/>:props.busy&&<span className="taskDots taskDotsInline" role="status" aria-label="SMAJ AI is responding"><i/><i/><i/></span>}
     </div></section>}
-    {props.conversationId&&<ChatComposer key={props.conversationId} busy={Boolean(props.busy)||Boolean(props.pendingMessage)} onSubmit={(message:string,image?:{mimeType:string;data:string})=>props.onFollowUp(message,props.conversationId,undefined,image)}/>}
     {props.delegation&&<DelegationDetail {...props}/>}
     </div>
+    {props.conversationId&&<ChatComposer key={props.conversationId} busy={Boolean(props.busy)||Boolean(props.pendingMessage)} onSubmit={(message:string,image?:{mimeType:string;data:string})=>props.onFollowUp(message,props.conversationId,undefined,image)}/>}
   </section>;
 }
 
