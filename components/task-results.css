@@ -15,29 +15,35 @@
 .chatFailure button{flex:none;padding:7px 12px;border:0;border-radius:9px;background:#7547d5;color:#fff;font-size:11px;font-weight:700}
 .chatFailure button:disabled{opacity:.6}
 .chatComposer{position:fixed;z-index:19;right:0;bottom:0;left:0;display:flex;align-items:flex-end;gap:8px;width:min(680px,100%);margin:0 auto;padding:12px 14px calc(12px + env(safe-area-inset-bottom));border-top:1px solid #ece7f3;background:#ffffffed;backdrop-filter:blur(14px)}
-.chatComposer textarea{flex:1;width:100%;min-width:0;max-height:120px;min-height:44px;resize:vertical;border:1px solid #e6e1eb;border-radius:14px;padding:12px;background:#fff;color:#20192f;font:inherit;font-size:14px;line-height:1.4}
+.chatComposer textarea{flex:1;width:100%;min-width:0;max-height:120px;min-height:40px;resize:vertical;border:0;border-radius:10px;padding:9px 5px;background:transparent;color:#20192f;font:inherit;font-size:14px;line-height:1.4}
 .chatComposer textarea:focus{outline:2px solid #8657d866;border-color:#8657d8}
 .chatComposer .primaryButton{flex:none;min-width:62px;min-height:44px;border-radius:12px;font-size:12px}
 @media(max-width:480px){.workspace .workspaceBody:has(.hasChatComposer){padding-bottom:145px}.chatThread{gap:20px}.chatUserMessage{max-width:94%;font-size:13px}.chatAssistantMessage{gap:8px}.chatComposer{padding-inline:10px}}
-.chatComposerContent{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;width:100%;min-width:0}
-.chatComposer .chatComposerContent textarea{width:100%;min-height:44px;max-height:120px;resize:vertical}
-.chatComposerActions{display:flex;align-items:center;gap:7px;min-width:0}
-.chatMediaButton{min-height:40px;padding:0 10px;border:1px solid #e8e1f0;border-radius:12px;background:#fff;color:#5d4382;font-size:12px;font-weight:650;white-space:nowrap}
+.chatComposerContent{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:7px;width:100%;min-width:0;padding:8px;border:1px solid #e6e1eb;border-radius:20px;background:#fff;box-shadow:0 4px 18px #2416330b}
+.chatComposerInputRow{display:flex;align-items:flex-end;gap:7px;min-width:0}
+.chatComposerInputRow textarea{width:100%;min-height:40px;max-height:120px;resize:vertical}
+.chatAttachmentMenuWrap{position:relative;flex:none;align-self:flex-end}
+.chatAttachButton{display:grid;place-items:center;width:36px;height:36px;margin:2px 0;border:0;border-radius:50%;background:#f1ebfa;color:#623b97;font-size:24px;font-weight:400;line-height:1;cursor:pointer}
+.chatAttachButton:disabled{opacity:.55;cursor:not-allowed}
+.chatAttachmentMenu{position:absolute;z-index:22;bottom:calc(100% + 10px);left:0;display:grid;gap:3px;width:min(220px,calc(100vw - 32px));padding:6px;border:1px solid #ece7f3;border-radius:14px;background:white;box-shadow:0 12px 32px #21143124}
+.chatAttachmentMenu button{min-height:42px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:#30253c;text-align:left;font:inherit;font-size:13px;cursor:pointer}
+.chatAttachmentMenu button:hover,.chatAttachmentMenu button:focus-visible{background:#f6f1fb;outline:none}
+.chatComposerImage{position:relative;width:68px;height:68px;margin:2px 0 0 2px}
+.chatComposerImage img{display:block;width:100%;height:100%;object-fit:cover;border:1px solid #ebe5f2;border-radius:12px}
+.chatComposerImage button{position:absolute;top:-7px;right:-7px;display:grid;place-items:center;width:22px;height:22px;padding:0;border:2px solid white;border-radius:50%;background:#3c3345;color:#fff;font-size:15px;line-height:1;cursor:pointer}
+.chatComposerActions{display:flex;align-items:center;gap:6px;flex:none}
+.chatMediaButton{min-height:36px;padding:0 9px;border:1px solid #e8e1f0;border-radius:11px;background:#fff;color:#5d4382;font-size:12px;font-weight:650;white-space:nowrap}
 .chatMediaButton:disabled{opacity:.55;cursor:not-allowed}
-.chatComposerActions .primaryButton{margin-left:auto}
+.chatComposerActions .primaryButton{min-width:52px;min-height:38px;margin-left:0;border-radius:12px}
 .chatMediaStatus{grid-column:1/-1;margin:0;color:#6b5388;font-size:12px}
 .chatMediaStatus.isError{color:#a5364b}
-.chatMediaDisclosure{color:#8a8292;font-size:10px;line-height:1.4}
-.chatAttachment{display:flex;align-items:center;gap:9px;min-width:0;padding:6px;border:1px solid #eee8f5;border-radius:12px;background:#faf8fd;color:#665a73;font-size:11px}
-.chatAttachment img,.chatImagePreview img{width:42px;height:42px;object-fit:cover;border-radius:8px}
-.chatAttachment span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.chatAttachment button{width:32px;height:32px;margin-left:auto;border:0;border-radius:50%;background:#eee8f5;color:#50317a;font-size:20px}
+.chatImagePreview{display:block;width:96px;height:96px;margin-top:8px}
+.chatImagePreview img{display:block;width:100%;height:100%;object-fit:cover;border-radius:11px}
 .chatSpeechControls{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chatSpeechControls button{min-height:34px;padding:0 10px;border:1px solid #e9e3f0;border-radius:10px;background:#fff;color:#62458b;font-size:11px}
 .chatSpeechControls button:disabled{opacity:.5;cursor:not-allowed}
 .chatAttachmentNote{display:block;margin-top:6px;color:#7a7184;font-size:11px}
-.chatImagePreview{display:flex;align-items:center;gap:8px;margin-top:8px;color:#756b7f;font-size:11px}
-@media(max-width:480px){.chatComposerActions{gap:5px}.chatMediaButton{padding-inline:7px;font-size:11px}.chatComposerActions .primaryButton{min-width:54px}.chatComposerContent{gap:7px}}
+@media(max-width:480px){.chatComposer{padding-inline:10px}.chatComposerContent{padding:7px}.chatComposerInputRow{gap:4px}.chatComposerActions{gap:4px}.chatMediaButton{padding-inline:7px;font-size:11px}.chatComposerActions .primaryButton{min-width:48px}}
 .workspace .tasksView>h1{font-size:27px;letter-spacing:-1px;line-height:1.15}
 .workspace .tasksView>.pageSub{font-size:14px;margin-bottom:18px;color:#827a90}
 .tasksView .taskRequest{margin:0 0 22px auto;background:#eee8fb;padding:13px 15px;border-radius:18px 18px 5px 18px;max-width:90%;font-size:14px;line-height:1.5;white-space:pre-wrap}
