@@ -1,18 +1,19 @@
 # SMAJ AI — Verified Delegation
 
-SMAJ AI uses Meta models to plan bounded work across SMAJ PI HUB services. People review proposed actions before approval; the Verified Delegation demo records only simulated job applications, checks the persisted outcomes, and issues a hash-backed receipt.
+SMAJ AI uses Meta models to plan bounded work across SMAJ PI HUB services. The chat also supports image questions through the configured Meta Responses model and browser-native speech input/output. People review proposed actions before approval; the Verified Delegation demo records only simulated job applications, checks the persisted outcomes, and issues a hash-backed receipt.
 
 **Live demo:** [ai.smajpihub.com](https://ai.smajpihub.com) · **Demo instructions:** [DEMO.md](DEMO.md)
+**Hackathon demo video:** [Watch on YouTube](https://youtube.com/shorts/CmbXa1IvJS4)
 
 > **Demo boundary:** The public AI workspace and the Verified Delegation walkthrough use live Meta planning when configured. The delegation walkthrough reads published Jobs listings but writes only local mock submissions. It does not submit real job applications or make Pi payments.
 
 ## Hackathon judging flow
 
 1. Open the [live demo](https://ai.smajpihub.com) and choose **Try Live Demo** to enter an isolated public workspace without Pi sign-in.
-2. To see the Verified Delegation proof flow locally, follow [DEMO.md](DEMO.md) to start the app and run `npm run demo`. This requires Meta credentials, a supported model ID, and access to the published Jobs endpoint.
-3. Review the generated recommendations and drafts. The script pauses at a human-approval gate; press Enter only when ready to approve the selected **mock** actions.
-4. The runner injects one transient failure, retries idempotently, and checks that every selected mock action was persisted exactly once.
-5. Inspect the event log and final SHA-256 proof digest. The receipt records the approval, recovery, verification checks, source, and that production writes and Pi payments were disabled.
+2. Try a text request or, in a supported browser, use **Mic** to dictate a question. Response audio is opt-in via **Play voice**; pause, stop, and mute controls are provided.
+3. Attach or capture a JPEG, PNG, or WebP image and ask about it. The image is sent to the configured Meta model for this request only; vision support depends on that model/account. Follow-up Store searches use published catalog results rather than treating visual guesses as matches.
+4. To see the Verified Delegation proof flow locally, follow [DEMO.md](DEMO.md) to start the app and run `npm run demo`. Review the generated recommendations and drafts; the script pauses at an explicit human-approval gate before mock actions.
+5. The runner injects one transient failure, retries idempotently, and checks that every selected mock action was persisted exactly once. Inspect the event log and final SHA-256 proof digest. Production writes and Pi payments remain disabled.
 
 The public workspace is useful for trying general AI requests and supported read-only catalog searches. It is separate from the CLI delegation demonstration; do not assume public workspace history is seeded with delegation examples.
 
@@ -46,14 +47,17 @@ Only the server-side Meta Model API is used:
 | Generate a response | `POST https://api.meta.ai/v1/responses` |
 | Default model ID | `muse-spark-1.3` (overridable with `META_MODEL`) |
 
-Each generation first reads the model catalog, then sends the prompt, selected model, `max_output_tokens`, and `store: false` to the Responses endpoint. `META_API_KEY` (or the legacy `MODEL_API_KEY`) is sent only in the server-side Authorization header. The catalog is used to log a mismatch warning; this code does not strictly reject a model before the Responses request. The provider may reject an unsupported ID. The default model ID is a code default, not a claim that a particular account or deployment has been verified.
+Each generation first reads the model catalog, then sends the prompt, selected model, `max_output_tokens`, and `store: false` to the Responses endpoint. Image requests use a Responses input containing `input_text` and `input_image` (base64 data URL) content items. The image is validated on the server, limited to 4 MiB, and not persisted in the conversation database. Vision support depends on the configured model and account; provider errors are surfaced rather than replaced with invented image analysis. `META_API_KEY` (or the legacy `MODEL_API_KEY`) is sent only in the server-side Authorization header. The catalog is used to log a mismatch warning; this code does not strictly reject a model before the Responses request. The default model ID is a code default, not a claim that a particular account or deployment has been verified.
 
 Meta is asked to return JSON as ordinary response text. The application parses that text and validates/normalizes it; it does **not** send a native JSON Schema/structured-output setting such as `response_format`. The planner expects `{ summary, recommendations: [{ jobId, score, rationale, coverNote }] }`; the service router expects `{ summary, services, steps, warnings }`. There is no Meta tool/function-calling schema or model tool-call dispatch implemented. Routing and execution are handled by SMAJ AI after parsing the model's text.
+
+Voice input uses the browser Web Speech recognition API and forwards its transcript through the same `/api/tasks` workflow. Spoken output uses browser speech synthesis only after a person presses **Play voice**. These voice features do not call a Meta speech or audio API; recognition availability and processing are controlled by the browser and may require microphone permission and a browser speech service.
 
 ## Architecture
 
 - **Next.js app and route handlers** provide the browser workspace, sessions, task planning, approvals, and task events.
 - **Meta client and planners** call the two Meta endpoints above and validate generated text into application plans.
+- **Multimodal chat** sends validated image input to the configured Meta Responses model when requested; browser speech APIs provide opt-in dictation and playback. Unsupported image input returns the provider error.
 - **SMAJ PI HUB published Jobs endpoint** is read-only for the Verified Delegation planner; the endpoint is configured by `SMAJ_JOBS_API_URL`.
 - **SQLite (`better-sqlite3`, WAL)** persists delegations, events, idempotency records, mock submissions, and receipts. Keep production and hackathon/demo databases separate.
 - **Verifier and receipt exporter** check persisted results and expose the receipt as JSON or PDF in the app. A receipt hash is a tamper-evident digest of the recorded receipt; it does not attest to an external side effect.
@@ -62,7 +66,7 @@ Production Jobs submissions and real Pi payments remain disabled by default. See
 
 ## Screenshots
 
-UI screenshots are not currently committed. The repository's existing [service atlas](public/assets/smaj-service-atlas.png) is an illustration, not a screenshot, so it is not presented as an app capture. Use the [live demo](https://ai.smajpihub.com) for the current visual reference.
+The repository does not currently contain captured UI, image-upload, voice, or approval screenshots. The existing [service atlas](public/assets/smaj-service-atlas.png) is an illustration, not an app screenshot, so it is not presented as one. See the [live demo](https://ai.smajpihub.com) and [official demo video](https://youtube.com/shorts/CmbXa1IvJS4) for available visuals.
 
 ## Setup
 

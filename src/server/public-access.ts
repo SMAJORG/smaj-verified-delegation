@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { getDatabase, type AppDatabase } from "@/src/server/database";
-import { AppError } from "@/src/server/http";
+import { AppError, readJsonBody } from "@/src/server/http";
 
 export const PUBLIC_SESSION_TTL = 8 * 60 * 60;
 const digest = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -63,10 +63,6 @@ export function beginPublicWork(request: Request, session: {authType:string;acto
  })();
  return ()=>{db.prepare("DELETE FROM public_work WHERE id = ?").run(id);};
 }
-export async function publicJson(request: Request) {
- const reader=request.body?.getReader();if(!reader)throw new AppError("invalid_request","A JSON request is required.",400);
- const chunks:Uint8Array[]=[];let size=0;
- try {for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>16000)throw new AppError("request_too_large","Keep your request under 2,000 characters.",413);chunks.push(value);}}
- finally {await reader.cancel();}
- try{const body=JSON.parse(Buffer.concat(chunks).toString("utf8"));if(!body||typeof body!=="object"||Array.isArray(body))throw new Error("object required");return body;}catch{throw new AppError("invalid_request","Send a valid JSON request.",400);}
+export async function publicJson(request: Request, maxBytes = 16000) {
+ return readJsonBody(request, maxBytes);
 }

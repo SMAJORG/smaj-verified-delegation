@@ -1,4 +1,4 @@
-import { requireSameOrigin } from "@/src/server/http";
+import { readJsonBody, requireSameOrigin } from "@/src/server/http";
 import { NextRequest, NextResponse } from "next/server";
 import { requireActorSession } from "@/src/server/auth";
 import { workspaceDatabase } from "@/src/server/demo-workspace";
@@ -12,6 +12,9 @@ import { beginPublicWork, publicJson } from "@/src/server/public-access";
 export const runtime = "nodejs";
 export const maxDuration = 240;
 export const dynamic = "force-dynamic";
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+const MAX_REQUEST_BYTES = 5_700_000;
+const IMAGE_TASK_SUFFIX = "\n[Image attached for this turn; image is not saved in conversation history.]";
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,15 +31,33 @@ export async function POST(request: NextRequest) {
     requireSameOrigin(request);
     const session = requireActorSession(request);
     actorId = session.actorId;
-    const body = await (session.authType === "public" ? publicJson(request) : request.json()) as { task?: unknown; conversationId?: unknown };
+    const body = await (session.authType === "public" ? publicJson(request, MAX_REQUEST_BYTES) : readJsonBody(request, MAX_REQUEST_BYTES));
     if (typeof body.task !== "string" || !body.task.trim() || body.task.length > 2000) throw new AppError("invalid_task", "Enter a message of 1 to 2,000 characters", 400);
+    let image: { mimeType: "image/jpeg" | "image/png" | "image/webp"; data: string } | undefined;
+    if (body.image !== undefined) {
+      if (!body.image || typeof body.image !== "object" || Array.isArray(body.image)) throw new AppError("invalid_image", "Attach a JPEG, PNG, or WebP image to continue.", 400);
+      const { mimeType, data } = body.image as { mimeType?: unknown; data?: unknown };
+      if (!["image/jpeg", "image/png", "image/webp"].includes(String(mimeType)) || typeof data !== "string" || !data.length || data.length > Math.ceil(MAX_IMAGE_BYTES / 3) * 4 || data.length % 4 !== 0 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(data)) {
+        throw new AppError("invalid_image", "Attach a valid JPEG, PNG, or WebP image smaller than 4 MB.", 400);
+      }
+      const bytes = Buffer.from(data, "base64");
+      const signatureMatches = mimeType === "image/jpeg"
+        ? bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff
+        : mimeType === "image/png"
+          ? bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+          : bytes.length >= 12 && bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP";
+      if (bytes.length > MAX_IMAGE_BYTES || bytes.toString("base64") !== data || !signatureMatches) throw new AppError("invalid_image", "Attach a valid JPEG, PNG, or WebP image smaller than 4 MB.", 400);
+      image = { mimeType: mimeType as "image/jpeg" | "image/png" | "image/webp", data };
+    }
+    if (image && body.task.trim().length > 1900) throw new AppError("invalid_task", "Keep your question under 1,900 characters when attaching an image.", 400);
     const tasks = new AiTaskStore(workspaceDatabase(request));
     if (body.conversationId !== undefined && (typeof body.conversationId !== "string" || !/^[0-9a-f-]{36}$/i.test(body.conversationId))) throw new AppError("invalid_conversation", "That conversation could not be continued.", 400);
     const requestKey = request.headers.get("idempotency-key") || undefined;
     if (requestKey && !/^[a-zA-Z0-9._:-]{8,128}$/.test(requestKey)) throw new AppError("invalid_request_key", "The message request could not be safely retried.", 400);
     savedTask = requestKey ? tasks.byRequestKey(actorId, requestKey) : undefined;
     if (!savedTask && (session.sandbox || session.authType === "public") && tasks.list(actorId).length >= 50) throw new AppError("demo_limit", "This workspace has reached its AI task limit. Start a new public workspace.", 429);
-    if (savedTask && savedTask.task !== body.task.trim()) throw new AppError("invalid_request_key", "This retry does not match the saved message.", 409);
+    const taskText = `${body.task.trim()}${image ? IMAGE_TASK_SUFFIX : ""}`;
+    if (savedTask && savedTask.task !== taskText) throw new AppError("invalid_request_key", "This retry does not match the saved message and attachment.", 409);
     if (savedTask?.plan.generationStatus === "complete") return NextResponse.json({ plan: savedTask.plan, task: savedTask }, { status: 200, headers: { "Cache-Control": "no-store" } });
     if (savedTask?.plan.generationStatus === "pending" && Date.now() - Date.parse(savedTask.createdAt) < 120_000) {
       return NextResponse.json({ message: "This message is still being processed. Retry shortly using the same message.", code: "generation_in_progress" }, { status: 409, headers: { "Cache-Control": "no-store" } });
@@ -93,11 +114,11 @@ export async function POST(request: NextRequest) {
     const preferences = new UserPreferencesStore(workspaceDatabase(request)).get(actorId);
     if (!savedTask) {
       const pendingPlan = { summary: "", model: "Meta AI", services: [], steps: [], warnings: [], generationStatus: "pending" as const };
-      savedTask = tasks.create(actorId, body.task.trim(), pendingPlan, conversationId, requestKey);
+      savedTask = tasks.create(actorId, taskText, pendingPlan, conversationId, requestKey);
     } else {
       tasks.savePlan(actorId, savedTask.id, { ...savedTask.plan, generationStatus: "pending", generationError: undefined });
     }
-    const plan = await new MetaServiceRouter().plan(body.task.trim(), connectedServiceIds, context, preferences);
+    const plan = await new MetaServiceRouter().plan(body.task.trim(), connectedServiceIds, context, preferences, image);
     const task = tasks.savePlan(actorId, savedTask.id, { ...plan, generationStatus: "complete" });
     savedTask = task;
     return NextResponse.json({ plan, task }, { status: 201, headers: { "Cache-Control": "no-store" } });

@@ -22,7 +22,7 @@ import type { ServiceConnection } from "@/src/server/service-connections";
 
 type View = "home" | "tasks" | "task-detail" | "services" | "approvals" | "receipts" | "profile";
 type ApiResponse = { tasks?: AiTask[]; task?: AiTask; delegation?: DelegationView; delegations?: DelegationView[]; plan?: ServiceRoutePlan; connections?: ServiceConnection[]; message?: string; storageScope?: string };
-type PendingMessage = { id: string; text: string; conversationId: string; persistedConversation: boolean; requestKey: string; status: "sending" | "failed"; error?: string };
+type PendingMessage = { id: string; text: string; conversationId: string; persistedConversation: boolean; requestKey: string; status: "sending" | "failed"; error?: string; image?: { mimeType: string; data: string } };
 const statusLabels: Record<string, string> = { awaiting_approval: "Awaiting approval", approved: "Approved", executing: "Executing", retrying: "Recovering", verifying: "Verifying", verified: "Verified", failed: "Needs attention" };
 const time = (value: string) => new Intl.DateTimeFormat("en", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 
@@ -37,6 +37,7 @@ export default function Dashboard() {
   const [view,setViewState]=useState<View>("home"); const viewRef=useRef<View>("home"); const setView=(next:View)=>{viewRef.current=next;setViewState(next);}; const [menuOpen,setMenuOpen]=useState(false); const [authenticated,setAuthenticated]=useState<boolean|null>(null); const [ssoEnabled,setSsoEnabled]=useState(false); const [demoEnabled,setDemoEnabled]=useState(false); const [sandbox,setSandbox]=useState(false); const [expiresAt,setExpiresAt]=useState<number|null>(null); const [accessToken,setAccessToken]=useState("");
   const [route,setRoute]=useState<DashboardRoute>({view:"home"});
   const [aiTasks,setAiTasks]=useState<AiTask[]>([]); const [selectedService,setSelectedService]=useState<ServiceId|null>(null); const [task,setTask]=useState(""); const [routePlan,setRoutePlan]=useState<ServiceRoutePlan|null>(null); const [connections,setConnections]=useState<ServiceConnection[]>([]); const [history,setHistory]=useState<DelegationView[]>([]); const [delegation,setDelegation]=useState<DelegationView|null>(null);
+  const [homeImage,setHomeImage]=useState<{mimeType:"image/jpeg"|"image/png"|"image/webp";data:string;name:string}|null>(null);
   const [threadTaskIds,setThreadTaskIds]=useState<string[]>([]); const [threadConversationId,setThreadConversationId]=useState<string|null>(null); const loadedConversations=useRef(new Set<string>());
   const discoveryInFlight=useRef(new Set<string>()); const automaticDiscoveryStarted=useRef(new Set<string>());
   const [pendingMessage,setPendingMessage]=useState<PendingMessage|null>(null);
@@ -94,17 +95,19 @@ export default function Dashboard() {
   const logout=async()=>{setError("");try{const response=await fetch("/api/auth/session",{method:"DELETE",signal:AbortSignal.timeout(15000)});if(!response.ok)throw new Error("Sign-out failed. Please try again.");streamRef.current?.close();setAuthenticated(false);setStorageScope(null);setHistory([]);setAiTasks([]);setTask("");setSelectedService(null);setConnections([]);setDelegation(null);setRoutePlan(null);setSandbox(false);setExpiresAt(null);viewHistory.current=[];updateRoute({view:"home"},true);setMenuOpen(false);}catch(failure){notifyError(failure,"Sign-out failed. Please try again.");}};
   const navigate=(next:View,selection?:Pick<DashboardRoute,"taskId"|"delegationId">)=>{if(viewRef.current!==next)viewHistory.current.push(viewRef.current);updateRoute({view:next,...selection});setMenuOpen(false);window.scrollTo({top:0,behavior:"smooth"});};
   const goBack=()=>{if(window.history.state?.smajDashboard){window.history.back();return;}const previous=viewHistory.current.pop()||"home";updateRoute({view:previous},true);setMenuOpen(false);window.scrollTo({top:0,behavior:"smooth"});};
-  const submitTask=async(message:string,conversationId?:string,retryPending?:PendingMessage):Promise<boolean>=>{
-    if(!message.trim()){setError("Enter a message or task.");return false;}
+  const submitTask=async(message:string,conversationId?:string,retryPending?:PendingMessage,image?:{mimeType:string;data:string}):Promise<boolean>=>{
+    const attachedImage=retryPending?.image||image;
+    if(!message.trim()&&!attachedImage){setError("Enter a message or attach an image.");return false;}
     if(busy==="routing")return false;
     const service=conversationId||retryPending?undefined:SMAJ_SERVICES.find(item=>item.id===selectedService);
-    const requestTask=retryPending?retryPending.text:service?`${service.name}: ${message.trim()}`:message.trim();
-    const optimistic=retryPending||{id:`pending-${crypto.randomUUID()}`,text:requestTask,conversationId:conversationId||crypto.randomUUID(),persistedConversation:Boolean(conversationId),requestKey:crypto.randomUUID(),status:"sending" as const};
+    const prompt=message.trim()||"Describe this image and suggest relevant SMAJ Store search terms.";
+    const requestTask=retryPending?retryPending.text:service?`${service.name}: ${prompt}`:prompt;
+    const optimistic=retryPending||{id:`pending-${crypto.randomUUID()}`,text:requestTask,conversationId:conversationId||crypto.randomUUID(),persistedConversation:Boolean(conversationId),requestKey:crypto.randomUUID(),status:"sending" as const,...(attachedImage?{image:attachedImage}:{})};
     setPendingMessage({...optimistic,status:"sending",error:undefined});
     setTask(requestTask);setBusy("routing");setError("");
     if(!conversationId){setDelegation(null);setRoutePlan(null);if(viewRef.current!=="task-detail")navigate("task-detail");}
     try{
-      const response=await fetch("/api/tasks",{signal:AbortSignal.timeout(135000),method:"POST",headers:{"Content-Type":"application/json","Idempotency-Key":optimistic.requestKey},body:JSON.stringify({task:requestTask,...(conversationId?{conversationId}:{})})});
+      const response=await fetch("/api/tasks",{signal:AbortSignal.timeout(135000),method:"POST",headers:{"Content-Type":"application/json","Idempotency-Key":optimistic.requestKey},body:JSON.stringify({task:requestTask,...(conversationId?{conversationId}:{}),...(attachedImage?{image:{mimeType:attachedImage.mimeType,data:attachedImage.data}}:{})})});
       const payload=await response.json().catch(()=>({})) as ApiResponse;
       if(!response.ok||!payload.plan||!payload.task)throw new Error((payload.message||"SMAJ AI could not answer. Please try again.")+(response.status===429&&response.headers.get("Retry-After")?` Try again in ${response.headers.get("Retry-After")} seconds.`:""));
       setAiTasks(items=>[payload.task!,...items.filter(item=>item.id!==payload.task!.id)]);
@@ -124,8 +127,8 @@ export default function Dashboard() {
     finally{setBusy(null);}
     return false;
   };
-  const retryPendingMessage=()=>{if(!pendingMessage)return;void submitTask(pendingMessage.text,pendingMessage.persistedConversation?pendingMessage.conversationId:undefined,pendingMessage);};
-  const routeTask=async(event:React.FormEvent)=>{event.preventDefault();await submitTask(task);};
+  const retryPendingMessage=()=>{if(!pendingMessage)return;void submitTask(pendingMessage.text,pendingMessage.persistedConversation?pendingMessage.conversationId:undefined,pendingMessage,pendingMessage.image);};
+  const routeTask=async(event:React.FormEvent)=>{event.preventDefault();if(await submitTask(task,undefined,undefined,homeImage||undefined))setHomeImage(null);};
   const runDiscovery = async (saved: AiTask, resume = false) => {
     if(discoveryInFlight.current.has(saved.id))return;
     automaticDiscoveryStarted.current.add(saved.id);
@@ -322,10 +325,10 @@ export default function Dashboard() {
     </aside>
     <section className={`workspaceBody ${view==="services"?servicesStyles.body:""} ${view==="home"?"homeBody":"internalBody"}`}>
       {sampleTasksEnabled&&sandbox&&<div className="demoNotice" role="status"><strong>Hackathon Demo</strong><span>Sample data. Simulated actions. Expires {expiresAt?time(new Date(expiresAt).toISOString()):"in one hour"}.</span><button className="secondaryButton" onClick={()=>navigate("tasks")}>Sample tasks</button><button className="secondaryButton" onClick={logout}>Exit demo</button></div>}
-      {view==="home"&&<HomeWorkspace task={task} setTask={setTask} selectedService={selectedService} selectService={setSelectedService} routeTask={routeTask} busy={busy} connectedIds={connectedIds}/>}
+      {view==="home"&&<HomeWorkspace task={task} setTask={setTask} selectedService={selectedService} selectService={setSelectedService} routeTask={routeTask} busy={busy} connectedIds={connectedIds} image={homeImage} setImage={setHomeImage}/>}
       {view==="services"&&<Services connections={connections} setConnection={setConnection} busy={busy}/>}
       {view==="tasks"&&<TaskHistory tasks={aiTasks} delegations={sampleTasksEnabled?history:[]} busy={busy} openAiTask={saved=>{setDelegation(null);setTask(saved.task);setRoutePlan(saved.plan);navigate("task-detail",{taskId:saved.id});}} deleteAiTask={deleteAiTask} openDelegation={openTask} deleteDelegation={deleteDelegation}/>}
-      {view==="task-detail"&&<Tasks messages={conversationTasks} pendingMessage={pendingMessage&&(!pendingMessage.persistedConversation?!route.taskId:(activeTask?.conversationId||activeTask?.id)===pendingMessage.conversationId)?pendingMessage:null} retryPendingMessage={retryPendingMessage} routePlan={currentRoutePlan} task={task} busy={busy} conversationId={activeTask?.conversationId||activeTask?.id||(!pendingMessage?.persistedConversation?pendingMessage?.conversationId:undefined)} onFollowUp={(message:string,id:string)=>submitTask(message,id)} approveLive={approveLive} retryLive={retryLive} refreshActionUpdates={refreshActionUpdates} sandbox={sandbox} reportError={(message:string)=>notifyError(message,"The task reported an error.")} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
+      {view==="task-detail"&&<Tasks messages={conversationTasks} pendingMessage={pendingMessage&&(!pendingMessage.persistedConversation?!route.taskId:(activeTask?.conversationId||activeTask?.id)===pendingMessage.conversationId)?pendingMessage:null} retryPendingMessage={retryPendingMessage} routePlan={currentRoutePlan} task={task} busy={busy} conversationId={activeTask?.conversationId||activeTask?.id||(!pendingMessage?.persistedConversation?pendingMessage?.conversationId:undefined)} onFollowUp={(message:string,id:string,retry?:PendingMessage,image?:{mimeType:string;data:string})=>submitTask(message,id,retry,image)} approveLive={approveLive} retryLive={retryLive} refreshActionUpdates={refreshActionUpdates} sandbox={sandbox} reportError={(message:string)=>notifyError(message,"The task reported an error.")} delegation={sampleTasksEnabled?delegation:null} jobsById={jobsById} selectedJobs={selectedJobs} setSelectedJobs={setSelectedJobs} approve={approve} execute={execute} injectFailure={injectFailure} setInjectFailure={setInjectFailure} downloadReceipt={downloadReceipt} deleteDelegation={deleteDelegation}/>}
       {view==="approvals"&&aiTasks.filter(t=>t.plan.proposedActions?.length&&!t.plan.execution).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Review live actions: {t.task}</button>)}
       {view==="approvals"&&<Approvals items={pending} openTask={openTask}/>}
       {view==="receipts"&&aiTasks.filter(t=>t.plan.execution?.receipt).map(t=><button className="secondaryButton" key={t.id} onClick={()=>{setTask(t.task);setRoutePlan(t.plan);navigate("task-detail",{taskId:t.id});}}>Live verified receipt: {t.task}</button>)}
@@ -351,16 +354,17 @@ export function Tasks(props:any){
     <p className="resultsEyebrow">AI TASK RESULTS</p>
     {(props.messages?.length>0||props.pendingMessage)&&<div className="chatThread" aria-label="Conversation messages">
       {(props.messages||[]).map((message:AiTask,index:number)=><article className="chatTurn" key={message.id}>
-        <div className="chatUserMessage">{message.task}</div>
+        <div className="chatUserMessage">{message.task}{message.task.includes("[Image attached for this turn; image is not saved in conversation history.]")&&<small className="chatAttachmentNote">Image used for this message only; it is not saved in history.</small>}</div>
         <section className={`chatAssistantMessage${props.pendingMessage?.id===message.id&&!message.plan.summary?" chatTyping":""}`}>{props.pendingMessage?.id===message.id&&!message.plan.summary
           ? <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><span className="taskDots" role="status" aria-label="SMAJ AI is responding"><i/><i/><i/></span></>
           : <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><TypedResponse text={message.plan.summary}/>
+            <SpeechControls text={message.plan.summary}/>
             <LiveTaskResult key={message.id} task={message} busy={Boolean(props.busy)} sandbox={props.sandbox} approve={props.approveLive} retry={props.retryLive} refreshActionUpdates={props.refreshActionUpdates} reportError={props.reportError}/>
           </div></>}</section>
         {index===props.messages.length-1&&<div ref={lastTurn} aria-hidden="true"/>}
       </article>)}
       {props.pendingMessage&&!props.messages.some((message:AiTask)=>message.id===props.pendingMessage.id)&&<article className="chatTurn" key={props.pendingMessage.id}>
-        <div className="chatUserMessage">{props.pendingMessage.text}</div>
+        <div className="chatUserMessage">{props.pendingMessage.text}{props.pendingMessage.image&&<span className="chatImagePreview"><img src={`data:${props.pendingMessage.image.mimeType};base64,${props.pendingMessage.image.data}`} alt="Attached image preview"/><small>Image attached</small></span>}</div>
         {props.pendingMessage.status==="sending"
           ? <section className="chatAssistantMessage chatTyping" role="status" aria-label="SMAJ AI is responding"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><span className="taskDots" aria-hidden="true"><i/><i/><i/></span></section>
           : <div className="chatFailure" role="alert"><span>{props.pendingMessage.error||"SMAJ AI could not answer. Please try again."}</span><button type="button" disabled={Boolean(props.busy)} onClick={props.retryPendingMessage}>Retry</button></div>}
@@ -370,21 +374,69 @@ export function Tasks(props:any){
     {!props.messages?.length&&!props.pendingMessage&&props.task&&props.routePlan&&<div className="taskRequest">{props.task}</div>}
     {!props.messages?.length&&!props.pendingMessage&&(props.routePlan||props.busy)&&<section className="resultsResponse"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent">
       {props.routePlan?.summary?<TypedResponse text={props.routePlan.summary}/>:props.busy&&<span className="taskDots taskDotsInline" role="status" aria-label="SMAJ AI is responding"><i/><i/><i/></span>}
+      {props.routePlan?.summary&&<SpeechControls text={props.routePlan.summary}/>}
     </div></section>}
-    {props.conversationId&&<ChatComposer key={props.conversationId} busy={Boolean(props.busy)||Boolean(props.pendingMessage)} onSubmit={(message:string)=>props.onFollowUp(message,props.conversationId)}/>}
+    {props.conversationId&&<ChatComposer key={props.conversationId} busy={Boolean(props.busy)||Boolean(props.pendingMessage)} onSubmit={(message:string,image?:{mimeType:string;data:string})=>props.onFollowUp(message,props.conversationId,undefined,image)}/>}
     {props.delegation&&<DelegationDetail {...props}/>}
   </section>;
 }
 
-function ChatComposer({busy,onSubmit}:{busy:boolean;onSubmit:(message:string)=>Promise<boolean>}){
+type SpeechRecognitionLike = {
+  lang:string; continuous:boolean; interimResults:boolean;
+  start:()=>void; stop:()=>void;
+  onresult:((event:Event & {results:ArrayLike<ArrayLike<{transcript:string;isFinal?:boolean}>>})=>void)|null;
+  onerror:((event:Event & {error:string})=>void)|null;
+  onend:(()=>void)|null;
+};
+type SpeechWindow = Window & {SpeechRecognition?:new()=>SpeechRecognitionLike;webkitSpeechRecognition?:new()=>SpeechRecognitionLike};
+
+function ChatComposer({busy,onSubmit}:{busy:boolean;onSubmit:(message:string,image?:{mimeType:string;data:string})=>Promise<boolean>}){
   const [message,setMessage]=useState("");
   const [sending,setSending]=useState(false);
-  const submit=async(event:React.FormEvent)=>{event.preventDefault();const submitted=message.trim();if(!submitted||busy||sending)return;setMessage("");setSending(true);try{await onSubmit(submitted);}finally{setSending(false);}};
-  return <form className="chatComposer" onSubmit={submit}>
+  const [image,setImage]=useState<{mimeType:"image/jpeg"|"image/png"|"image/webp";data:string;name:string}|null>(null);
+  const [mediaState,setMediaState]=useState("");
+  const [mediaError,setMediaError]=useState("");
+  const galleryRef=useRef<HTMLInputElement>(null);
+  const cameraRef=useRef<HTMLInputElement>(null);
+  const recognitionRef=useRef<SpeechRecognitionLike|null>(null);
+  const submit=async(event?:React.FormEvent,spokenText?:string)=>{event?.preventDefault();const submitted=(spokenText??message).trim();if((!submitted&&!image)||busy||sending)return;const prompt=submitted||"Describe this image and suggest relevant SMAJ Store search terms.";setMessage("");setSending(true);setMediaError("");setMediaState(image?"Uploading image and processing with SMAJ AI…":"Sending to SMAJ AI…");try{await onSubmit(prompt,image?{mimeType:image.mimeType,data:image.data}:undefined);setImage(null);setMediaState("");}finally{setSending(false);if(!spokenText)setMediaState("");}};
+  const selectImage=(file?:File)=>{setMediaError("");if(!file)return;if(!["image/jpeg","image/png","image/webp"].includes(file.type)){setMediaError("Choose a JPEG, PNG, or WebP image.");return;}if(file.size>4*1024*1024){setMediaError("Images must be smaller than 4 MB.");return;}setMediaState("Preparing image…");const reader=new FileReader();reader.onerror=()=>{setMediaState("");setMediaError("The image could not be read. Try another file.");};reader.onload=()=>{if(typeof reader.result!=="string"){setMediaState("");setMediaError("The image could not be read. Try another file.");return;}setImage({mimeType:file.type as "image/jpeg"|"image/png"|"image/webp",data:reader.result.split(",",2)[1]||"",name:file.name});setMediaState("");};reader.readAsDataURL(file);};
+  const startVoice=()=>{setMediaError("");const SpeechRecognition=(window as SpeechWindow).SpeechRecognition||(window as SpeechWindow).webkitSpeechRecognition;if(!SpeechRecognition){setMediaError("Voice input is not supported in this browser. You can type your message instead.");return;}try{let transcript="";let failed=false;const recognition=new SpeechRecognition();recognition.lang=navigator.language||"en-US";recognition.continuous=false;recognition.interimResults=true;recognition.onresult=event=>{transcript=Array.from(event.results).map(result=>result[0]?.transcript||"").join("").trim();setMessage(transcript);};recognition.onerror=event=>{failed=true;setMediaState("");setMediaError(event.error==="not-allowed"||event.error==="service-not-allowed"?"Microphone permission was denied. Allow microphone access or type your message.":"Voice recognition failed. Please try again or type your message.");};recognition.onend=()=>{recognitionRef.current=null;if(failed)return;if(!transcript){setMediaState("");return;}setMediaState("Transcription ready — sending…");void submit(undefined,transcript);};recognitionRef.current=recognition;setMediaState("Listening…");recognition.start();}catch{setMediaState("");setMediaError("The microphone could not be started. Check browser permissions.");}};
+  useEffect(()=>()=>{recognitionRef.current?.stop();},[]);
+  return <form className="chatComposer" onSubmit={event=>void submit(event)}>
     <label className="taskSrOnly" htmlFor="ai-chat-message">Message SMAJ AI</label>
-    <textarea id="ai-chat-message" value={message} onChange={event=>setMessage(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();event.currentTarget.form?.requestSubmit();}}} maxLength={2000} rows={1} placeholder="Message SMAJ AI"/>
-    <button className="primaryButton" type="submit" aria-label="Send message" disabled={busy||sending||!message.trim()}>{busy||sending?"…":"Send"}</button>
+    <div className="chatComposerContent">
+      {image&&<div className="chatAttachment"><img src={`data:${image.mimeType};base64,${image.data}`} alt={`Preview of ${image.name}`}/><span>{image.name}</span><button type="button" aria-label="Remove attached image" onClick={()=>setImage(null)}>×</button></div>}
+      <textarea id="ai-chat-message" value={message} onChange={event=>setMessage(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();event.currentTarget.form?.requestSubmit();}}} maxLength={2000} rows={1} placeholder="Message SMAJ AI"/>
+      <div className="chatComposerActions">
+        <input ref={galleryRef} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={event=>{selectImage(event.target.files?.[0]);event.target.value="";}}/>
+        <input ref={cameraRef} hidden type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={event=>{selectImage(event.target.files?.[0]);event.target.value="";}}/>
+        <button className="chatMediaButton" type="button" aria-label="Attach an image from gallery" title="Attach image" disabled={busy||sending} onClick={()=>galleryRef.current?.click()}>＋ Image</button>
+        <button className="chatMediaButton" type="button" aria-label="Take a photo" title="Take a photo" disabled={busy||sending} onClick={()=>cameraRef.current?.click()}>Camera</button>
+        <button className="chatMediaButton" type="button" aria-label="Speak a message" title="Speak a message" disabled={busy||sending||mediaState==="Listening…"} onClick={startVoice}>Mic</button>
+        <button className="primaryButton" type="submit" aria-label="Send message" disabled={busy||sending||(!message.trim()&&!image)}>{busy||sending?"…":"Send"}</button>
+      </div>
+      <small className="chatMediaDisclosure">Voice uses your browser speech service. Images are sent to the configured Meta model when you send them and are not saved in history.</small>
+      {(mediaState||mediaError)&&<p className={`chatMediaStatus${mediaError?" isError":""}`} role={mediaError?"alert":"status"}>{mediaError||mediaState}</p>}
+    </div>
   </form>;
+}
+
+function SpeechControls({text}:{text:string}) {
+  const [mounted,setMounted]=useState(false);
+  const [state,setState]=useState<"idle"|"speaking"|"paused">("idle");
+  const [muted,setMuted]=useState(false);
+  const utterance=useRef<SpeechSynthesisUtterance|null>(null);
+  useEffect(()=>setMounted(true),[]);
+  const stop=()=>{window.speechSynthesis?.cancel();utterance.current=null;setState("idle");};
+  const play=()=>{if(!("speechSynthesis" in window)){return;}if(state==="paused"){window.speechSynthesis.resume();setState("speaking");return;}stop();const next=new SpeechSynthesisUtterance(text);next.volume=muted?0:1;next.onend=()=>setState("idle");next.onerror=()=>setState("idle");utterance.current=next;window.speechSynthesis.speak(next);setState("speaking");};
+  if(!text||!mounted||!("speechSynthesis" in window))return null;
+  return <div className="chatSpeechControls" aria-label="Spoken response controls">
+    <button type="button" onClick={play}>{state==="paused"?"Resume voice":"Play voice"}</button>
+    <button type="button" onClick={()=>{window.speechSynthesis.pause();setState("paused");}} disabled={state!=="speaking"}>Pause</button>
+    <button type="button" onClick={stop} disabled={state==="idle"}>Stop</button>
+    <button type="button" onClick={()=>{setMuted(value=>!value);if(!muted&&state!=="idle")stop();}}>{muted?"Unmute":"Mute"}</button>
+  </div>;
 }
 
 function Approvals({items,openTask}:{items:DelegationView[];openTask:(item:DelegationView)=>void}){return <Page subtitle="Nothing sensitive happens without your permission."><div className="approvalList">{items.map(item=><article key={item.id}><span><Icon name="shield"/></span><div><strong>{item.goal}</strong><p>{item.plan.recommendations.length} mock Jobs actions are waiting for review.</p><small>No production submission or Pi payment will occur.</small></div><button className="primaryButton" onClick={()=>openTask(item)}>Review request</button></article>)}{items.length===0&&<Empty text="No pending approvals."/>}</div></Page>}

@@ -19,6 +19,25 @@
 .chatComposer textarea:focus{outline:2px solid #8657d866;border-color:#8657d8}
 .chatComposer .primaryButton{flex:none;min-width:62px;min-height:44px;border-radius:12px;font-size:12px}
 @media(max-width:480px){.workspace .workspaceBody:has(.hasChatComposer){padding-bottom:145px}.chatThread{gap:20px}.chatUserMessage{max-width:94%;font-size:13px}.chatAssistantMessage{gap:8px}.chatComposer{padding-inline:10px}}
+.chatComposerContent{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;width:100%;min-width:0}
+.chatComposer .chatComposerContent textarea{width:100%;min-height:44px;max-height:120px;resize:vertical}
+.chatComposerActions{display:flex;align-items:center;gap:7px;min-width:0}
+.chatMediaButton{min-height:40px;padding:0 10px;border:1px solid #e8e1f0;border-radius:12px;background:#fff;color:#5d4382;font-size:12px;font-weight:650;white-space:nowrap}
+.chatMediaButton:disabled{opacity:.55;cursor:not-allowed}
+.chatComposerActions .primaryButton{margin-left:auto}
+.chatMediaStatus{grid-column:1/-1;margin:0;color:#6b5388;font-size:12px}
+.chatMediaStatus.isError{color:#a5364b}
+.chatMediaDisclosure{color:#8a8292;font-size:10px;line-height:1.4}
+.chatAttachment{display:flex;align-items:center;gap:9px;min-width:0;padding:6px;border:1px solid #eee8f5;border-radius:12px;background:#faf8fd;color:#665a73;font-size:11px}
+.chatAttachment img,.chatImagePreview img{width:42px;height:42px;object-fit:cover;border-radius:8px}
+.chatAttachment span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chatAttachment button{width:32px;height:32px;margin-left:auto;border:0;border-radius:50%;background:#eee8f5;color:#50317a;font-size:20px}
+.chatSpeechControls{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chatSpeechControls button{min-height:34px;padding:0 10px;border:1px solid #e9e3f0;border-radius:10px;background:#fff;color:#62458b;font-size:11px}
+.chatSpeechControls button:disabled{opacity:.5;cursor:not-allowed}
+.chatAttachmentNote{display:block;margin-top:6px;color:#7a7184;font-size:11px}
+.chatImagePreview{display:flex;align-items:center;gap:8px;margin-top:8px;color:#756b7f;font-size:11px}
+@media(max-width:480px){.chatComposerActions{gap:5px}.chatMediaButton{padding-inline:7px;font-size:11px}.chatComposerActions .primaryButton{min-width:54px}.chatComposerContent{gap:7px}}
 .workspace .tasksView>h1{font-size:27px;letter-spacing:-1px;line-height:1.15}
 .workspace .tasksView>.pageSub{font-size:14px;margin-bottom:18px;color:#827a90}
 .tasksView .taskRequest{margin:0 0 22px auto;background:#eee8fb;padding:13px 15px;border-radius:18px 18px 5px 18px;max-width:90%;font-size:14px;line-height:1.5;white-space:pre-wrap}

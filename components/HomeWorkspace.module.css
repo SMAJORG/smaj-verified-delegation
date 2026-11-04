@@ -26,6 +26,13 @@
 .root.root .submit { display: flex; min-width: 0; flex: 0 1 auto; align-items: center; justify-content: center; gap: 7px; margin-left: auto; min-height: 44px; padding: 0 17px; border: 0; border-radius: 14px; background: #7951c7; color: #fff; font-size: 14px; font-weight: 750; white-space: nowrap; box-shadow: none; transition: background .15s, box-shadow .15s; }
 .root.root .submit:hover:not(:disabled) { background: #6840b6; box-shadow: 0 3px 12px #7951c725; }
 .root.root .submit:disabled { opacity: .5; cursor: not-allowed; }
+.root.root .mediaButton { min-height: 40px; padding: 0 10px; border: 1px solid #eee9f4; border-radius: 12px; background: #fff; color: #625a70; font-size: 12px; white-space: nowrap; }
+.imagePreview { display: flex; align-items: center; gap: 9px; margin-top: 12px; padding: 7px; border: 1px solid #eee8f5; border-radius: 12px; background: #faf8fd; color: #665a73; font-size: 12px; }
+.imagePreview img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; }
+.imagePreview span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imagePreview button { width: 34px; height: 34px; margin-left: auto; border: 0; border-radius: 50%; background: #eee8f5; color: #50317a; font-size: 20px; }
+.imageError { margin: 8px 0 0; color: #a5364b; font-size: 12px; }
+.mediaDisclosure { display: block; margin-top: 8px; color: #8a8292; font-size: 10px; line-height: 1.4; }
 .root.root button:focus-visible { outline: 3px solid #a98ce4; outline-offset: 3px; }
 .suggestions { display: flex; width: 100%; gap: 8px; min-width: 0; max-width: 100%; box-sizing: border-box; overflow-x: auto; overscroll-behavior-x: contain; touch-action: pan-x pan-y; padding: 17px 3px 5px; scrollbar-width: none; -ms-overflow-style: none; }
 .suggestions::-webkit-scrollbar { display: none; }
@@ -44,8 +51,9 @@
 .showAll:hover { border-color: #cbb9e8; background: #fcfaff; }
 @media (max-width: 360px) {
   .root.root .composer { padding: 13px; }
-  .root.root .toolbar { gap: 6px; }
+  .root.root .toolbar { flex-wrap: wrap; gap: 6px; }
   .root.root .tool { padding: 0 9px; }
+  .root.root .mediaButton { padding: 0 8px; }
   .root.root .submit { gap: 5px; padding: 0 8px; font-size: 11px; }
   .root.root .service { font-size: 9px; }
 }

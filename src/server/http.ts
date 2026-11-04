@@ -24,6 +24,31 @@ export const apiError = (error: unknown) => {
   return NextResponse.json({ error: "internal_error", message: "The request could not be completed", requestId }, { status: 500 });
 };
 
+export async function readJsonBody(request: Request, maxBytes: number) {
+  const reader = request.body?.getReader();
+  if (!reader) throw new AppError("invalid_request", "A JSON request is required.", 400);
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > maxBytes) throw new AppError("request_too_large", "The request is too large.", 413);
+      chunks.push(value);
+    }
+  } finally {
+    await reader.cancel();
+  }
+  try {
+    const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("object required");
+    return body as Record<string, unknown>;
+  } catch {
+    throw new AppError("invalid_request", "Send a valid JSON request.", 400);
+  }
+}
+
 // Use deployment configuration, never client-supplied forwarded Host, as the
 // production trust boundary. Render supplies its own exact external HTTPS URL.
 export function requireSameOrigin(request: Request) {

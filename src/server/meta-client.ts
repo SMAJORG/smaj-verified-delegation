@@ -88,7 +88,7 @@ async function request(path: string, apiKey: string, fetcher: typeof fetch, body
   catch { throw new AppError("meta_invalid_response", "Meta returned invalid JSON.", 502); }
 }
 
-export async function metaResponse(input: string, maxTokens: number, fetcher: typeof fetch = fetch) {
+export async function metaResponse(input: string | Record<string, unknown>[], maxTokens: number, fetcher: typeof fetch = fetch) {
   const apiKey = (process.env.META_API_KEY || process.env.MODEL_API_KEY)?.trim();
   const model = normalizeModelId((process.env.META_MODEL || DEFAULT_META_MODEL).trim());
 

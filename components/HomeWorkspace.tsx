@@ -13,10 +13,15 @@ type Props = {
   routeTask: (event: React.FormEvent) => void;
   busy: string | null;
   connectedIds: Set<ServiceId>;
+  image: { mimeType: "image/jpeg" | "image/png" | "image/webp"; data: string; name: string } | null;
+  setImage: (image: Props["image"]) => void;
 };
 
-export default function HomeWorkspace({ task, setTask, selectedService, selectService, routeTask, busy, connectedIds }: Props) {
+export default function HomeWorkspace({ task, setTask, selectedService, selectService, routeTask, busy, connectedIds, image, setImage }: Props) {
   const input = useRef<HTMLTextAreaElement>(null);
+  const gallery = useRef<HTMLInputElement>(null);
+  const camera = useRef<HTMLInputElement>(null);
+  const [imageError, setImageError] = useState("");
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [showAllServices, setShowAllServices] = useState(false);
   useEffect(() => {
@@ -36,6 +41,19 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
     return service.adapterMode === "planning_only" ? "Planned" : connectedIds.has(id) ? "Connected" : "Not connected";
   };
   const ready = !selected || status(selected.id) === "Connected";
+  const chooseImage = (file?: File) => {
+    setImageError("");
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) { setImageError("Choose a JPEG, PNG, or WebP image."); return; }
+    if (file.size > 4 * 1024 * 1024) { setImageError("Images must be smaller than 4 MB."); return; }
+    const reader = new FileReader();
+    reader.onerror = () => setImageError("The image could not be read. Try another file.");
+    reader.onload = () => {
+      if (typeof reader.result !== "string") { setImageError("The image could not be read. Try another file."); return; }
+      setImage({ mimeType: file.type as "image/jpeg" | "image/png" | "image/webp", data: reader.result.split(",", 2)[1] || "", name: file.name });
+    };
+    reader.readAsDataURL(file);
+  };
 
   return <section className={`homeView launcherHome ${styles.root}`}>
     <p className={styles.eyebrow}>YOUR WORKSPACE</p><h1 className={styles.title}>What can I help you do?</h1>
@@ -46,9 +64,16 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
         {!task && <span className={styles.rotatingPlaceholder} aria-hidden="true"><span key={placeholderIndex}>{SMAJ_SERVICES[placeholderIndex].example}…</span></span>}
       </div>
       <div className={styles.toolbar}>
+        <input ref={gallery} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={event => { chooseImage(event.target.files?.[0]); event.target.value = ""; }} />
+        <input ref={camera} hidden type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={event => { chooseImage(event.target.files?.[0]); event.target.value = ""; }} />
+        <button type="button" className={styles.mediaButton} aria-label="Attach an image from gallery" onClick={() => gallery.current?.click()}>＋ Image</button>
+        <button type="button" className={styles.mediaButton} aria-label="Take a photo" onClick={() => camera.current?.click()}>Camera</button>
         {selected && <button type="button" className={`${styles.tool} ${styles.apps}`} onClick={() => selectService(null)} aria-label={`Clear ${selected.shortName} context`}><ServiceIcon serviceId={selected.id}/><span>{selected.shortName}</span><span className={styles.clear} aria-hidden="true">×</span></button>}
-        <button type="submit" className={styles.submit} disabled={!task.trim() || busy === "routing"}>{busy === "routing" ? <><span className="spinner"/>Asking AI…</> : <>Ask SMAJ AI <span aria-hidden="true">↗</span></>}</button>
+        <button type="submit" className={styles.submit} disabled={(!task.trim()&&!image) || busy === "routing"}>{busy === "routing" ? <><span className="spinner"/>Asking AI…</> : <>Ask SMAJ AI <span aria-hidden="true">↗</span></>}</button>
       </div>
+      {image&&<div className={styles.imagePreview}><img src={`data:${image.mimeType};base64,${image.data}`} alt={`Preview of ${image.name}`}/><span>{image.name}</span><button type="button" aria-label="Remove attached image" onClick={()=>setImage(null)}>×</button></div>}
+      {imageError&&<p className={styles.imageError} role="alert">{imageError}</p>}
+      <small className={styles.mediaDisclosure}>Images are sent to the configured Meta model when you submit them and are not saved in history.</small>
     </form>
     {selected && <div className="serviceContext" role="status"><span><strong>{selected.name}</strong> · {status(selected.id)}{status(selected.id) === "Planned" ? " — integration not available yet." : !ready ? " — use Apps in the header to connect this app." : " — task context selected."}</span></div>}
     <div className={styles.suggestions} aria-label="Suggested requests">
