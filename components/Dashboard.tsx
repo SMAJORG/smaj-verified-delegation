@@ -260,10 +260,12 @@ export default function Dashboard() {
   const currentRoutePlan = activeTask?.plan || routePlan;
   const conversationTasks = threadConversationId===activeTask?.conversationId ? threadTaskIds.map(id=>aiTasks.find(item=>item.id===id)).filter((item):item is AiTask=>item!==undefined&&item.plan.generationStatus!=="pending"&&item.plan.generationStatus!=="failed") : activeTask&&activeTask.plan.generationStatus!=="pending"&&activeTask.plan.generationStatus!=="failed"?[activeTask]:[];
   useEffect(()=>{
-    if(authenticated!==true||sandbox||route.view!=="task-detail"||!activeTask||activeTask.plan.generationStatus==="pending"||activeTask.plan.generationStatus==="failed"||activeTask.plan.discovery||activeTask.plan.execution||!activeTask.plan.services.some(id=>["store","jobs","stream"].includes(id))||automaticDiscoveryStarted.current.has(activeTask.id))return;
+    const catalogTask=activeTask?.plan.services.some(id=>["store","jobs","stream"].includes(id));
+    const discoveryIncomplete=Boolean(activeTask?.plan.discovery&&!activeTask.plan.summaryAi&&!activeTask.plan.summaryError&&activeTask.plan.progressStage!=="done");
+    if(authenticated!==true||sandbox||route.view!=="task-detail"||!activeTask||activeTask.plan.generationStatus==="pending"||activeTask.plan.generationStatus==="failed"||(activeTask.plan.discovery&&!discoveryIncomplete)||activeTask.plan.execution||!catalogTask||automaticDiscoveryStarted.current.has(activeTask.id))return;
     automaticDiscoveryStarted.current.add(activeTask.id);
     void runDiscovery(activeTask);
-  },[authenticated,sandbox,route.view,activeTask?.id,activeTask?.plan.generationStatus,activeTask?.plan.discovery,activeTask?.plan.execution,activeTask?.plan.services]);
+  },[authenticated,sandbox,route.view,activeTask?.id,activeTask?.plan.generationStatus,activeTask?.plan.discovery,activeTask?.plan.summaryAi,activeTask?.plan.summaryError,activeTask?.plan.progressStage,activeTask?.plan.execution,activeTask?.plan.services]);
   const approveLive = async (taskId:string,actionIds: string[]) => {
     const target=aiTasks.find(item=>item.id===taskId);if(!target)return;
     if (publicAccess) {
@@ -401,9 +403,11 @@ export function Tasks(props:any){
         <div className="chatUserMessage">{message.task}{props.messageImages?.[message.id]&&<span className="chatImagePreview"><img src={`data:${props.messageImages[message.id].mimeType};base64,${props.messageImages[message.id].data}`} alt="Attached image"/></span>}{message.task.includes("[Image attached for this turn; image is not saved in conversation history.]")&&<small className="chatAttachmentNote">Image used for this message only; it is not saved in history.</small>}</div>
         <section className={`chatAssistantMessage${props.pendingMessage?.id===message.id&&!message.plan.summary?" chatTyping":""}`}>{props.pendingMessage?.id===message.id&&!message.plan.summary
           ? <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><span className="conversationProgress" role="status">{props.progressStage||"Thinking…"}</span></>
-          : <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><TypedResponse text={message.plan.summary}/>
-            <LiveTaskResult key={message.id} task={message} busy={Boolean(props.busy)} sandbox={props.sandbox} approve={props.approveLive} updateSellerMessage={props.updateSellerMessage} cancelSellerAction={props.cancelSellerAction} retry={props.retryLive} refreshActionUpdates={props.refreshActionUpdates} reportError={props.reportError}/>
-            {index===visibleMessages.length-1&&props.progressStage&&<div className="conversationProgress" role="status">{props.progressStage}</div>}
+          : <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent">{index===visibleMessages.length-1&&props.busy&&message.plan.services.some((id:string)=>["store","jobs","stream"].includes(id))&&!message.plan.summaryAi&&!message.plan.summaryError
+            ? <div className="conversationProgress" role="status">{props.progressStage||"Searching…"}</div>
+            : <><TypedResponse text={message.plan.summary}/>
+              <LiveTaskResult key={message.id} task={message} busy={Boolean(props.busy)} sandbox={props.sandbox} approve={props.approveLive} updateSellerMessage={props.updateSellerMessage} cancelSellerAction={props.cancelSellerAction} retry={props.retryLive} refreshActionUpdates={props.refreshActionUpdates} reportError={props.reportError}/>
+            </>}
           </div></>}</section>
       </article>)}
       {props.pendingMessage&&!props.messages.some((message:AiTask)=>message.id===props.pendingMessage.id)&&<article className="chatTurn" key={props.pendingMessage.id}>

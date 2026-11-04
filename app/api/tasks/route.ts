@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
       summary: turn.plan.summary.slice(0, 1200),
       services: turn.plan.services,
       ...(session.authType === "sso" ? {
+        ...(turn.plan.selectedStoreProduct ? { selectedStoreProduct: turn.plan.selectedStoreProduct } : {}),
         storeListings: (() => {
           const result = turn.plan.discovery?.results.find(item => item.serviceId === "store" && item.status === "read");
           const products = (result?.records || []).filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object");
@@ -97,6 +98,18 @@ export async function POST(request: NextRequest) {
             matched: matchedIds.has(String(product.id || "")),
           })).filter(product => product.id && product.title);
         })(),
+        ...(!turn.plan.execution ? (() => {
+          const action = turn.plan.proposedActions?.find((candidate): candidate is Extract<(typeof turn.plan.proposedActions)[number], { kind: "contact_seller" }> => candidate.kind === "contact_seller");
+          return action ? { pendingSellerContact: { recordId: action.recordId, productTitle: action.storePreview?.product.title || action.title, ...(action.storePreview?.product.sellerName ? { sellerName: action.storePreview.product.sellerName } : {}) } } : {};
+        })() : {}),
+        ...(turn.plan.cancelledActions?.slice().reverse().find(({ action }) => action.kind === "contact_seller") ? (() => {
+          const action = turn.plan.cancelledActions!.slice().reverse().find(({ action }) => action.kind === "contact_seller")!.action;
+          return action.kind === "contact_seller" ? { cancelledSellerContact: { recordId: action.recordId, productTitle: action.storePreview?.product.title || action.title, ...(action.storePreview?.product.sellerName ? { sellerName: action.storePreview.product.sellerName } : {}) } } : {};
+        })() : {}),
+        ...(turn.plan.execution?.actions.find((action): action is Extract<(typeof turn.plan.execution.actions)[number], { kind: "contact_seller" }> => action.kind === "contact_seller") ? (() => {
+          const action = turn.plan.execution!.actions.find((candidate): candidate is Extract<(typeof turn.plan.execution.actions)[number], { kind: "contact_seller" }> => candidate.kind === "contact_seller")!;
+          return { sellerContactExecution: { recordId: action.recordId, productTitle: action.storePreview?.product.title || action.title, status: turn.plan.execution!.status } };
+        })() : {}),
       } : {}),
       sellerMessages: (turn.plan.execution?.evidence || []).flatMap(item => {
         if (!item || typeof item !== "object") return [];

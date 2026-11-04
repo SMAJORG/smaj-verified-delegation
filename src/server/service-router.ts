@@ -18,6 +18,10 @@ export class MetaServiceRouter {
       summary: string;
       services: ServiceId[];
       storeListings?: Array<{ id: string; sellerId?: string; title: string; sellerName?: string; pricePi?: number; priceUsdt?: number; quantity?: number; summary?: string; matched?: boolean }>;
+      selectedStoreProduct?: { id: string; sellerId?: string; title: string; sellerName?: string; pricePi?: number; priceUsdt?: number; quantity?: number; summary?: string };
+      pendingSellerContact?: { recordId: string; productTitle: string; sellerName?: string };
+      cancelledSellerContact?: { recordId: string; productTitle: string; sellerName?: string };
+      sellerContactExecution?: { recordId: string; productTitle: string; status: "queued" | "running" | "retrying" | "verified" | "failed" };
       sellerMessages?: Array<{ productId: string; message: string; createdAt: string }>;
     }> = [],
     preferences: string[] = [],
@@ -47,6 +51,10 @@ export class MetaServiceRouter {
         summary: turn.summary.slice(0, 1200),
         services: turn.services,
         ...(turn.storeListings?.length ? { storeListings: turn.storeListings.slice(0, 12) } : {}),
+        ...(turn.selectedStoreProduct ? { selectedStoreProduct: turn.selectedStoreProduct } : {}),
+        ...(turn.pendingSellerContact ? { pendingSellerContact: turn.pendingSellerContact } : {}),
+        ...(turn.cancelledSellerContact ? { cancelledSellerContact: turn.cancelledSellerContact } : {}),
+        ...(turn.sellerContactExecution ? { sellerContactExecution: turn.sellerContactExecution } : {}),
         ...(turn.sellerMessages?.length ? {
           sellerMessages: turn.sellerMessages.slice(-8).map(message => ({ ...message, message: message.message.slice(0, 500) })),
         } : {}),
@@ -59,15 +67,66 @@ export class MetaServiceRouter {
 
     const lastStoreTurn = [...recentContext].reverse().find(turn => turn.storeListings?.length);
     const listings = lastStoreTurn?.storeListings || [];
-    const explicitContact = /\b(?:contact|message|write|ask)\b.{0,80}\b(?:seller|owner)\b|\b(?:seller|owner)\b.{0,80}\b(?:contact|message|write|ask)\b/i.test(request);
-    const affirmative = /^\s*(?:yes|yeah|yep|sure|please do|go ahead|do it|okay|ok)\b/i.test(request);
+    const explicitContact = /\b(?:contact|message|write|ask|reach out to)\b.{0,80}\b(?:seller|owner|them|the owner)\b|\b(?:seller|owner)\b.{0,80}\b(?:contact|message|write|ask|reach out)\b/i.test(request);
+    const affirmative = /^\s*(?:yes|yeah|yep|sure|please|go ahead|do it|okay|ok|sounds good|that one|do that)\b/i.test(request);
     const declinedContact = /\b(?:don't|do not|not|never|avoid|cancel|stop)\b.{0,60}\b(?:contact|message|seller|owner)\b/i.test(request);
     const lastConversationTurn = recentContext.at(-1);
-    const priorAskedToContact = Boolean(lastConversationTurn && /\b(?:would you like|want to|shall i|should i)\b.{0,100}\b(?:contact|message|ask).{0,40}\b(?:seller|owner)\b/i.test(lastConversationTurn.summary));
-    const contactFollowUp = listings.length > 0 && !declinedContact && (explicitContact || (affirmative && priorAskedToContact));
+    const priorAskedToContact = [...recentContext].reverse().slice(0, 3).some(turn =>
+      /\b(?:would you like|want to|shall i|should i|would you like me to|want me to)\b.{0,120}\b(?:contact|message|ask|reach out).{0,60}\b(?:seller|owner|them)\b/i.test(turn.summary)
+      || /\b(?:contact|message|reach out to|ask)\b.{0,60}\b(?:seller|owner)\b.{0,80}\b(?:would you like|want me to|should i|shall i)\b/i.test(turn.summary),
+    );
     const mentionedListings = listings.filter(product => request.toLowerCase().includes(product.id.toLowerCase()) || request.toLowerCase().includes(product.title.toLowerCase()));
+    const namesDifferentProduct = (recordId: string) => mentionedListings.length > 0 && !mentionedListings.some(product => product.id === recordId);
+    const existingPending = [...recentContext].reverse().find(turn => turn.pendingSellerContact);
+    if (!declinedContact && (explicitContact || affirmative) && existingPending?.pendingSellerContact && !namesDifferentProduct(existingPending.pendingSellerContact.recordId)) {
+      const pending = existingPending.pendingSellerContact;
+      return {
+        summary: `The seller message for ${pending.productTitle} is already prepared above. Review that card and approve it if you want it sent; no message has been sent.`,
+        model: "Meta AI",
+        services: [],
+        steps: [],
+        warnings: ["The existing seller message remains pending explicit approval."],
+        sources: hubKnowledgeContext(request).sources,
+        selectedStoreProduct: existingPending.selectedStoreProduct,
+      };
+    }
+    const existingCancellation = [...recentContext].reverse().find(turn => turn.cancelledSellerContact);
+    if (!declinedContact && (explicitContact || affirmative) && existingCancellation?.cancelledSellerContact && !namesDifferentProduct(existingCancellation.cancelledSellerContact.recordId)) {
+      return {
+        summary: `The seller request for ${existingCancellation.cancelledSellerContact.productTitle} was cancelled. Nothing was sent. Ask again only if you want to prepare a new message.`,
+        model: "Meta AI",
+        services: [],
+        steps: [],
+        warnings: [],
+        sources: hubKnowledgeContext(request).sources,
+      };
+    }
+    const persistedProduct = [...recentContext].reverse().find(turn => turn.selectedStoreProduct)?.selectedStoreProduct;
+    const contactFollowUp = (listings.length > 0 || Boolean(persistedProduct)) && !declinedContact && (explicitContact || (affirmative && (priorAskedToContact || Boolean(persistedProduct))));
     const preferredListings = listings.filter(product => product.matched);
-    const candidates = mentionedListings.length ? mentionedListings : preferredListings.length ? preferredListings : listings;
+    const existingExecution = [...recentContext].reverse().find(turn => turn.sellerContactExecution);
+    if (!declinedContact && (explicitContact || affirmative) && existingExecution?.sellerContactExecution && !namesDifferentProduct(existingExecution.sellerContactExecution.recordId)) {
+      const execution = existingExecution.sellerContactExecution;
+      const status = execution.status === "verified" ? "verified as sent"
+        : execution.status === "failed" ? "reported a failure"
+          : execution.status === "queued" ? "approved and queued"
+            : execution.status === "retrying" ? "being safely retried" : "being processed";
+      return {
+        summary: `The seller-contact action for ${execution.productTitle} is already ${status}. Check its existing status above; I won't create a duplicate request.`,
+        model: "Meta AI",
+        services: [],
+        steps: [],
+        warnings: [],
+        sources: hubKnowledgeContext(request).sources,
+        selectedStoreProduct: existingExecution.selectedStoreProduct,
+      };
+    }
+    const candidates = mentionedListings.length ? mentionedListings
+      : persistedProduct && (explicitContact || (affirmative && priorAskedToContact))
+        ? listings.filter(product => product.id === persistedProduct.id).length
+          ? listings.filter(product => product.id === persistedProduct.id)
+          : [{ ...persistedProduct, matched: true }]
+        : preferredListings.length ? preferredListings : listings;
     if (contactFollowUp && candidates.length !== 1) {
       const choices = candidates.slice(0, 6).map(product => product.title).filter(Boolean);
       return {

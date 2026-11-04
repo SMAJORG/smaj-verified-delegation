@@ -14,7 +14,7 @@ import { GET as detail, DELETE as remove } from "@/app/api/tasks/[id]/route";
 import { GET as listConversations } from "@/app/api/conversations/route";
 import { GET as getConversation, PATCH as renameConversation, DELETE as deleteConversation } from "@/app/api/conversations/[id]/route";
 import { issueDemoSession } from "@/src/server/demo-sessions";
-import { SESSION_COOKIE } from "@/src/server/auth";
+import { createUserSession, SESSION_COOKIE } from "@/src/server/auth";
 import { workspaceDatabase } from "@/src/server/demo-workspace";
 
 test("short messages produce a provider answer and tasks remain owner-scoped through deletion", async () => {
@@ -93,6 +93,131 @@ test("connected catalog requests are read-only by default and recommendations us
     assert.match(prompt, /Prefer adjustable lamps/);
     assert.match(prompt, /Find a desk lamp/);
     assert.match(prompt, /Rank live matches by explicit constraints/);
+  } finally {
+    for (const name of Object.keys(process.env)) if (!(name in previous)) delete process.env[name];
+    Object.assign(process.env, previous);
+  }
+});
+
+test("affirmative seller confirmations continue the uniquely matched saved product without another Meta routing call", async () => {
+  const plan = await new MetaServiceRouter(async () => {
+    throw new Error("A grounded seller confirmation must not repeat Meta product routing.");
+  }).plan("Yes", ["store"], [{
+    task: "Find a desk lamp",
+    summary: "I found one desk lamp. Would you like me to contact the seller?",
+    services: ["store"],
+    storeListings: [{ id: "published-product-id", sellerId: "seller-id", title: "Adjustable desk lamp", sellerName: "Store seller", matched: true }],
+  }]);
+
+  assert.deepEqual(plan.services, ["store"]);
+  assert.equal(plan.selectedStoreProduct?.id, "published-product-id");
+  assert.equal(plan.steps[0].approvalRequired, true);
+  assert.match(plan.summary, /Nothing will be sent until you approve/i);
+});
+
+test("a persisted selected product continues after refresh and explicit contact wording", async () => {
+  const plan = await new MetaServiceRouter(async () => {
+    throw new Error("A saved seller selection must not trigger a new routing search.");
+  }).plan("Yes, contact the seller", ["store"], [{
+    task: "Yes",
+    summary: "I’ll prepare a message about this product for your review.",
+    services: ["store"],
+    selectedStoreProduct: { id: "published-product-id", title: "Adjustable desk lamp", sellerName: "Store seller" },
+  }]);
+
+  assert.equal(plan.selectedStoreProduct?.id, "published-product-id");
+  assert.equal(plan.steps[0].serviceId, "store");
+  assert.equal(plan.steps[0].query?.search, "Adjustable desk lamp");
+});
+
+test("repeated confirmation keeps an existing pending seller action instead of searching or asking again", async () => {
+  const plan = await new MetaServiceRouter(async () => {
+    throw new Error("An existing proposal must not trigger another Meta call.");
+  }).plan("Yes, contact the seller", ["store"], [{
+    task: "Contact the seller",
+    summary: "Review the proposed seller message.",
+    services: ["store"],
+    selectedStoreProduct: { id: "published-product-id", title: "Adjustable desk lamp" },
+    pendingSellerContact: { recordId: "published-product-id", productTitle: "Adjustable desk lamp" },
+  }]);
+
+  assert.deepEqual(plan.services, []);
+  assert.match(plan.summary, /already prepared above/i);
+  assert.match(plan.summary, /no message has been sent/i);
+});
+
+test("cancelled and executing seller actions cannot be duplicated by later confirmations", async () => {
+  const router = new MetaServiceRouter(async () => {
+    throw new Error("A terminal seller action must not trigger new routing.");
+  });
+  const cancelled = await router.plan("Yes", ["store"], [{
+    task: "Yes",
+    summary: "Seller request cancelled.",
+    services: ["store"],
+    cancelledSellerContact: { recordId: "published-product-id", productTitle: "Adjustable desk lamp" },
+  }]);
+  assert.deepEqual(cancelled.services, []);
+  assert.match(cancelled.summary, /was cancelled/i);
+
+  const newProduct = await router.plan("Contact the seller about the ceramic mug", ["store"], [{
+    task: "Find products",
+    summary: "One desk lamp was cancelled.",
+    services: ["store"],
+    cancelledSellerContact: { recordId: "published-product-id", productTitle: "Adjustable desk lamp" },
+    storeListings: [{ id: "another-product-id", title: "Ceramic mug", matched: true }],
+  }]);
+  assert.equal(newProduct.selectedStoreProduct?.id, "another-product-id");
+
+  const executing = await router.plan("Yes, contact the seller", ["store"], [{
+    task: "Yes",
+    summary: "Approved and queued.",
+    services: ["store"],
+    sellerContactExecution: { recordId: "published-product-id", productTitle: "Adjustable desk lamp", status: "verified" },
+  }]);
+  assert.deepEqual(executing.services, []);
+  assert.match(executing.summary, /already verified as sent/i);
+  assert.match(executing.summary, /won't create a duplicate/i);
+});
+
+test("task endpoint restores pending seller product state and does not repeat discovery on confirmation", async () => {
+  const previous = { ...process.env };
+  process.env.SMAJ_HACKATHON_DB_PATH = ":memory:";
+  process.env.SMAJ_AI_SESSION_SECRET = "seller-follow-up-session-secret";
+  const identity = createUserSession({ sub: "seller-follow-up-owner", uid: "pi-owner" });
+  const conversationId = "11111111-1111-4111-8111-111111111111";
+  const request = (body: unknown) => new NextRequest("https://test.example/api/tasks", {
+    method: "POST",
+    headers: { cookie: `${SESSION_COOKIE}=${identity.value}`, origin: "https://test.example", "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  try {
+    const seedRequest = request({});
+    new AiTaskStore(workspaceDatabase(seedRequest)).create(identity.actorId, "Contact the seller", {
+      summary: "Review the prepared seller message above.",
+      model: "fixture",
+      services: ["store"],
+      steps: [],
+      warnings: [],
+      selectedStoreProduct: { id: "published-product-id", title: "Adjustable desk lamp" },
+      proposedActions: [{
+        id: "seller-action-1",
+        serviceId: "store",
+        recordId: "published-product-id",
+        kind: "contact_seller",
+        title: "Ask about Adjustable desk lamp",
+        message: "Is this product available?",
+        storePreview: { product: { recordId: "published-product-id", sellerId: "seller-id", title: "Adjustable desk lamp", sellerName: "Store seller", pricePi: 2, quantityAvailable: 1 } },
+      }],
+      actionReviewHash: "review-hash",
+    }, conversationId);
+
+    const response = await POST(request({ task: "Yes, contact the seller", conversationId }));
+    assert.equal(response.status, 201);
+    const payload = await response.json();
+    assert.deepEqual(payload.plan.services, []);
+    assert.match(payload.plan.summary, /already prepared above/i);
+    assert.equal(payload.plan.selectedStoreProduct.id, "published-product-id");
+    assert.equal(new AiTaskStore(workspaceDatabase(seedRequest)).get(identity.actorId, payload.task.id).plan.generationStatus, "complete");
   } finally {
     for (const name of Object.keys(process.env)) if (!(name in previous)) delete process.env[name];
     Object.assign(process.env, previous);
