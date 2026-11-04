@@ -71,23 +71,43 @@ In the application workflow, recommendations are bounded to at most three and mu
 
 ## Meta AI integration
 
-The implemented provider integration is the server-side Meta Model API:
+Powered by Meta AI
 
-| Purpose | Request |
-| --- | --- |
-| Account model catalog | `GET https://api.meta.ai/v1/models` |
-| Generate a response | `POST https://api.meta.ai/v1/responses` |
-| Default model ID | `muse-spark-1.3`, overridable with `META_MODEL` |
+SMAJ AI integrates Meta's Model API to deliver intelligent conversations, task planning, multimodal assistance, and AI-powered service discovery across SMAJ PI HUB.
 
-The application reads the configured account's model catalog, then sends a prompt, model ID, `max_output_tokens`, and `store: false` to the Responses endpoint. The catalog mismatch is logged but does not strictly reject a model before the Responses request. The default model ID is a code default; availability depends on the configured Meta account.
+Meta AI Integration
 
-Image questions use `input_text` and `input_image` content in the Responses request. The server validates images and limits them to 4 MiB; image bytes are not persisted in conversation history. Vision support depends on the configured model and account. Provider failures are reported rather than replaced with invented analysis.
+Feature| Integration
+Model discovery| "GET https://api.meta.ai/v1/models"
+AI responses| "POST https://api.meta.ai/v1/responses"
+Default model| "muse-spark-1.3" (subject to availability)
+Model selection| Dynamic selection from supported account models
+Image understanding| Supported multimodal Meta models
+Voice input| Browser Web Speech API
+Voice output| Browser speech synthesis
+Authentication| Secure server-side Meta API key
 
-The API key is sent only in a server-side Authorization header using `META_API_KEY` (or legacy `MODEL_API_KEY`). Never put provider credentials in client-side or `NEXT_PUBLIC_` variables.
+Multiple Meta AI Models
 
-Meta is asked for JSON as ordinary response text. SMAJ AI parses and validates it; it does **not** configure native JSON Schema structured output such as `response_format`, and there is no Meta tool/function-calling schema or model tool-call dispatcher implemented. Application routing and execution are handled by SMAJ AI after parsing.
+SMAJ AI is designed to let users choose their preferred AI model directly from the message composer.
 
-Voice dictation uses browser Web Speech recognition and sends its transcript through the existing task workflow. Spoken output uses browser speech synthesis and requires an explicit user action. These features do not call a Meta speech or audio API; browser support and microphone permission vary.
+The model selector retrieves compatible models from the connected Meta account, allowing users to switch models without starting a new conversation.
+
+How it works:
+
+1. Open the model dropdown inside the SMAJ AI message input.
+2. View the available Meta AI models.
+3. Select a preferred model.
+4. Send a message using the selected model.
+5. Switch models anytime while keeping conversation history.
+
+Model availability depends on the connected Meta API account. Only supported and authorized models should be displayed.
+
+Secure and Responsible Integration
+
+All Meta API requests are processed through SMAJ AI's secure backend. API credentials are never exposed to users.
+
+Model-generated responses are validated by the application, while Verified Delegation maintains explicit human approval for consequential actions.
 
 ## Screenshots
 
