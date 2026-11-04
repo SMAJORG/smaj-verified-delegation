@@ -127,6 +127,24 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         const record = records.get(m.serviceId + ":" + m.id) as Record<string, unknown>;
         return { serviceId: m.serviceId, id: m.id, reason: matchReason(task.task, m.serviceId, record, task.plan) };
       });
+      if (!plan.selectedStoreProduct) {
+        const storeMatches = (plan.matches || []).filter(match => match.serviceId === "store");
+        if (storeMatches.length === 1) {
+          const record = records.get(`store:${storeMatches[0].id}`) as Record<string, unknown>;
+          if (record && typeof record.title === "string") {
+            plan.selectedStoreProduct = {
+              id: storeMatches[0].id,
+              ...(typeof record.sellerId === "string" ? { sellerId: record.sellerId } : {}),
+              title: record.title,
+              ...(typeof record.sellerName === "string" ? { sellerName: record.sellerName } : {}),
+              ...(typeof record.pricePi === "number" ? { pricePi: record.pricePi } : {}),
+              ...(typeof record.priceUsdt === "number" ? { priceUsdt: record.priceUsdt } : {}),
+              ...(typeof record.quantity === "number" ? { quantity: record.quantity } : {}),
+              ...(typeof record.summary === "string" ? { summary: record.summary } : {}),
+            };
+          }
+        }
+      }
       const requestText = task.task;
       const declinedAction = (action: string) => new RegExp(String.raw`\b(?:don't|do not|not|never|avoid|cancel|stop)\b.{0,60}\b(?:${action})\b`, "i").test(requestText);
       const requestsSave = /\b(save|shortlist|favorite|favourite)\b/i.test(requestText) && !declinedAction("save|shortlist|favorite|favourite");
@@ -134,6 +152,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         || Boolean(task.plan.selectedStoreProduct && /^\s*(?:yes|yeah|yep|sure|please do|go ahead|do it|okay|ok)\b/i.test(requestText)))
         && !declinedAction("message|contact|seller");
       const requestsOrder = /\b(order|buy|purchase)\b/i.test(requestText) && !declinedAction("order|buy|purchase");
+      const selectedProduct = plan.selectedStoreProduct;
+      if (requestsSellerContact && selectedProduct) {
+        plan.summary = `I prepared a message to ${selectedProduct.sellerName || "the seller"} about ${selectedProduct.title}. Review the exact draft below; nothing is sent until you approve it.`;
+      }
       const turns = conversationTurns;
       const sellerAvailabilityConfirmed = (recordId: string) => turns.some(turn =>
         (turn.plan.execution?.evidence || []).some(item => {
@@ -147,11 +169,18 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           });
         }),
       );
-      const generatedActions = Array.isArray(answer.actions) ? [...answer.actions] : [];
-      const selectedProduct = task.plan.selectedStoreProduct;
-      if (session.authType === "sso" && requestsSellerContact && selectedProduct
-        && !generatedActions.some((action: any) => action?.serviceId === "store" && action?.kind === "contact_seller")) {
-        generatedActions.push({
+      let generatedActions = Array.isArray(answer.actions) ? [...answer.actions] : [];
+      if (session.authType === "sso" && requestsSellerContact && selectedProduct) {
+        const modelDraft = generatedActions.find((action: any) =>
+          action?.serviceId === "store"
+          && action?.kind === "contact_seller"
+          && action?.recordId === selectedProduct.id
+          && typeof action?.message === "string"
+          && action.message.trim().length > 0
+          && action.message.length <= 1000,
+        );
+        generatedActions = generatedActions.filter((action: any) => !(action?.serviceId === "store" && action?.kind === "contact_seller"));
+        generatedActions.push(modelDraft || {
           serviceId: "store",
           recordId: selectedProduct.id,
           kind: "contact_seller",
@@ -201,6 +230,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       const adapter = new HubActionAdapter();
       const preparedActions = [];
       const preparationErrors: string[] = [];
+      const sellerContactPreparationFailed = plan.proposedActions.some(action => action.kind === "contact_seller");
       for (const action of plan.proposedActions) {
         if (!(action.serviceId === "jobs" && action.kind === "apply") && !(action.serviceId === "store" && (action.kind === "contact_seller" || action.kind === "create_order"))) {
           preparedActions.push(action);
@@ -218,11 +248,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           preparationErrors.push(error instanceof AppError ? error.message : "The Hub could not prepare this application review.");
         }
       }
+      const sellerContactWasPrepared = preparedActions.some(action => action.kind === "contact_seller");
       plan.proposedActions = preparedActions;
-      if (preparationErrors.length) plan.summaryError = {
-        code: "application_prepare_failed",
-        message: preparationErrors.join(" "),
-      };
+      if (preparationErrors.length) {
+        plan.summaryError = { code: "application_prepare_failed", message: preparationErrors.join(" ") };
+        if (sellerContactPreparationFailed && !sellerContactWasPrepared && selectedProduct) {
+          plan.summary = `I found ${selectedProduct.title}, but couldn't prepare a seller message for your review. No message was sent. ${preparationErrors.join(" ")}`.slice(0, 6000);
+        }
+      }
     }
     if (plan.proposedActions?.length) plan.actionReviewHash = createHash("sha256").update(JSON.stringify({ proofHash: discovery.proofHash, actions: plan.proposedActions })).digest("hex");
     plan.progressStage = "done";

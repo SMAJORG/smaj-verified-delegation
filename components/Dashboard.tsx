@@ -40,6 +40,7 @@ export default function Dashboard() {
   const [homeImage,setHomeImage]=useState<{mimeType:"image/jpeg"|"image/png"|"image/webp";data:string;name:string}|null>(null);
   const [threadTaskIds,setThreadTaskIds]=useState<string[]>([]); const [threadConversationId,setThreadConversationId]=useState<string|null>(null); const loadedConversations=useRef(new Set<string>());
   const discoveryRuns=useRef(new Map<string,Promise<boolean>>()); const automaticDiscoveryStarted=useRef(new Set<string>());
+  const submissionInFlight=useRef(false);
   const [pendingMessage,setPendingMessage]=useState<PendingMessage|null>(null);
   const [messageImages,setMessageImages]=useState<Record<string,{mimeType:string;data:string}>>({});
   const [candidateName,setCandidateName]=useState(""); const [skills,setSkills]=useState(""); const [selectedJobs,setSelectedJobs]=useState<string[]>([]); const [injectFailure,setInjectFailure]=useState(true); const [busy,setBusy]=useState<string|null>(null); const [error,setError]=useState(""); const [storageScope,setStorageScope]=useState<string|null>(null);
@@ -99,7 +100,8 @@ export default function Dashboard() {
   const submitTask=async(message:string,conversationId?:string,retryPending?:PendingMessage,image?:{mimeType:string;data:string}):Promise<boolean>=>{
     const attachedImage=retryPending?.image||image;
     if(!message.trim()&&!attachedImage){setError("Enter a message or attach an image.");return false;}
-    if(busy==="routing")return false;
+    if(busy||submissionInFlight.current)return false;
+    submissionInFlight.current=true;
     const service=conversationId||retryPending?undefined:SMAJ_SERVICES.find(item=>item.id===selectedService);
     const prompt=message.trim()||"Describe this image and suggest relevant SMAJ Store search terms.";
     const requestTask=retryPending?retryPending.text:service?`${service.name}: ${prompt}`:prompt;
@@ -128,7 +130,7 @@ export default function Dashboard() {
       setPendingMessage(current=>current?.id===optimistic.id?{...current,status:"failed",error:message}:current);
       notifyError(routeError,"SMAJ AI could not answer. Please retry.");
     }
-    finally{setBusy(null);}
+    finally{setBusy(null);submissionInFlight.current=false;}
     return false;
   };
   const retryPendingMessage=()=>{if(!pendingMessage)return;void submitTask(pendingMessage.text,pendingMessage.persistedConversation?pendingMessage.conversationId:undefined,pendingMessage,pendingMessage.image);};

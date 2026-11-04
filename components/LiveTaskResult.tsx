@@ -30,6 +30,7 @@ export default function LiveTaskResult({ task, busy, sandbox, approve, updateSel
   const pendingOrder = plan.execution?.evidence?.find(item => Boolean(item) && typeof item === "object" && (item as Record<string, unknown>).kind === "create_order") as Record<string, unknown> | undefined;
   const orderAction = plan.execution?.actions.find(item => item.kind === "create_order");
   const sellerAction = plan.proposedActions?.find((action): action is Extract<typeof action, { kind: "contact_seller" }> => action.kind === "contact_seller");
+  const isSellerContactFollowUp = Boolean(plan.selectedStoreProduct && sellerAction);
   const sellerProductRecord = sellerAction && plan.discovery?.results.flatMap(result => result.records).find(value => String((value as { id?: unknown }).id) === sellerAction.recordId) as Record<string, unknown> | undefined;
   const sellerImage = sellerProductRecord && typeof sellerProductRecord.imageUrl === "string" && /^https:\/\//i.test(sellerProductRecord.imageUrl) ? sellerProductRecord.imageUrl : undefined;
   useEffect(() => {
@@ -43,7 +44,7 @@ export default function LiveTaskResult({ task, busy, sandbox, approve, updateSel
     reportError(errorDetails);
   }, [task.id, errorDetails, reportError]);
   return <section className="liveTaskResults" aria-label="Live data and execution">
-    {plan.discovery && <>
+    {plan.discovery && !isSellerContactFollowUp && <>
       {plan.discovery.results.map(result => {
         const records = plan.summaryAi && result.serviceId !== "stream" ? result.records.filter(value => plan.matches?.some(match => match.serviceId === result.serviceId && match.id === String((value as {id?:unknown}).id))) : result.records;
         const employerBacked = result.serviceId === "jobs" ? records.filter(value => (value as { listingProvenance?: string }).listingProvenance === "employer_backed") : [];
