@@ -26,17 +26,16 @@
 .chatFailure{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0 0 43px;padding:10px 12px;border:1px solid #f0c5cc;border-radius:12px;background:#fff2f4;color:#9d3348;font-size:12px;line-height:1.45}
 .chatFailure button{flex:none;padding:7px 12px;border:0;border-radius:9px;background:#7547d5;color:#fff;font-size:11px;font-weight:700}
 .chatFailure button:disabled{opacity:.6}
-.chatComposer{position:sticky;z-index:19;bottom:0;display:flex;flex:none;align-items:flex-end;gap:8px;width:100%;margin:0 auto;padding:10px 0 calc(10px + env(safe-area-inset-bottom));border-top:1px solid #ece7f3;background:#ffffffed;backdrop-filter:blur(14px)}
+.chatComposer{position:sticky;z-index:19;bottom:0;display:grid;flex:none;grid-template-columns:minmax(0,1fr);gap:4px;width:100%;margin:0 auto;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border:1px solid #e6e1eb;border-radius:20px;background:#fff;box-shadow:none}
 .chatComposer textarea{flex:1;width:100%;min-width:0;max-height:120px;min-height:40px;resize:vertical;border:0;border-radius:10px;padding:9px 5px;background:transparent;color:#20192f;font:inherit;font-size:14px;line-height:1.4}
 .chatComposer textarea:focus{outline:2px solid #8657d866;border-color:#8657d8}
 .chatComposer .primaryButton{flex:none;min-width:62px;min-height:44px;border-radius:12px;font-size:12px}
 @media(max-width:760px){.workspace .workspaceBody.internalBody:has(.hasChatComposer){height:calc(100dvh - 56px);padding:0 15px}}
 @media(max-width:480px){.chatThread{gap:20px}.chatUserMessage{max-width:94%;font-size:13px}.chatAssistantMessage{gap:8px}}
-.chatComposerContent{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:7px;width:100%;min-width:0;padding:8px;border:1px solid #e6e1eb;border-radius:20px;background:#fff;box-shadow:0 4px 18px #2416330b}
 .chatComposerInputRow{display:flex;align-items:flex-end;gap:7px;min-width:0}
 .chatComposerInputRow textarea{width:100%;min-height:40px;max-height:120px;resize:vertical}
 .chatAttachmentMenuWrap{position:relative;flex:none;align-self:flex-end}
-.chatAttachButton{display:grid;place-items:center;width:36px;height:36px;margin:2px 0;border:0;border-radius:50%;background:#f1ebfa;color:#623b97;font-size:24px;font-weight:400;line-height:1;cursor:pointer}
+.chatAttachButton{display:grid;place-items:center;width:36px;height:36px;margin:2px 0;border:0;border-radius:50%;background:transparent;color:#623b97;font-size:24px;font-weight:400;line-height:1;cursor:pointer}
 .chatAttachButton:disabled{opacity:.55;cursor:not-allowed}
 .chatAttachmentMenu{position:absolute;z-index:22;bottom:calc(100% + 10px);left:0;display:grid;gap:3px;width:min(220px,calc(100vw - 32px));padding:6px;border:1px solid #ece7f3;border-radius:14px;background:white;box-shadow:0 12px 32px #21143124}
 .chatAttachmentMenu button{min-height:42px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:#30253c;text-align:left;font:inherit;font-size:13px;cursor:pointer}
@@ -48,12 +47,12 @@
 .chatSendButton{display:grid;place-items:center;width:38px;height:38px;padding:0;border:0;border-radius:50%;background:#7544d0;color:#fff;box-shadow:0 3px 9px #7544d033}
 .chatSendButton svg{width:19px;height:19px}
 .chatSendButton:disabled{background:#c9bddb;box-shadow:none;cursor:not-allowed}
-.chatMediaStatus{grid-column:1/-1;margin:0;color:#6b5388;font-size:12px}
+.chatMediaStatus{margin:0;color:#6b5388;font-size:12px}
 .chatMediaStatus.isError{color:#a5364b}
 .chatImagePreview{display:block;width:96px;height:96px;margin-top:8px}
 .chatImagePreview img{display:block;width:100%;height:100%;object-fit:cover;border-radius:11px}
 .chatAttachmentNote{display:block;margin-top:6px;color:#7a7184;font-size:11px}
-@media(max-width:480px){.chatComposerContent{padding:7px}.chatComposerInputRow{gap:4px}}
+@media(max-width:480px){.chatComposer{padding:7px 8px calc(7px + env(safe-area-inset-bottom))}.chatComposerInputRow{gap:4px}}
 .workspace .tasksView>h1{font-size:27px;letter-spacing:-1px;line-height:1.15}
 .workspace .tasksView>.pageSub{font-size:14px;margin-bottom:18px;color:#827a90}
 .tasksView .taskRequest{margin:0 0 22px auto;background:#eee8fb;padding:13px 15px;border-radius:18px 18px 5px 18px;max-width:90%;font-size:14px;line-height:1.5;white-space:pre-wrap}

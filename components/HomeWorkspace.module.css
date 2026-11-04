@@ -28,7 +28,7 @@
 .root.root .submit:hover:not(:disabled) { background: #6840b6; box-shadow: 0 3px 12px #7951c725; }
 .root.root .submit:disabled { opacity: .5; cursor: not-allowed; }
 .root.root .attachmentMenuWrap { position: relative; flex:none; }
-.root.root .attachButton { display:grid; place-items:center; width:36px; height:36px; padding:0; border:0; border-radius:50%; background:#f1ebfa; color:#623b97; font-size:24px; line-height:1; }
+.root.root .attachButton { display:grid; place-items:center; width:36px; height:36px; padding:0; border:0; border-radius:50%; background:transparent; color:#623b97; font-size:24px; line-height:1; }
 .root.root .attachButton:disabled { opacity:.55; cursor:not-allowed; }
 .root.root .attachmentMenu { position:absolute; z-index:22; bottom:calc(100% + 9px); left:0; display:grid; gap:3px; width:min(220px,calc(100vw - 36px)); padding:6px; border:1px solid #ece7f3; border-radius:14px; background:#fff; box-shadow:0 12px 32px #21143124; }
 .root.root .attachmentMenu button { min-height:42px; padding:0 12px; border:0; border-radius:9px; background:transparent; color:#30253c; text-align:left; font:inherit; font-size:13px; }

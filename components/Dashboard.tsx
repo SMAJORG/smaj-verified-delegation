@@ -415,26 +415,24 @@ function ChatComposer({busy,onSubmit}:{busy:boolean;onSubmit:(message:string,ima
   },[attachmentMenuOpen]);
   return <form className="chatComposer" onSubmit={event=>void submit(event)}>
     <label className="taskSrOnly" htmlFor="ai-chat-message">Message SMAJ AI</label>
-    <div className="chatComposerContent">
-      {image&&<div className="chatComposerImage"><img src={`data:${image.mimeType};base64,${image.data}`} alt="Attached image preview"/><button type="button" aria-label="Remove attached image" onClick={()=>setImage(null)}>×</button></div>}
-      <div className="chatComposerInputRow">
-        <div className="chatAttachmentMenuWrap" ref={attachmentMenuRef}>
-          <input ref={galleryRef} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={event=>{selectImage(event.target.files?.[0]);event.target.value="";}}/>
-          <input ref={cameraRef} hidden type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={event=>{selectImage(event.target.files?.[0]);event.target.value="";}}/>
-          <button className="chatAttachButton" type="button" aria-label="Add an attachment" aria-expanded={attachmentMenuOpen} aria-haspopup="menu" disabled={busy||sending} onClick={()=>setAttachmentMenuOpen(open=>!open)}>+</button>
-          {attachmentMenuOpen&&<div className="chatAttachmentMenu" role="menu" aria-label="Add an attachment">
-            <button type="button" role="menuitem" onClick={()=>{setAttachmentMenuOpen(false);galleryRef.current?.click();}}>Upload image</button>
-            <button type="button" role="menuitem" onClick={()=>{setAttachmentMenuOpen(false);cameraRef.current?.click();}}>Camera</button>
-            <button type="button" role="menuitem" onClick={()=>{setAttachmentMenuOpen(false);startVoice();}}>Microphone</button>
-          </div>}
-        </div>
-        <textarea id="ai-chat-message" value={message} onChange={event=>setMessage(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();event.currentTarget.form?.requestSubmit();}}} maxLength={2000} rows={1} placeholder="Message SMAJ AI"/>
-        <div className="chatComposerActions">
-          <button className="chatSendButton" type="submit" aria-label="Send message" disabled={busy||sending||(!message.trim()&&!image)}>{busy||sending?<span aria-hidden="true">…</span>:<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>}</button>
-        </div>
+    {image&&<div className="chatComposerImage"><img src={`data:${image.mimeType};base64,${image.data}`} alt="Attached image preview"/><button type="button" aria-label="Remove attached image" onClick={()=>setImage(null)}>×</button></div>}
+    <div className="chatComposerInputRow">
+      <div className="chatAttachmentMenuWrap" ref={attachmentMenuRef}>
+        <input ref={galleryRef} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={event=>{selectImage(event.target.files?.[0]);event.target.value="";}}/>
+        <input ref={cameraRef} hidden type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={event=>{selectImage(event.target.files?.[0]);event.target.value="";}}/>
+        <button className="chatAttachButton" type="button" aria-label="Add an attachment" aria-expanded={attachmentMenuOpen} aria-haspopup="menu" disabled={busy||sending} onClick={()=>setAttachmentMenuOpen(open=>!open)}>+</button>
+        {attachmentMenuOpen&&<div className="chatAttachmentMenu" role="menu" aria-label="Add an attachment">
+          <button type="button" role="menuitem" onClick={()=>{setAttachmentMenuOpen(false);galleryRef.current?.click();}}>Upload image</button>
+          <button type="button" role="menuitem" onClick={()=>{setAttachmentMenuOpen(false);cameraRef.current?.click();}}>Camera</button>
+          <button type="button" role="menuitem" onClick={()=>{setAttachmentMenuOpen(false);startVoice();}}>Microphone</button>
+        </div>}
       </div>
-      {(mediaState||mediaError)&&<p className={`chatMediaStatus${mediaError?" isError":""}`} role={mediaError?"alert":"status"}>{mediaError||mediaState}</p>}
+      <textarea id="ai-chat-message" value={message} onChange={event=>setMessage(event.target.value)} onInput={event=>{event.currentTarget.style.height="auto";event.currentTarget.style.height=`${Math.min(event.currentTarget.scrollHeight,120)}px`;}} onKeyDown={event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();event.currentTarget.form?.requestSubmit();}}} maxLength={2000} rows={1} placeholder="Message SMAJ AI"/>
+      <div className="chatComposerActions">
+        <button className="chatSendButton" type="submit" aria-label="Send message" disabled={busy||sending||(!message.trim()&&!image)}>{busy||sending?<span aria-hidden="true">…</span>:<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>}</button>
+      </div>
     </div>
+    {(mediaState||mediaError)&&<p className={`chatMediaStatus${mediaError?" isError":""}`} role={mediaError?"alert":"status"}>{mediaError||mediaState}</p>}
   </form>;
 }
 
