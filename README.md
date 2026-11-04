@@ -1,83 +1,102 @@
 # SMAJ AI — Verified Delegation
 
-SMAJ AI uses Meta models to plan bounded work across SMAJ PI HUB services. The chat also supports image questions through the configured Meta Responses model and browser-native speech input/output. People review proposed actions before approval; the Verified Delegation demo records only simulated job applications, checks the persisted outcomes, and issues a hash-backed receipt.
+**SMAJ AI — Verified Delegation** is a Meta-powered assistant for planning bounded work across the SMAJ ecosystem. It brings together conversational AI, read-only service discovery, explicit human approval, and independently checked records of simulated actions.
 
-**Live demo:** [ai.smajpihub.com](https://ai.smajpihub.com) · **Demo instructions:** [DEMO.md](DEMO.md)
-**Hackathon demo video:** [Watch on YouTube](https://youtube.com/shorts/CmbXa1IvJS4)
+**Developed by SMAJ Ecosystem for SMAJ PI HUB.**
 
-> **Demo boundary:** The public AI workspace and the Verified Delegation walkthrough use live Meta planning when configured. The delegation walkthrough reads published Jobs listings but writes only local mock submissions. It does not submit real job applications or make Pi payments.
+**[Try the public SMAJ AI demo](https://smaj-verified-delegation.onrender.com)** · [Judge walkthrough](DEMO.md) · [Official hackathon video](https://youtube.com/shorts/CmbXa1IvJS4)
+
+The public visitor workspace is separate from the reproducible Verified Delegation runner. It supports anonymous AI requests without Pi authentication. The delegation demo reads published SMAJ Jobs listings, but its job-application writes are local mock actions only. On the linked public deployment, production writes and real Pi payments are disabled; the CLI demo does not submit real applications or make payments.
+
+## Official SMAJ ecosystem websites
+
+| Website | Official purpose |
+| --- | --- |
+| [SMAJ Ecosystem](https://smaj.org) | Parent technology ecosystem |
+| [SMAJ PI HUB](https://smajpihub.com) | Pi-powered super app |
+| [SMAJ AI](https://smaj-verified-delegation.onrender.com) | Public visitor deployment |
+| [GitHub repository](https://github.com/SMAJORG/smaj-verified-delegation) | Source code and project documentation |
+
+## The problem and our approach
+
+People increasingly ask AI systems to coordinate multi-step tasks, but a useful recommendation should not silently become an external action. A system also needs to distinguish model-generated suggestions from authoritative records and make it possible to review what actually happened.
+
+SMAJ AI plans bounded work from a person's request, grounds discovery in allowlisted published catalog data, and presents proposed actions for explicit approval. The hackathon workflow executes only simulated job applications, verifies persisted records independently, and produces a SHA-256 proof receipt. The receipt is evidence of the recorded simulation, not proof of an external side effect.
 
 ## Hackathon judging flow
 
-1. Open the [live demo](https://ai.smajpihub.com) and choose **Try Live Demo** to enter an isolated public workspace without Pi sign-in.
-2. Try a text request or, in a supported browser, use **Mic** to dictate a question. Response audio is opt-in via **Play voice**; pause, stop, and mute controls are provided.
-3. Attach or capture a JPEG, PNG, or WebP image and ask about it. The image is sent to the configured Meta model for this request only; vision support depends on that model/account. Follow-up Store searches use published catalog results rather than treating visual guesses as matches.
-4. To see the Verified Delegation proof flow locally, follow [DEMO.md](DEMO.md) to start the app and run `npm run demo`. Review the generated recommendations and drafts; the script pauses at an explicit human-approval gate before mock actions.
-5. The runner injects one transient failure, retries idempotently, and checks that every selected mock action was persisted exactly once. Inspect the event log and final SHA-256 proof digest. Production writes and Pi payments remain disabled.
+1. Open **[Try the public SMAJ AI demo](https://smaj-verified-delegation.onrender.com)**. It is an anonymous visitor workspace and does not require Pi sign-in.
+2. Ask a text question. In a supported browser, use the attachment menu to upload an image or dictate a message. Browser speech recognition handles dictation; image understanding is sent through the configured Meta Responses model and depends on the deployed model/account.
+3. Use the Results page voice menu to play a spoken response. Audio is not played automatically; playback requires a user action.
+4. For the complete approval-and-proof walkthrough, follow [DEMO.md](DEMO.md) locally and run `npm run demo`. Review the generated recommendations and draft notes. The runner stops at an explicit approval gate unless deliberately configured for unattended automation.
+5. After approval, observe the mock execution, controlled transient failure and idempotent retry, independent verification, event log, and SHA-256 receipt.
 
-The public workspace is useful for trying general AI requests and supported read-only catalog searches. It is separate from the CLI delegation demonstration; do not assume public workspace history is seeded with delegation examples.
+The public visitor workspace is not pre-seeded with the CLI runner's sample tasks. Do not interpret image descriptions as verified product matches; catalog results come from the published catalog adapters.
 
 ## Verified Delegation workflow
 
 ```text
-Goal + candidate skills
+Person's goal and candidate skills
         ↓
 Read published SMAJ Jobs listings
         ↓
-Meta produces bounded job recommendations and draft cover notes
+Meta proposes bounded recommendations and draft cover notes
         ↓
 Person reviews and explicitly approves selected drafts
         ↓
 Local mock submissions (no production application call)
         ↓
-Independent check of persisted actions and unique idempotency keys
+Verifier checks persisted actions and unique idempotency keys
         ↓
-Proof receipt + SHA-256 digest
+Proof receipt with SHA-256 digest
 ```
 
-The plan is limited to at most three recommendations and to IDs from the fetched Jobs data. Execution requires explicit approval and uses idempotency keys to prevent duplicate mock submissions. The verifier compares selected job IDs with persisted submissions and checks key uniqueness before issuing the receipt. A controlled retry is available in the demo; interrupted runs use a short lease and can safely resume. The receipt is evidence of this simulated workflow, not proof of an external job application.
-
-## Meta integration currently implemented
-
-Only the server-side Meta Model API is used:
-
-| Purpose | Implemented request |
-| --- | --- |
-| Account model catalog | `GET https://api.meta.ai/v1/models` |
-| Generate a response | `POST https://api.meta.ai/v1/responses` |
-| Default model ID | `muse-spark-1.3` (overridable with `META_MODEL`) |
-
-Each generation first reads the model catalog, then sends the prompt, selected model, `max_output_tokens`, and `store: false` to the Responses endpoint. Image requests use a Responses input containing `input_text` and `input_image` (base64 data URL) content items. The image is validated on the server, limited to 4 MiB, and not persisted in the conversation database. Vision support depends on the configured model and account; provider errors are surfaced rather than replaced with invented image analysis. `META_API_KEY` (or the legacy `MODEL_API_KEY`) is sent only in the server-side Authorization header. The catalog is used to log a mismatch warning; this code does not strictly reject a model before the Responses request. The default model ID is a code default, not a claim that a particular account or deployment has been verified.
-
-Meta is asked to return JSON as ordinary response text. The application parses that text and validates/normalizes it; it does **not** send a native JSON Schema/structured-output setting such as `response_format`. The planner expects `{ summary, recommendations: [{ jobId, score, rationale, coverNote }] }`; the service router expects `{ summary, services, steps, warnings }`. There is no Meta tool/function-calling schema or model tool-call dispatch implemented. Routing and execution are handled by SMAJ AI after parsing the model's text.
-
-Voice input uses the browser Web Speech recognition API and forwards its transcript through the same `/api/tasks` workflow. Spoken output uses browser speech synthesis only after a person presses **Play voice**. These voice features do not call a Meta speech or audio API; recognition availability and processing are controlled by the browser and may require microphone permission and a browser speech service.
+In the application workflow, recommendations are bounded to at most three and must refer to IDs from fetched Jobs records. Execution requires explicit approval; rejected or unapproved actions are not executed. The verifier checks the approved job IDs against persisted mock submissions and validates idempotency-key uniqueness before issuing a receipt. The demo runner also injects a transient failure and retries safely. Its receipt describes the verified simulation, not an external job application.
 
 ## Architecture
 
-- **Next.js app and route handlers** provide the browser workspace, sessions, task planning, approvals, and task events.
-- **Meta client and planners** call the two Meta endpoints above and validate generated text into application plans.
-- **Multimodal chat** sends validated image input to the configured Meta Responses model when requested; browser speech APIs provide opt-in dictation and playback. Unsupported image input returns the provider error.
-- **SMAJ PI HUB published Jobs endpoint** is read-only for the Verified Delegation planner; the endpoint is configured by `SMAJ_JOBS_API_URL`.
-- **SQLite (`better-sqlite3`, WAL)** persists delegations, events, idempotency records, mock submissions, and receipts. Keep production and hackathon/demo databases separate.
-- **Verifier and receipt exporter** check persisted results and expose the receipt as JSON or PDF in the app. A receipt hash is a tamper-evident digest of the recorded receipt; it does not attest to an external side effect.
+- **Next.js workspace and route handlers** provide the visitor session, chat, task planning, consent checks, approvals, and task updates.
+- **Meta client and planners** call the Meta Model API and validate generated response text into application plans.
+- **Catalog adapters** retrieve published Jobs, Store, and Stream records through HTTPS host/path allowlists, redirect protection, and bounded response parsing. The hackathon delegation runner uses the read-only published Jobs catalog.
+- **SQLite (`better-sqlite3`, WAL)** persists application tasks, delegation events, idempotency records, mock submissions, and receipts. Keep demo and production data separate.
+- **Executor and verifier** enforce approval for consequential simulated actions, record outcomes, compare persisted records with approved actions, and create JSON/PDF receipts.
 
-Production Jobs submissions and real Pi payments remain disabled by default. See [INTEGRATION.md](INTEGRATION.md) for broader integration status and security boundaries.
+## Meta AI integration
+
+The implemented provider integration is the server-side Meta Model API:
+
+| Purpose | Request |
+| --- | --- |
+| Account model catalog | `GET https://api.meta.ai/v1/models` |
+| Generate a response | `POST https://api.meta.ai/v1/responses` |
+| Default model ID | `muse-spark-1.3`, overridable with `META_MODEL` |
+
+The application reads the configured account's model catalog, then sends a prompt, model ID, `max_output_tokens`, and `store: false` to the Responses endpoint. The catalog mismatch is logged but does not strictly reject a model before the Responses request. The default model ID is a code default; availability depends on the configured Meta account.
+
+Image questions use `input_text` and `input_image` content in the Responses request. The server validates images and limits them to 4 MiB; image bytes are not persisted in conversation history. Vision support depends on the configured model and account. Provider failures are reported rather than replaced with invented analysis.
+
+The API key is sent only in a server-side Authorization header using `META_API_KEY` (or legacy `MODEL_API_KEY`). Never put provider credentials in client-side or `NEXT_PUBLIC_` variables.
+
+Meta is asked for JSON as ordinary response text. SMAJ AI parses and validates it; it does **not** configure native JSON Schema structured output such as `response_format`, and there is no Meta tool/function-calling schema or model tool-call dispatcher implemented. Application routing and execution are handled by SMAJ AI after parsing.
+
+Voice dictation uses browser Web Speech recognition and sends its transcript through the existing task workflow. Spoken output uses browser speech synthesis and requires an explicit user action. These features do not call a Meta speech or audio API; browser support and microphone permission vary.
 
 ## Screenshots
 
-The repository does not currently contain captured UI, image-upload, voice, or approval screenshots. The existing [service atlas](public/assets/smaj-service-atlas.png) is an illustration, not an app screenshot, so it is not presented as one. See the [live demo](https://ai.smajpihub.com) and [official demo video](https://youtube.com/shorts/CmbXa1IvJS4) for available visuals.
+No application screenshots are included yet. A genuine capture could not be made in the current environment because its installed headless Chromium exits before opening a page. No illustrations or fabricated images are presented as functional screenshots. The public demo and [official demonstration video](https://youtube.com/shorts/CmbXa1IvJS4) are available to view the interface.
 
-## Setup
+## Installation and local setup
 
-Requirements: Node.js 24 and npm.
+**Requirements:** Node.js 24 and npm.
 
 ```sh
+git clone https://github.com/SMAJORG/smaj-verified-delegation.git
+cd smaj-verified-delegation
 npm ci
 cp .env.example .env.local
 ```
 
-Set these server-side values in `.env.local` for new live Meta requests:
+For new live Meta requests, set server-side credentials and a local demo token in `.env.local`:
 
 ```dotenv
 META_API_KEY=your_meta_api_key
@@ -85,7 +104,7 @@ META_MODEL=exact_model_id_from_your_account_catalog
 SMAJ_DEMO_ACCESS_TOKEN=generate_a_random_secret_at_least_16_characters
 ```
 
-Use an exact model ID available to the configured key from `GET https://api.meta.ai/v1/models`. Keep `.env.local` private and never use a `NEXT_PUBLIC_` prefix for credentials. Do not copy real production secrets into a local judging setup. The `.env.example` contains placeholders and safe demo defaults; SSO and production-write credentials are not needed for the public workspace or the local demo script unless those capabilities are explicitly enabled.
+Use an exact model ID available to the configured key from `GET https://api.meta.ai/v1/models`. Do not copy production secrets into a local judging setup. The `.env.example` contains placeholders and safe demo defaults; public visitor access and the local demo do not require production-write credentials or Pi payment configuration.
 
 Start the app:
 
@@ -93,13 +112,13 @@ Start the app:
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). To run the end-to-end delegation demo, keep the app running and, in another terminal, run:
+Open [http://localhost:3000](http://localhost:3000). To run the Verified Delegation walkthrough, leave the app running and open another terminal:
 
 ```sh
-npm run demo
+SMAJ_DEMO_ACCESS_TOKEN=your_local_demo_token npm run demo
 ```
 
-The script uses `SMAJ_DEMO_ACCESS_TOKEN` for its local session. Set `DEMO_AUTO_APPROVE=1` only for an unattended run; otherwise it pauses for explicit approval. It reads the live published Jobs catalog and uses Meta for planning, while mock records are written to the configured local SQLite database. See [DEMO.md](DEMO.md) for the full script configuration and limitations.
+The app and runner must use the same local `SMAJ_DEMO_ACCESS_TOKEN`. The runner reads the published Jobs catalog and writes only local mock records. Set `DEMO_AUTO_APPROVE=1` only for an unattended run; by default the runner pauses for explicit approval. See [DEMO.md](DEMO.md) for details.
 
 ## Checks
 
@@ -111,4 +130,4 @@ npm run build
 
 ## Suggested next improvement
 
-Prototype one narrowly scoped Meta function call—`search_public_jobs`—backed by the existing read-only Jobs adapter. First confirm tool calling is supported by the selected account/model and Responses API. Keep the tool allowlisted, cap its inputs/results, show the proposed call to the person, and retain the existing explicit approval gate for any simulated action.
+Prototype one narrowly scoped Meta function call, `search_public_jobs`, backed by the existing read-only Jobs adapter. First confirm tool calling is supported by the selected account/model and Responses API. Keep the tool allowlisted, bound its inputs and results, display proposed calls, and preserve explicit human approval for any simulated action.

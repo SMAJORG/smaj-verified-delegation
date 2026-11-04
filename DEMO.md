@@ -1,6 +1,10 @@
-# Verified Delegation demo
+# SMAJ AI — Verified Delegation demo
 
 The reproducible walkthrough uses the real Meta Model API and the read-only published SMAJ Jobs catalog, then writes only local mock application records. It does not submit applications to employers or make Pi payments.
+
+**Developed by SMAJ Ecosystem for SMAJ PI HUB.**
+
+**[Try the public SMAJ AI visitor demo](https://smaj-verified-delegation.onrender.com)** · [Official demonstration video](https://youtube.com/shorts/CmbXa1IvJS4)
 
 ## Judge walkthrough
 
@@ -10,7 +14,7 @@ The reproducible walkthrough uses the real Meta Model API and the read-only publ
 4. The runner injects one transient failure, retries with the same idempotency key, and verifies that the approved mock submissions are persisted without duplicates.
 5. Review the event log, verification result, and SHA-256 proof digest. The receipt records the simulation boundary and verification checks.
 
-The public browser demo at [ai.smajpihub.com](https://ai.smajpihub.com) is a separate anonymous workspace for trying supported AI requests. Do not assume its task history is preloaded with the CLI workflow's sample records.
+The public browser demo is an anonymous workspace for trying supported AI requests and does not require Pi authentication. It is separate from the local CLI workflow; do not assume its task history is preloaded with the runner's sample records.
 
 ## Configure
 
