@@ -81,7 +81,7 @@ test("verified job application requires selection and approval, submits once, ve
         { slug: "sample-engineer", title: "Engineer sample", company: "Sample Employer", employerVerified: false, location: "Remote", category: "Engineering" },
       ], pagination: { page: 1, pageSize: 50, total: 3, pages: 1 } });
     }
-    if (url.pathname === "/v1/models") return Response.json({ data: [{ id: "fixture-model" }] });
+    if (url.pathname === "/v1/models") return Response.json({ data: [{ id: "fixture-model", capabilities: { conversation: true } }] });
     if (url.pathname === "/v1/responses") {
       metaResponses++;
       const answer = metaResponses === 1

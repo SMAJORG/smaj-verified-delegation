@@ -2,32 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { metaResponse } from "@/src/server/meta-client";
 
-test("AI attempts a live response even when the catalog is empty", async () => {
-  const previous = { ...process.env };
+test("empty catalogs fail closed without sending an unsupported response request", async () => {
+  const previous = process.env.META_API_KEY;
+  process.env.META_API_KEY = "test-only-secret";
   try {
-    process.env.META_API_KEY = "test-only-secret";
-    process.env.META_MODEL = "muse-wonder-1.0";
     const calls: string[] = [];
-    const fetcher = async (url: string | URL | Request, init?: RequestInit) => {
-      const target = String(url);
-      calls.push(target);
-      if (target.endsWith("/models")) {
-        return Response.json({ data: [] });
-      }
-      const body = JSON.parse(String(init?.body));
-      assert.equal(body.model, "muse-wonder-1.0");
-      assert.equal("model_id" in body, false);
-      return Response.json({
-        status: "completed",
-        output: [{ content: [{ type: "output_text", text: "real answer" }] }],
-      });
-    };
-    const result = await metaResponse("Say hello.", 1500, fetcher as typeof fetch);
-    assert.equal(result.model, "muse-wonder-1.0");
-    assert.equal(calls.length, 2);
-    assert.equal(result.payload.output[0].content[0].text, "real answer");
+    await assert.rejects(() => metaResponse("Say hello.", 1500, (async url => {
+      calls.push(String(url)); return Response.json({ data: [] });
+    }) as typeof fetch), (error: any) => error.code === "meta_no_conversational_models");
+    assert.deepEqual(calls, ["https://api.meta.ai/v1/models"]);
   } finally {
-    for (const name of Object.keys(process.env)) if (!(name in previous)) delete process.env[name];
-    Object.assign(process.env, previous);
+    if (previous === undefined) delete process.env.META_API_KEY; else process.env.META_API_KEY = previous;
   }
 });

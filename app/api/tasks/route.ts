@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
     actorId = session.actorId;
     const body = await (session.authType === "public" ? publicJson(request, MAX_REQUEST_BYTES, 16_000) : readJsonBody(request, MAX_REQUEST_BYTES, 16_000));
     if (typeof body.task !== "string" || !body.task.trim() || body.task.length > 2000) throw new AppError("invalid_task", "Enter a message of 1 to 2,000 characters", 400);
+    if (body.model !== undefined && (typeof body.model !== "string" || !body.model.trim() || body.model.length > 200)) throw new AppError("invalid_model", "Choose an available Meta model.", 400);
     let image: { mimeType: "image/jpeg" | "image/png" | "image/webp"; data: string } | undefined;
     if (body.image !== undefined) {
       if (!body.image || typeof body.image !== "object" || Array.isArray(body.image)) throw new AppError("invalid_image", "Attach a JPEG, PNG, or WebP image to continue.", 400);
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
     } else {
       tasks.savePlan(actorId, savedTask.id, { ...savedTask.plan, generationStatus: "pending", generationError: undefined });
     }
-    const plan = await new MetaServiceRouter().plan(body.task.trim(), connectedServiceIds, context, preferences, image);
+    const plan = await new MetaServiceRouter().plan(body.task.trim(), connectedServiceIds, context, preferences, image, body.model as string | undefined);
     const task = tasks.savePlan(actorId, savedTask.id, { ...plan, generationStatus: "complete" });
     savedTask = task;
     return NextResponse.json({ plan, task }, { status: 201, headers: { "Cache-Control": "no-store" } });

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import styles from "./HomeWorkspace.module.css";
+import ModelSelector from "@/components/ModelSelector";
 import ServiceIcon from "@/components/ServiceIcon";
 import { SMAJ_SERVICES, type ServiceId } from "@/src/domain/services";
 
@@ -116,6 +117,7 @@ export default function HomeWorkspace({ task, setTask, selectedService, selectSe
             <button type="button" role="menuitem" onClick={()=>{setAttachmentMenuOpen(false);startVoice();}}>Microphone</button>
           </div>}
         </div>
+        <ModelSelector/>
         <button type="submit" className={styles.submit} aria-label="Send message" disabled={(!task.trim()&&!image) || busy === "routing"}><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
       </div>
     </form>

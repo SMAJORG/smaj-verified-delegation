@@ -26,6 +26,7 @@ export class MetaServiceRouter {
     }> = [],
     preferences: string[] = [],
     image?: { mimeType: "image/jpeg" | "image/png" | "image/webp"; data: string },
+    selectedModel?: string,
   ): Promise<ServiceRoutePlan> {
     const request = task.trim();
     if (!request) throw new AppError("invalid_task", "Enter a message or task", 400);
@@ -198,7 +199,7 @@ export class MetaServiceRouter {
           { type: "input_image", image_url: `data:${image.mimeType};base64,${image.data}` },
         ] }]
       : prompt;
-    const { payload, model, provenance } = await metaResponse(input, 1800, this.fetcher);
+    const { payload, model, provenance } = await metaResponse(input, 1800, this.fetcher, selectedModel);
 
     let parsed: any;
     try { parsed = parseJson(extractMetaOutputText(payload)); }

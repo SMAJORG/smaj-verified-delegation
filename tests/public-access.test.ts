@@ -54,7 +54,7 @@ test("public car, software Jobs, services and Hub questions use Meta without SSO
  let reads=0,modelCalls=0;
  globalThis.fetch=async(input,init)=>{
   const url=new URL(String(input));
-  if(url.pathname==="/v1/models")return Response.json({data:[{id:"test-only-public-model"}]});
+  if(url.pathname==="/v1/models")return Response.json({data:[{id:"test-only-public-model", capabilities: { conversation: true }}]});
   if(url.pathname==="/marketplace/products"){reads++;assert.equal(init?.method,"GET");assert.equal(url.searchParams.get("currency"),"USD");assert.equal(url.searchParams.get("maxPrice"),"30000");return Response.json({products:[{id:"public-car",title:"Lexus SUV",priceUsdt:22500,imageUrl:"https://images.example/car.jpg"},{id:"too-expensive",title:"Lexus SUV",priceUsdt:40000},{id:"accessory",title:"Car cover",priceUsdt:50}]});}
   if(url.pathname==="/jobs/jobs"){reads++;assert.equal(url.searchParams.has("catalog_read"),false);return Response.json({jobs:[{slug:"react-sample",title:"React Frontend Engineer",company:"Orbit Commerce",companyId:"orbit-commerce",location:"Lagos, Nigeria",category:"Engineering",mode:"Hybrid",type:"Full time",salary:"π 0.007–0.00955 / mo",summary:"Build fast, accessible commerce tools.",skills:["React","TypeScript"]}],pagination:{page:1,pageSize:50,total:1,pages:1}});}
   assert.equal(url.origin,"https://api.meta.ai");assert.equal((init?.headers as Record<string,string>).Authorization,"Bearer test-only-provider-secret");modelCalls++;

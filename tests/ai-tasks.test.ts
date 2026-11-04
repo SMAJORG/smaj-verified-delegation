@@ -24,7 +24,7 @@ test("short messages produce a provider answer and tasks remain owner-scoped thr
   const requests: string[] = [];
   const fetcher = async (url: string | URL | Request, init?: RequestInit) => {
     requests.push(String(url));
-    if (String(url).endsWith("/models")) return Response.json({ data: [{ id: "test-account-model" }] });
+    if (String(url).endsWith("/models")) return Response.json({ data: [{ id: "test-account-model", capabilities: { conversation: true } }] });
     assert.equal(JSON.parse(String(init?.body)).model, "test-account-model");
     return Response.json({ status: "completed", output: [{ content: [{ type: "output_text", text: JSON.stringify({ summary: "Test provider greeting", steps: [], services: [], warnings: [] }) }] }] });
   };
@@ -55,7 +55,7 @@ test("planning-only services give a truthful live-availability answer", async ()
   process.env.META_API_KEY = "test-only-secret";
   process.env.META_MODEL = "test-account-model";
   const fetcher = async (_url: string | URL | Request, init?: RequestInit) => {
-    if (String(_url).endsWith("/models")) return Response.json({ data: [{ id: "test-account-model" }] });
+    if (String(_url).endsWith("/models")) return Response.json({ data: [{ id: "test-account-model", capabilities: { conversation: true } }] });
     const prompt = String(JSON.parse(String(init?.body)).input);
     assert.match(prompt, /adapterMode/);
     return Response.json({ status: "completed", output: [{ content: [{ type: "output_text", text: JSON.stringify({ summary: "I found several courses for you.", steps: [{ id: "courses", serviceId: "education", title: "Find courses", capability: "course discovery" }], services: ["education"], warnings: [] }) }] }] });
@@ -77,7 +77,7 @@ test("connected catalog requests are read-only by default and recommendations us
   process.env.META_MODEL = "test-account-model";
   let prompt = "";
   const fetcher = async (_url: string | URL | Request, init?: RequestInit) => {
-    if (String(_url).endsWith("/models")) return Response.json({ data: [{ id: "test-account-model" }] });
+    if (String(_url).endsWith("/models")) return Response.json({ data: [{ id: "test-account-model", capabilities: { conversation: true } }] });
     prompt = String(JSON.parse(String(init?.body)).input);
     return Response.json({ status: "completed", output: [{ content: [{ type: "output_text", text: JSON.stringify({ summary: "I can search the connected catalog.", steps: [{ id: "store", serviceId: "store", title: "Search products", capability: "product discovery" }], services: ["store"], warnings: [] }) }] }] });
   };
@@ -236,17 +236,17 @@ test("AI rejects missing credentials and blank models, uses the default model, a
     const calls: string[] = [];
     const result = await metaResponse("Hi", 100, (async (url, init) => {
       calls.push(String(url));
-      if (String(url).endsWith("/models")) return Response.json({ data: [] });
+      if (String(url).endsWith("/models")) return Response.json({ data: [{ id: "muse-spark-1.3" }] });
       assert.equal(JSON.parse(String(init?.body)).model, "muse-spark-1.3");
       return Response.json({ id: "fixture-response", model: "muse-spark-1.3", status: "completed", output: [{ content: [{ type: "output_text", text: "Fixture hello" }] }] });
     }) as typeof fetch);
     assert.equal(result.model, "muse-spark-1.3");
     assert.equal(calls.length, 2);
     assert.equal(result.provenance.responseId, "fixture-response");
-    await assert.rejects(() => metaResponse("Hi", 100, (async url => String(url).endsWith("/models") ? Response.json({data:[]}) : Response.json({status:"completed",output:[]})) as typeof fetch), (error: any) => error.code === "meta_empty_response");
-    await assert.rejects(() => metaResponse("Hi", 100, (async url => String(url).endsWith("/models") ? Response.json({data:[]}) : Response.json({status:"incomplete",output:[{content:[{type:"output_text",text:"Partial"}]}]})) as typeof fetch), (error: any) => error.code === "meta_incomplete");
+    await assert.rejects(() => metaResponse("Hi", 100, (async url => String(url).endsWith("/models") ? Response.json({data:[{id:"muse-spark-1.3"}]}) : Response.json({status:"completed",output:[]})) as typeof fetch), (error: any) => error.code === "meta_empty_response");
+    await assert.rejects(() => metaResponse("Hi", 100, (async url => String(url).endsWith("/models") ? Response.json({data:[{id:"muse-spark-1.3"}]}) : Response.json({status:"incomplete",output:[{content:[{type:"output_text",text:"Partial"}]}]})) as typeof fetch), (error: any) => error.code === "meta_incomplete");
     process.env.META_MODEL = "test-account-model";
-    await assert.rejects(() => metaResponse("Hi", 100, (async url => String(url).endsWith("/models") ? Response.json({ data: [{ id: "test-account-model" }] }) : Response.json({ error: { code: "model_not_found", message: "private upstream details" } }, { status: 404 })) as typeof fetch), (error: any) => error.code === "meta_model_not_found" && !error.message.includes("private upstream details"));
+    await assert.rejects(() => metaResponse("Hi", 100, (async url => String(url).endsWith("/models") ? Response.json({ data: [{ id: "test-account-model", capabilities: { conversation: true } }] }) : Response.json({ error: { code: "model_not_found", message: "private upstream details" } }, { status: 404 })) as typeof fetch), (error: any) => error.code === "meta_model_not_found" && !error.message.includes("private upstream details"));
     await assert.rejects(() => metaResponse("Hi", 100, (async () => { throw new Error("private network error"); }) as typeof fetch), /could not be reached/);
   } finally {
     for (const name of Object.keys(process.env)) if (!(name in previous)) delete process.env[name];
@@ -260,7 +260,7 @@ test("task HTTP routes authenticate, save a short answer, list, open, and enforc
   process.env.SMAJ_DEMO_AUTH_ENABLED = "true";
   process.env.META_API_KEY = "test-only-secret";
   process.env.META_MODEL = "test-account-model";
-  globalThis.fetch = async url => Response.json(String(url).endsWith("/models") ? { data: [{ id: "test-account-model" }] } : { status: "completed", output: [{ content: [{ type: "output_text", text: JSON.stringify({ summary: "Fixture greeting", steps: [], services: [], warnings: [] }) }] }] });
+  globalThis.fetch = async url => Response.json(String(url).endsWith("/models") ? { data: [{ id: "test-account-model", capabilities: { conversation: true } }] } : { status: "completed", output: [{ content: [{ type: "output_text", text: JSON.stringify({ summary: "Fixture greeting", steps: [], services: [], warnings: [] }) }] }] });
   const request = (cookie: string, method = "GET", body?: unknown) => new NextRequest("https://test.example/api/tasks", { method, headers: { cookie, origin: "https://test.example", "Content-Type": "application/json" }, ...(body ? { body: JSON.stringify(body) } : {}) });
   try {
     assert.equal((await GET(request(""))).status, 401);

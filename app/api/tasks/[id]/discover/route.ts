@@ -109,7 +109,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         })))}`,
         `Service availability: ${JSON.stringify(task.plan.steps.map(step => ({ serviceId: step.serviceId, name: SMAJ_SERVICES.find(service => service.id === step.serviceId)?.name, reason: step.reason })))}`,
         `Evidence: ${JSON.stringify({ results: discovery.results, ...(task.plan.selectedStoreProduct ? { selectedSavedProduct: task.plan.selectedStoreProduct } : {}) })}`,
-      ].join("\n"), 2400);
+      ].join("\n"), 2400, fetch, task.plan.ai?.model);
       let answer;
       try { answer = JSON.parse(extractMetaOutputText(payload).replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")); }
       catch { throw new AppError("invalid_meta_answer", "Meta returned invalid catalog analysis JSON", 502); }

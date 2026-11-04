@@ -30,7 +30,7 @@ test("informational Meta answers include evidence and produce no approval or exe
   try {
     const fetcher: typeof fetch = async (input, init) => {
       requests.push(String(input));
-      if (String(input).endsWith('/models')) return Response.json({ data: [{ id: 'fixture-model' }] });
+      if (String(input).endsWith('/models')) return Response.json({ data: [{ id: 'fixture-model', capabilities: { conversation: true } }] });
       const prompt = JSON.parse(String(init?.body)).input;
       assert.match(prompt, /HUB KNOWLEDGE RULES/);
       assert.match(prompt, /not part of the current.*launch plan/i);

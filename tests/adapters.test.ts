@@ -64,7 +64,7 @@ test("Meta planner uses the account-confirmed configured model and rejects unkno
   const previousModel=process.env.META_MODEL; process.env.META_MODEL="test-account-model";
   let requestBody: Record<string, unknown> = {};
   const fetcher = async (_input: string | URL | Request, init?: RequestInit) => {
-    if(String(_input).endsWith("/models"))return new Response(JSON.stringify({data:[{id:"test-account-model"}]}));
+    if(String(_input).endsWith("/models"))return new Response(JSON.stringify({data:[{id:"test-account-model", capabilities: { conversation: true }}]}));
     requestBody = JSON.parse(String(init?.body));
     return new Response(JSON.stringify({
       status: "completed",
@@ -90,7 +90,7 @@ test("Meta planner uses the account-confirmed configured model and rejects unkno
     assert.deepEqual(result.recommendations.map(item => item.jobId), [jobs[0].id]);
     assert.equal(result.recommendations[0].score, 96);
     const incomplete = (async input => String(input).endsWith("/models")
-      ? Response.json({ data: [{ id: "test-account-model" }] })
+      ? Response.json({ data: [{ id: "test-account-model", capabilities: { conversation: true } }] })
       : Response.json({ status: "completed", output: [{ content: [{ type: "output_text", text: JSON.stringify({ summary: "Incomplete provider result", recommendations: [{ jobId: jobs[0].id, score: 90 }] }) }] }] })) as typeof fetch;
     await assert.rejects(() => new MetaJobsPlanner(incomplete).plan({ candidateName: "Amina", skills: ["TypeScript"], goal: "Find engineering roles" }, jobs), /rationale and application draft/);
   } finally {

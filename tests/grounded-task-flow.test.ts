@@ -27,7 +27,7 @@ test("authenticated natural request routes through provider, approved live catal
   let modelCalls = 0, catalogCalls = 0, writes = 0, saved = false;
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
-    if (url.pathname === "/v1/models") return Response.json({ data: [{id:"fixture-model"}] });
+    if (url.pathname === "/v1/models") return Response.json({ data: [{id:"fixture-model", capabilities: { conversation: true }}] });
     if (url.pathname === "/marketplace/products") {
       catalogCalls++; assert.equal(init?.method,"GET"); assert.equal(url.searchParams.get("currency"),"USD"); assert.equal(url.searchParams.get("maxPrice"),"30000");
       return Response.json({ products: [{id:"product-one",title:"Available car",priceUsdt:25000,pricePi:2}, {id:"over-budget",title:"Expensive car",priceUsdt:50000,pricePi:1}] });
@@ -86,7 +86,7 @@ test("a confirmed unique car result becomes one bound seller approval draft with
   let modelCalls = 0, catalogCalls = 0, preparedRecordId = "";
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
-    if (url.pathname === "/v1/models") return Response.json({ data: [{ id: "fixture-model" }] });
+    if (url.pathname === "/v1/models") return Response.json({ data: [{ id: "fixture-model", capabilities: { conversation: true } }] });
     if (url.pathname === "/marketplace/products") {
       catalogCalls++;
       return Response.json({ products: [{

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import ModelSelector, { ModelProvider, useMetaModels } from "@/components/ModelSelector";
 import ServiceIcon from "@/components/ServiceIcon";
 import BrandLogo from "@/components/BrandLogo";
 import LandingPage from "@/components/LandingPage";
@@ -33,7 +34,10 @@ const Icon = ({ name }: { name: string }) => {
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name] || paths.spark}</svg>;
 };
 
-export default function Dashboard() {
+export default function Dashboard() { return <ModelProvider><DashboardContent/></ModelProvider>; }
+
+function DashboardContent() {
+  const metaModels = useMetaModels();
   const [view,setViewState]=useState<View>("home"); const viewRef=useRef<View>("home"); const setView=(next:View)=>{viewRef.current=next;setViewState(next);}; const [menuOpen,setMenuOpen]=useState(false); const [authenticated,setAuthenticated]=useState<boolean|null>(null); const [ssoEnabled,setSsoEnabled]=useState(false); const [demoEnabled,setDemoEnabled]=useState(false); const [sandbox,setSandbox]=useState(false); const [expiresAt,setExpiresAt]=useState<number|null>(null); const [accessToken,setAccessToken]=useState("");
   const [route,setRoute]=useState<DashboardRoute>({view:"home"});
   const [aiTasks,setAiTasks]=useState<AiTask[]>([]); const [selectedService,setSelectedService]=useState<ServiceId|null>(null); const [task,setTask]=useState(""); const [routePlan,setRoutePlan]=useState<ServiceRoutePlan|null>(null); const [connections,setConnections]=useState<ServiceConnection[]>([]); const [history,setHistory]=useState<DelegationView[]>([]); const [delegation,setDelegation]=useState<DelegationView|null>(null);
@@ -110,8 +114,9 @@ export default function Dashboard() {
     setTask(requestTask);setBusy("routing");setError("");
     if(!conversationId){setDelegation(null);setRoutePlan(null);if(viewRef.current!=="task-detail")navigate("task-detail");}
     try{
-      const response=await fetch("/api/tasks",{signal:AbortSignal.timeout(135000),method:"POST",headers:{"Content-Type":"application/json","Idempotency-Key":optimistic.requestKey},body:JSON.stringify({task:requestTask,...(conversationId?{conversationId}:{}),...(attachedImage?{image:{mimeType:attachedImage.mimeType,data:attachedImage.data}}:{})})});
+      const response=await fetch("/api/tasks",{signal:AbortSignal.timeout(135000),method:"POST",headers:{"Content-Type":"application/json","Idempotency-Key":optimistic.requestKey},body:JSON.stringify({task:requestTask,...(metaModels.selected?{model:metaModels.selected}:{}),...(conversationId?{conversationId}:{}),...(attachedImage?{image:{mimeType:attachedImage.mimeType,data:attachedImage.data}}:{})})});
       const payload=await response.json().catch(()=>({})) as ApiResponse;
+      if(["meta_model_not_available","meta_model_not_found"].includes((payload as ApiResponse & {error?:string}).error||""))await metaModels.refresh();
       if(!response.ok||!payload.plan||!payload.task)throw new Error((payload.message||"SMAJ AI could not answer. Please try again.")+(response.status===429&&response.headers.get("Retry-After")?` Try again in ${response.headers.get("Retry-After")} seconds.`:""));
       setAiTasks(items=>[payload.task!,...items.filter(item=>item.id!==payload.task!.id)]);
       if(attachedImage)setMessageImages(images=>({...images,[payload.task!.id]:attachedImage}));
@@ -479,6 +484,7 @@ function ChatComposer({busy,reportError,onSubmit}:{busy:boolean;reportError:(mes
         </div>}
       </div>
       <textarea id="ai-chat-message" value={message} onChange={event=>setMessage(event.target.value)} onInput={event=>{event.currentTarget.style.height="auto";event.currentTarget.style.height=`${Math.min(event.currentTarget.scrollHeight,120)}px`;}} onKeyDown={event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();event.currentTarget.form?.requestSubmit();}}} maxLength={2000} rows={1} placeholder="Message SMAJ AI"/>
+      <ModelSelector/>
       <div className="chatComposerActions">
         <button className="chatSendButton" type="submit" aria-label="Send message" disabled={busy||sending||(!message.trim()&&!image)}><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
       </div>
