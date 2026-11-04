@@ -135,7 +135,12 @@ npm test
 npm run typecheck
 npm run build
 ```
+##Future Development
 
-## Suggested next improvement
+SMAJ AI aims to expand Verified Delegation across SMAJ PI HUB services, including commerce, employment, education, and other digital utilities.
 
-Prototype one narrowly scoped Meta function call, `search_public_jobs`, backed by the existing read-only Jobs adapter. First confirm tool calling is supported by the selected account/model and Responses API. Keep the tool allowlisted, bound its inputs and results, display proposed calls, and preserve explicit human approval for any simulated action.
+Planned improvements include deeper Meta AI tool integration, expanded service connectivity, stronger action verification, and more seamless approval workflows.
+
+Our vision is simple:
+
+Not just AI answers. AI actions you can verify..
