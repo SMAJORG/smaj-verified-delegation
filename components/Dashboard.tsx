@@ -319,6 +319,7 @@ export default function Dashboard() {
     {view!=="home"&&<header className="internalNav">
       <button type="button" className="internalBack" onClick={goBack} aria-label="Go back"><Icon name="back"/></button>
       <h1>{pageTitle[view]}</h1>
+      {view==="task-detail"&&<ResultsVoiceMenu text={conversationTasks.at(-1)?.plan.summary||currentRoutePlan?.summary||""}/>}
     </header>}
     <div className={`menuOverlay ${menuOpen?"show":""}`} onClick={()=>setMenuOpen(false)}/>
     <aside className={`drawer ${menuOpen?"show":""}`}>
@@ -346,31 +347,28 @@ function DrawerItem({icon,label,badge,active,onClick}:{icon:string;label:string;
 
 
 export function Tasks(props:any){
-  const lastTurn=useRef<HTMLDivElement|null>(null);
+  const resultsScrollArea=useRef<HTMLDivElement|null>(null);
   const messageKey=[...(props.messages as AiTask[]).map(item=>item.id),props.pendingMessage?.id||""].join(",");
-  const voiceText=(props.messages as AiTask[]).at(-1)?.plan.summary||props.routePlan?.summary||"";
   useEffect(()=>{
-    const frame=requestAnimationFrame(()=>lastTurn.current?.scrollIntoView({behavior:"smooth",block:"end"}));
+    const frame=requestAnimationFrame(()=>{const area=resultsScrollArea.current;if(area)area.scrollTo({top:area.scrollHeight,behavior:"smooth"});});
     return()=>cancelAnimationFrame(frame);
   },[messageKey]);
   return <section className={`tasksView compactResults${props.conversationId||props.pendingMessage?" hasChatComposer":""}`} data-results-design="approved-compact-v2">
-    <div className="resultsPageToolbar"><p className="resultsEyebrow">AI TASK RESULTS</p><ResultsVoiceMenu text={voiceText}/></div>
+    <div className="resultsConversation" ref={resultsScrollArea} aria-label="Results conversation">
     {(props.messages?.length>0||props.pendingMessage)&&<div className="chatThread" aria-label="Conversation messages">
-      {(props.messages||[]).map((message:AiTask,index:number)=><article className="chatTurn" key={message.id}>
+      {(props.messages||[]).map((message:AiTask)=><article className="chatTurn" key={message.id}>
         <div className="chatUserMessage">{message.task}{props.messageImages?.[message.id]&&<span className="chatImagePreview"><img src={`data:${props.messageImages[message.id].mimeType};base64,${props.messageImages[message.id].data}`} alt="Attached image"/></span>}{message.task.includes("[Image attached for this turn; image is not saved in conversation history.]")&&<small className="chatAttachmentNote">Image used for this message only; it is not saved in history.</small>}</div>
         <section className={`chatAssistantMessage${props.pendingMessage?.id===message.id&&!message.plan.summary?" chatTyping":""}`}>{props.pendingMessage?.id===message.id&&!message.plan.summary
           ? <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><span className="taskDots" role="status" aria-label="SMAJ AI is responding"><i/><i/><i/></span></>
           : <><BrandLogo className="resultsAvatar resultsAvatarLogo"/><div className="resultsContent"><TypedResponse text={message.plan.summary}/>
             <LiveTaskResult key={message.id} task={message} busy={Boolean(props.busy)} sandbox={props.sandbox} approve={props.approveLive} retry={props.retryLive} refreshActionUpdates={props.refreshActionUpdates} reportError={props.reportError}/>
           </div></>}</section>
-        {index===props.messages.length-1&&<div ref={lastTurn} aria-hidden="true"/>}
       </article>)}
       {props.pendingMessage&&!props.messages.some((message:AiTask)=>message.id===props.pendingMessage.id)&&<article className="chatTurn" key={props.pendingMessage.id}>
         <div className="chatUserMessage">{props.pendingMessage.text}{props.pendingMessage.image&&<span className="chatImagePreview"><img src={`data:${props.pendingMessage.image.mimeType};base64,${props.pendingMessage.image.data}`} alt="Attached image"/></span>}</div>
         {props.pendingMessage.status==="sending"
           ? <section className="chatAssistantMessage chatTyping" role="status" aria-label="SMAJ AI is responding"><BrandLogo className="resultsAvatar resultsAvatarLogo"/><span className="taskDots" aria-hidden="true"><i/><i/><i/></span></section>
           : <div className="chatFailure" role="alert"><span>{props.pendingMessage.error||"SMAJ AI could not answer. Please try again."}</span><button type="button" disabled={Boolean(props.busy)} onClick={props.retryPendingMessage}>Retry</button></div>}
-        <div ref={lastTurn} aria-hidden="true"/>
       </article>}
     </div>}
     {!props.messages?.length&&!props.pendingMessage&&props.task&&props.routePlan&&<div className="taskRequest">{props.task}</div>}
@@ -379,6 +377,7 @@ export function Tasks(props:any){
     </div></section>}
     {props.conversationId&&<ChatComposer key={props.conversationId} busy={Boolean(props.busy)||Boolean(props.pendingMessage)} onSubmit={(message:string,image?:{mimeType:string;data:string})=>props.onFollowUp(message,props.conversationId,undefined,image)}/>}
     {props.delegation&&<DelegationDetail {...props}/>}
+    </div>
   </section>;
 }
 
