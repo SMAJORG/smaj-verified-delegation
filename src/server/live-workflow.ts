@@ -5,7 +5,7 @@ import type { LiveAction, LiveExecution } from "@/src/domain/services";
 import { AiTaskStore } from "@/src/server/ai-tasks";
 import { ServiceConnectionStore } from "@/src/server/service-connections";
 import { AppError } from "@/src/server/http";
-import { HubActionAdapter, type ActionAdapter } from "@/src/server/live-actions";
+import { HubActionAdapter, liveDelegationConfigured, type ActionAdapter } from "@/src/server/live-actions";
 
 type Run = { task_id: string; owner_id: string; uid: string; state: string; attempts: number; approved_at: string; expires_at: string; actions_json: string; lease_token: string };
 export class LiveWorkflow {
@@ -30,9 +30,21 @@ export class LiveWorkflow {
   }
   retry(session: ActorSession, id: string) {
     if (session.authType !== "sso" || session.sandbox || !session.uid) throw new AppError("live_identity_required", "Retrying live execution requires a real Hub sign-in", 403);
-    if (process.env.SMAJ_PRODUCTION_WRITES_ENABLED !== "true" || (process.env.SMAJ_AI_DELEGATION_SECRET?.trim().length || 0) < 32) throw new AppError("live_delegation_not_configured", "Live actions are not configured on both servers", 503);
+    if (!liveDelegationConfigured()) throw new AppError("live_delegation_not_configured", "Live delivery requires SMAJ_AI_DELEGATION_SECRET (at least 32 characters) and SMAJ_PRODUCTION_WRITES_ENABLED=true on both servers", 503);
     return this.db.transaction(() => {
       const store = new AiTaskStore(this.db); const task = store.get(session.actorId, id); const current = task.plan.execution;
+      if (current?.status === "unavailable") {
+        if (Date.parse(current.expiresAt) <= this.now().getTime()) throw new AppError("contract_expired", "The approval expired. Review and approve a new request.", 409);
+        const at = this.now().toISOString();
+        const existing = this.db.prepare("SELECT * FROM live_action_runs WHERE task_id = ? AND owner_id = ? AND uid = ?").get(id, session.actorId, session.uid) as Run | undefined;
+        if (existing) {
+          if (existing.state !== "unavailable" || JSON.stringify(JSON.parse(existing.actions_json)) !== JSON.stringify(current.actions)) throw new AppError("retry_contract_mismatch", "A delivery attempt already exists for this approval", 409);
+          this.db.prepare("UPDATE live_action_runs SET state = 'queued', attempts = 0, next_at = ?, lease_until = NULL, lease_token = NULL WHERE task_id = ? AND owner_id = ? AND uid = ? AND state = 'unavailable'").run(at, id, session.actorId, session.uid);
+        } else {
+          this.db.prepare("INSERT INTO live_action_runs (task_id, owner_id, uid, state, next_at, approved_at, expires_at, actions_json) VALUES (?, ?, ?, 'queued', ?, ?, ?, ?)").run(id, session.actorId, session.uid, at, current.approvedAt, current.expiresAt, JSON.stringify(current.actions));
+        }
+        return store.savePlan(session.actorId, id, { ...task.plan, execution: { ...current, status: "queued", error: undefined, retryable: false, events: [...(current.events || []), { at, type: "delivery.requeued", message: "Delivery configuration is available; the previously approved exact draft is queued." }] } });
+      }
       if (!current || current.status !== "failed" || current.retryable !== true) throw new AppError("retry_not_available", "This action has no safely retryable failure", 409);
       if (Date.parse(current.expiresAt) <= this.now().getTime()) throw new AppError("contract_expired", "The approved action expired. Review and approve a new request.", 409);
       const run = this.db.prepare("SELECT * FROM live_action_runs WHERE task_id = ? AND owner_id = ? AND uid = ?").get(id, session.actorId, session.uid) as (Run & { approved_at: string; expires_at: string; actions_json: string }) | undefined;
@@ -44,7 +56,6 @@ export class LiveWorkflow {
   }
   approve(session: ActorSession, id: string, actionIds: string[], reviewHash?: string) {
     if (session.authType !== "sso" || session.sandbox || !session.uid) throw new AppError("live_identity_required", "Live execution requires a real Hub sign-in; demo sessions cannot perform production actions", 403);
-    if (process.env.SMAJ_PRODUCTION_WRITES_ENABLED !== "true" || (process.env.SMAJ_AI_DELEGATION_SECRET?.trim().length || 0) < 32) throw new AppError("live_delegation_not_configured", "Configure SMAJ_AI_DELEGATION_SECRET and SMAJ_PRODUCTION_WRITES_ENABLED=true on both servers before live execution", 503);
     return this.db.transaction(() => {
       const store = new AiTaskStore(this.db); const task = store.get(session.actorId, id);
       // Replays cannot broaden the approved set or enqueue a second run.
@@ -54,7 +65,16 @@ export class LiveWorkflow {
         if (JSON.stringify([...new Set(actionIds)].sort()) !== JSON.stringify(approvedIds)) throw new AppError("approval_conflict", "The approved action set cannot be changed after execution is queued", 409);
         return task;
       }
-      if (!task.plan.summaryAi || task.plan.summaryError || !task.plan.discovery) throw new AppError("analysis_required", "A completed Meta analysis of live catalog evidence is required before action approval", 409);
+      if (task.plan.execution) {
+        throw new AppError("approval_conflict", "This action already has an execution status", 409);
+      }
+      const catalogDraft = task.plan.proposedActions?.length === 1 && task.plan.proposedActions.every(action =>
+        action.kind === "contact_seller" && action.storePreview?.source === "catalog" && task.plan.discovery?.results.some(result =>
+          result.serviceId === "store" && result.status === "read" && result.records.some(value => {
+            const record = value as Record<string, unknown>;
+            return record.id === action.recordId && record.sellerId === action.storePreview?.product.sellerId && record.title === action.storePreview?.product.title;
+          })));
+      if ((!task.plan.summaryAi && !catalogDraft) || task.plan.summaryError || !task.plan.discovery) throw new AppError("analysis_required", "A completed Meta analysis of live catalog evidence is required before action approval", 409);
       if (Date.parse(task.plan.discovery.completedAt) < this.now().getTime() - 30 * 60_000) throw new AppError("evidence_expired", "Refresh discovery before approving live actions", 409);
       if (!reviewHash || reviewHash !== task.plan.actionReviewHash) throw new AppError("stale_approval", "The reviewed drafts changed. Reload and review the current action details before approving", 409);
       const proposals = task.plan.proposedActions || [];
@@ -62,7 +82,7 @@ export class LiveWorkflow {
       if (!selected.length || selected.length > 3 || selected.some(a => !a)) throw new AppError("invalid_actions", "Select one to three proposed actions", 400);
       const actions = selected as LiveAction[];
       if (actions.some(action => action.serviceId === "store" && action.kind === "contact_seller" && (!action.message.trim() || action.message.length > 1000 || action.storePreview?.product.recordId !== action.recordId))) throw new AppError("seller_message_review_required", "Review the exact seller message and current product before approval", 409);
-      if (actions.some(action => action.serviceId === "store" && action.kind === "create_order" && (!Number.isInteger(action.quantity) || action.quantity < 1 || action.quantity > 20 || action.storePreview?.product.recordId !== action.recordId || action.quantity > action.storePreview.product.quantityAvailable))) throw new AppError("order_review_required", "Review an available quantity and current product price before order approval", 409);
+      if (actions.some(action => action.serviceId === "store" && action.kind === "create_order" && (!Number.isInteger(action.quantity) || action.quantity < 1 || action.quantity > 20 || action.storePreview?.product.recordId !== action.recordId || typeof action.storePreview.product.quantityAvailable !== "number" || action.quantity > action.storePreview.product.quantityAvailable))) throw new AppError("order_review_required", "Review an available quantity and current product price before order approval", 409);
       const storeOrderActions = actions.filter((action): action is Extract<LiveAction, { kind: "create_order" }> => action.serviceId === "store" && action.kind === "create_order");
       if (storeOrderActions.length) {
         const turns = store.conversationHistory(session.actorId, task.conversationId || task.id);
@@ -89,6 +109,20 @@ export class LiveWorkflow {
       const connected = new ServiceConnectionStore(this.db).list(session.actorId, "sso");
       if (actions.some(a => !connected.some(c => c.serviceId === a.serviceId && c.connected))) throw new AppError("service_disconnected", "Connect each selected service before approving", 409);
       const approvedAt = this.now().toISOString(); const expiresAt = new Date(this.now().getTime() + 24 * 60 * 60_000).toISOString();
+      if (!liveDelegationConfigured()) {
+        this.db.prepare("INSERT INTO live_action_runs (task_id, owner_id, uid, state, next_at, approved_at, expires_at, actions_json) VALUES (?, ?, ?, 'unavailable', ?, ?, ?, ?)").run(id, session.actorId, session.uid, approvedAt, approvedAt, expiresAt, JSON.stringify(actions));
+        const execution: LiveExecution = {
+          status: "unavailable",
+          approvedAt,
+          expiresAt,
+          actions,
+          attempts: 0,
+          error: "Approved — delivery unavailable. Configure SMAJ_AI_DELEGATION_SECRET and SMAJ_PRODUCTION_WRITES_ENABLED=true on both servers. The message has not been sent.",
+          retryable: false,
+          events: [{ at: approvedAt, type: "delivery.unavailable", message: "The exact draft was approved and preserved, but no authorized delivery integration is configured. No message was sent." }],
+        };
+        return store.savePlan(session.actorId, id, { ...task.plan, execution });
+      }
       this.db.prepare("INSERT INTO live_action_runs (task_id, owner_id, uid, state, next_at, approved_at, expires_at, actions_json) VALUES (?, ?, ?, 'queued', ?, ?, ?, ?)").run(id, session.actorId, session.uid, approvedAt, approvedAt, expiresAt, JSON.stringify(actions));
       return store.savePlan(session.actorId, id, { ...task.plan, execution: { status: "queued", approvedAt, expiresAt, actions, attempts: 0 } });
     })();
@@ -131,10 +165,17 @@ export class LiveWorkflow {
     } catch (error) {
       const failure = error instanceof AppError ? error : new AppError("execution_failed", "Live execution failed; outcome is unverified", 502);
       const retryable = [429, 500, 502, 503, 504].includes(failure.status);
-      execution.status = run.attempts < 3 && retryable ? "retrying" : "failed";
-      execution.error = failure.message;
-      execution.retryable = retryable;
-      execution.events!.push({ at: this.now().toISOString(), type: execution.status, message: failure.message });
+      if (failure.code === "live_delegation_not_configured") {
+        execution.status = "unavailable";
+        execution.error = "Approved — delivery unavailable. Hub delivery could not be verified. The approved draft is preserved; no successful delivery is claimed.";
+        execution.retryable = false;
+        execution.events!.push({ at: this.now().toISOString(), type: "delivery.unavailable", message: execution.error });
+      } else {
+        execution.status = run.attempts < 3 && retryable ? "retrying" : "failed";
+        execution.error = failure.message;
+        execution.retryable = retryable;
+        execution.events!.push({ at: this.now().toISOString(), type: execution.status, message: failure.message });
+      }
     }
     // A stale worker cannot overwrite a newer lease's outcome.
     this.db.transaction(() => {

@@ -34,6 +34,40 @@ test("live queue requires SSO, evidence, connected services, and an immutable ex
   } finally { f.db.close(); process.env = old; }
 });
 
+test("Hub configuration refusal preserves approval as delivery unavailable without attempting a seller message", async () => {
+  const old = { ...process.env }; enable(); const f = setup(); let sends = 0;
+  try {
+    const plan = f.task.plan;
+    const sellerPlan = {
+      ...plan,
+      services: ["store" as const],
+      proposedActions: [{
+        id: "seller",
+        serviceId: "store" as const,
+        recordId: "real-product",
+        kind: "contact_seller" as const,
+        title: "Ask about the product",
+        message: "Is this product available?",
+        storePreview: { product: { recordId: "real-product", sellerId: "seller-id", title: "Product", sellerName: "Seller", pricePi: 2, quantityAvailable: 1 } },
+      }],
+    };
+    const task = f.store.savePlan(session.actorId, f.task.id, sellerPlan);
+    const adapter = { async perform(_contract: unknown, _action: unknown, operation: string) {
+      if (operation === "execute") sends++;
+      throw new AppError("live_delegation_not_configured", "Hub configuration missing", 503);
+    } };
+    const worker = new LiveWorkflow(f.db, adapter, f.now);
+    worker.approve(session, task.id, ["seller"], "fixture-review-hash");
+    await worker.tick();
+    const execution = f.store.get(session.actorId, task.id).plan.execution!;
+    assert.equal(execution.status, "unavailable");
+    assert.match(execution.error || "", /Approved — delivery unavailable/);
+    assert.match(execution.actions[0].kind === "contact_seller" ? execution.actions[0].message : "", /Is this product available/);
+    assert.equal(sends, 0);
+    assert.equal((f.db.prepare("SELECT state FROM live_action_runs WHERE task_id = ?").get(task.id) as {state:string}).state, "unavailable");
+  } finally { f.db.close(); process.env = old; }
+});
+
 test("employer-backed but unverified jobs cannot enter the real application queue", () => {
   const old = { ...process.env }; enable(); const f = setup();
   try {

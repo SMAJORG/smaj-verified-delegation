@@ -43,7 +43,8 @@ export type JobApplicationPreview = {
   cv: { attached: boolean; name?: string; size?: number; visibility?: string };
 };
 export type StoreActionPreview = {
-  product: { recordId: string; sellerId: string; title: string; sellerName: string; pricePi: number; quantityAvailable: number };
+  source?: "catalog";
+  product: { recordId: string; sellerId: string; title: string; sellerName: string; pricePi?: number; priceUsdt?: number; priceLabel?: string; quantityAvailable?: number };
 };
 export type StoreMessageEvidence = {
   id: string;
@@ -57,7 +58,7 @@ export type LiveAction =
   | { id: string; serviceId: "store"; recordId: string; kind: "save_product"; title: string }
   | { id: string; serviceId: "store"; recordId: string; kind: "contact_seller"; title: string; message: string; storePreview?: StoreActionPreview }
   | { id: string; serviceId: "store"; recordId: string; kind: "create_order"; title: string; quantity: number; storePreview?: StoreActionPreview };
-export type LiveExecution = { status: "queued" | "running" | "retrying" | "verified" | "failed"; approvedAt: string; expiresAt: string; actions: LiveAction[]; attempts: number; error?: string; retryable?: boolean; evidence?: unknown[]; events?: Array<{ at: string; type: string; message: string }>; receipt?: { mode: "live"; verifiedAt: string; evidence: unknown[]; proofHash: string; proof: unknown } };
+export type LiveExecution = { status: "queued" | "running" | "retrying" | "verified" | "failed" | "unavailable"; approvedAt: string; expiresAt: string; actions: LiveAction[]; attempts: number; error?: string; retryable?: boolean; evidence?: unknown[]; events?: Array<{ at: string; type: string; message: string }>; receipt?: { mode: "live"; verifiedAt: string; evidence: unknown[]; proofHash: string; proof: unknown } };
 
 export type ServicePlanStep = {
   query?: CatalogQuery;

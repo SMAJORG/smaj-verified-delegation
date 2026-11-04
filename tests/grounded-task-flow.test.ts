@@ -12,6 +12,7 @@ import { ServiceConnectionStore } from "@/src/server/service-connections";
 import { LiveWorkflow } from "@/src/server/live-workflow";
 import { AiTaskStore } from "@/src/server/ai-tasks";
 import { AppError } from "@/src/server/http";
+import type { LiveAction } from "@/src/domain/services";
 
 test("authenticated natural request routes through provider, approved live catalog, grounded response, exact-draft approval and independent execution", async () => {
   const old = { ...process.env }, original = globalThis.fetch;
@@ -140,6 +141,10 @@ test("a confirmed unique car result becomes one bound seller approval draft with
     assert.equal(found.plan.selectedStoreProduct.sellerId, "seller-one");
     assert.match(found.plan.summary, /Would you like to contact a seller/);
 
+    delete process.env.SMAJ_AI_DELEGATION_SECRET;
+    delete process.env.SMAJ_PRODUCTION_WRITES_ENABLED;
+    delete process.env.META_API_KEY;
+    delete process.env.MODEL_API_KEY;
     const confirmation = await create(request({ task: "Yes, contact the seller", conversationId: firstTask.conversationId }));
     assert.equal(confirmation.status, 201);
     const followUpTask = (await confirmation.json()).task;
@@ -150,12 +155,13 @@ test("a confirmed unique car result becomes one bound seller approval draft with
     const result = (await prepared.json()).task;
 
     assert.equal(catalogCalls, 1, "confirmation must reuse the listed car instead of searching again");
-    assert.equal(preparedRecordId, "car-one", `Hub preparation must be bound to the exact matched car: ${JSON.stringify(result.plan)}`);
+    assert.equal(preparedRecordId, "", "missing delegation configuration must not block a catalog-backed approval draft");
     assert.equal(result.plan.proposedActions.length, 1);
     assert.equal(result.plan.proposedActions[0].kind, "contact_seller");
     assert.equal(result.plan.proposedActions[0].recordId, "car-one");
     assert.equal(result.plan.proposedActions[0].storePreview.product.sellerId, "seller-one");
     assert.match(result.plan.summary, /Review the exact draft below/);
+    assert.ok(result.plan.warnings.some((warning: string) => /Seller draft prepared from the live catalog/.test(warning)));
     assert.doesNotMatch(result.plan.summary, /Would you like me to contact/i);
     assert.equal(result.plan.execution, undefined, "preparing the approval draft must not send a seller message");
 
@@ -174,13 +180,34 @@ test("a confirmed unique car result becomes one bound seller approval draft with
     assert.equal(edited.status, 200);
     const editedTask = (await edited.json()).task;
     assert.equal(editedTask.plan.proposedActions[0].message, "Hello, is the Toyota Corolla still available?");
+    const runsBeforeApproval = (db.prepare("SELECT COUNT(*) n FROM live_action_runs").get() as { n: number }).n;
     const approved = await approve(request({
       approved: true,
       actionIds: [editedTask.plan.proposedActions[0].id],
       reviewHash: editedTask.plan.actionReviewHash,
     }), followUpContext);
-    assert.equal(approved.status, 202);
-    assert.equal((await approved.json()).task.plan.execution.status, "queued");
+    assert.equal(approved.status, 200);
+    const approvedTask = (await approved.json()).task;
+    assert.equal(approvedTask.plan.execution.status, "unavailable");
+    assert.match(approvedTask.plan.execution.error, /Approved — delivery unavailable/);
+    const approvedSellerAction = approvedTask.plan.execution.actions.find((action: LiveAction) => action.kind === "contact_seller");
+    assert.ok(approvedSellerAction && "message" in approvedSellerAction);
+    assert.equal(approvedSellerAction.message, "Hello, is the Toyota Corolla still available?");
+    assert.equal((db.prepare("SELECT COUNT(*) n FROM live_action_runs").get() as { n: number }).n, runsBeforeApproval + 1);
+    const replay = await approve(request({ approved: true, actionIds: [editedTask.plan.proposedActions[0].id], reviewHash: editedTask.plan.actionReviewHash }), followUpContext);
+    assert.equal(replay.status, 200);
+    assert.equal((db.prepare("SELECT COUNT(*) n FROM live_action_runs").get() as { n: number }).n, runsBeforeApproval + 1);
+    const conflict = await approve(request({ approved: true, actionIds: ["different-action"], reviewHash: editedTask.plan.actionReviewHash }), followUpContext);
+    assert.equal(conflict.status, 409);
+    const confirmedAgain = await create(request({ task: "Yes, contact the seller", conversationId: firstTask.conversationId }));
+    const confirmedAgainPayload = await confirmedAgain.json();
+    assert.deepEqual(confirmedAgainPayload.plan.services, []);
+    assert.match(confirmedAgainPayload.plan.summary, /already approved, but delivery is unavailable/i);
+    process.env.SMAJ_AI_DELEGATION_SECRET = "fixture-live-capability-secret-at-least-32-characters";
+    process.env.SMAJ_PRODUCTION_WRITES_ENABLED = "true";
+    const retried = new LiveWorkflow(db).retry({ actorId: identity.sub, uid: identity.uid, authType: "sso" }, followUpTask.id);
+    assert.equal(retried.plan.execution?.status, "queued");
+    assert.match(JSON.stringify(retried.plan.execution?.actions), /Toyota Corolla still available/);
     assert.equal(result.plan.execution, undefined, "only the explicit approval request may queue execution");
 
     const cancellationTask = taskStore.create(identity.sub, "Cancel seller draft", result.plan);
@@ -193,7 +220,7 @@ test("a confirmed unique car result becomes one bound seller approval draft with
     assert.equal(cancelledTask.plan.proposedActions.length, 0);
     assert.equal(cancelledTask.plan.cancelledActions[0].action.recordId, "car-one");
 
-    assert.equal(modelCalls, 3, "a repeated confirmation must not invoke routing or discovery again");
+    assert.equal(modelCalls, 2, "a repeated confirmation must not invoke routing or discovery again");
   } finally {
     globalThis.fetch = original;
     process.env = old;

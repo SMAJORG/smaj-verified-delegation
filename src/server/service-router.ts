@@ -21,7 +21,7 @@ export class MetaServiceRouter {
       selectedStoreProduct?: { id: string; sellerId?: string; title: string; sellerName?: string; pricePi?: number; priceUsdt?: number; quantity?: number; summary?: string };
       pendingSellerContact?: { recordId: string; productTitle: string; sellerName?: string };
       cancelledSellerContact?: { recordId: string; productTitle: string; sellerName?: string };
-      sellerContactExecution?: { recordId: string; productTitle: string; status: "queued" | "running" | "retrying" | "verified" | "failed" };
+      sellerContactExecution?: { recordId: string; productTitle: string; status: "queued" | "running" | "retrying" | "verified" | "failed" | "unavailable" };
       sellerMessages?: Array<{ productId: string; message: string; createdAt: string }>;
     }> = [],
     preferences: string[] = [],
@@ -111,6 +111,7 @@ export class MetaServiceRouter {
       const execution = existingExecution.sellerContactExecution;
       const status = execution.status === "verified" ? "verified as sent"
         : execution.status === "failed" ? "reported a failure"
+          : execution.status === "unavailable" ? "approved, but delivery is unavailable; delivery has not been verified"
           : execution.status === "queued" ? "approved and queued"
             : execution.status === "retrying" ? "being safely retried" : "being processed";
       return {

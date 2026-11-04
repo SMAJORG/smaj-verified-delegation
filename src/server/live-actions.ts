@@ -4,6 +4,9 @@ import { AppError } from "@/src/server/http";
 
 export type LiveContract = { ownerId: string; uid: string; taskId: string; approvedAt: string; expiresAt: string };
 export type PreparationContract = { ownerId: string; uid: string; taskId: string };
+export const liveDelegationConfigured = () =>
+  process.env.SMAJ_PRODUCTION_WRITES_ENABLED === "true"
+  && (process.env.SMAJ_AI_DELEGATION_SECRET?.trim().length || 0) >= 32;
 export interface ActionAdapter {
   perform(contract: LiveContract, action: LiveAction, operation: "execute" | "verify"): Promise<Record<string, unknown>>;
   prepare?(contract: PreparationContract, action: Extract<LiveAction, { serviceId: "jobs" }>): Promise<JobApplicationPreview>;
@@ -34,6 +37,9 @@ export class HubActionAdapter implements ActionAdapter {
     try { response = await this.fetcher(`${url.origin}/ai-delegation/${operation}`, { method: "POST", headers: { "X-SMAJ-Delegation": `${encoded}.${signature}`, "Content-Type": "application/json" }, body: "{}", redirect: "error", signal: AbortSignal.timeout(20_000), cache: "no-store" }); }
     catch { throw new AppError("hub_unreachable", "Hub action response was not received; outcome must be checked on retry", 502); }
     const body = await response.json().catch(() => ({}));
+    if (!response.ok && (body.code === "delegation_disabled" || body.code === "live_delegation_not_configured" || body.error === "live_delegation_not_configured")) {
+      throw new AppError("live_delegation_not_configured", "Live delivery is not configured on SMAJ PI HUB", 503);
+    }
     if (!response.ok) throw new AppError("hub_action_failed", typeof body.message === "string" ? body.message.slice(0, 400) : `Hub action failed (HTTP ${response.status})`, response.status);
     return body;
   }
@@ -43,7 +49,7 @@ export class HubActionAdapter implements ActionAdapter {
     if (action.serviceId === "store" && (action.kind === "contact_seller" || action.kind === "create_order")) {
       const body = await this.request(contract, action, "prepare");
       const preview = body.preview as StoreActionPreview | undefined;
-      if (!preview?.product || preview.product.recordId !== action.recordId || !preview.product.sellerId || !preview.product.title || !preview.product.sellerName || !Number.isFinite(preview.product.pricePi) || preview.product.pricePi <= 0 || !Number.isInteger(preview.product.quantityAvailable) || preview.product.quantityAvailable < 0) {
+      if (!preview?.product || preview.product.recordId !== action.recordId || !preview.product.sellerId || !preview.product.title || !preview.product.sellerName || typeof preview.product.pricePi !== "number" || !Number.isFinite(preview.product.pricePi) || preview.product.pricePi <= 0 || typeof preview.product.quantityAvailable !== "number" || !Number.isInteger(preview.product.quantityAvailable) || preview.product.quantityAvailable < 0) {
         throw new AppError("invalid_store_action_preview", "Hub did not return a complete product and seller review", 502);
       }
       return preview;
